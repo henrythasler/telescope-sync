@@ -10,7 +10,9 @@ To achieve the goal of finding an object in the sky more easily, we need to link
 
 ## Determining telescope orientation
 
-Can be done using a high quality motion sensor (accelerometer, gyroscope and compass)
+Can be done using a high quality motion sensor (accelerometer, gyroscope and compass) or rotary encoder mounted on top of the two axes of rotation (az/alt). To avoid additional mechanical work, I chose the motion sensor approach.
+
+After some research I selected the following list of possible candidates:
 
 Rank | Name | Pros | Cons
 ---|---|---|---
@@ -21,7 +23,7 @@ Rank | Name | Pros | Cons
 5 | [LSM6DSOX + LIS3MDL](https://github.com/adafruit/Adafruit_LSM6DS) |  | Out of Stock
 6 | MPU-9250 | | High Zero-rate Offset
 
-GPS Receiver: [GP-20U7](docs/GP-20U7.pdf)
+Stellarium expects the right ascension and declination of the telescope as input. To compute these values, we need the exact location and a timestamp. A simple GPS Receiver ([GP-20U7](docs/GP-20U7.pdf)) should provide this information with sufficient precision.
 
 ## Host-Controller
 
@@ -52,6 +54,7 @@ Byte-order is little-endian. Least significiant bytes are stored first.
 
 - [Control Your Telescope Using Stellarium & Arduino](https://www.instructables.com/Control-Your-Telescope-Using-Stellarium-Arduino/)
 - [Arduino Star-Finder for Telescopes](https://www.instructables.com/Arduino-Star-Finder-for-Telescopes/)
+- [SpotNik - StepTo / PushTo / Digital Setting Circles for EQ Mounted Telescopes Based on Arduino](https://www.instructables.com/SpotNik-StepTo-PushTo-Digital-Setting-Circles-for-/)
 
 ### Hardware
 
