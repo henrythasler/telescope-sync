@@ -1,0 +1,17 @@
+{
+  "name": "server",
+  "version": "1.0.0",
+  "description": "",
+  "main": "index.js",
+  "scripts": {
+    "test": "echo \"Error: no test specified\" && exit 1",
+    "build": "tsc",
+    "server": "tsc && node dist/server.js"
+  },
+  "author": "Henry Thasler",
+  "license": "MIT",
+  "dependencies": {
+    "@types/node": "^17.0.0",
+    "typescript": "^4.5.4"
+  }
+}
