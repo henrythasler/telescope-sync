@@ -67,6 +67,12 @@ class Telescope {
     setPosition(newPos: Equatorial) {
         this.position = newPos;
     }
+
+    getHorizontalPosition(): Horizontal {
+        let altAz: Horizontal = { alt: 0, az: 0 }
+
+        return altAz;
+    }
 };
 
 
@@ -76,10 +82,11 @@ function onConnect(socket: net.Socket) {
     const telescope = new Telescope();
     let counter = 0;
 
-    // insert fake movement
     const timer = setInterval(() => {
-        counter++;
-        telescope.position.ra = Math.sin(counter / 10) + 1;
+        // insert fake movement
+        // counter++;
+        // telescope.position.ra = Math.sin(counter / 10) + 1;
+
         socket.write(packCurrentPosition(telescope.position), (err) => {
             if (err) console.log(err);
         });
@@ -101,6 +108,8 @@ function onConnect(socket: net.Socket) {
                 + `dec: ${message.dec.toFixed(4).toString()}°, `
                 + `}`);
             telescope.setPosition({ dec: message.dec, ra: message.ra });
+
+            console.log(telescope.getHorizontalPosition());
         }
         else {
             console.log(`Received ${data.length} Bytes: ${data.toString('hex')}`)

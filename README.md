@@ -56,6 +56,16 @@ Byte-order is little-endian. Least significiant bytes are stored first.
 - [Arduino Star-Finder for Telescopes](https://www.instructables.com/Arduino-Star-Finder-for-Telescopes/)
 - [SpotNik - StepTo / PushTo / Digital Setting Circles for EQ Mounted Telescopes Based on Arduino](https://www.instructables.com/SpotNik-StepTo-PushTo-Digital-Setting-Circles-for-/)
 
+
+### Math
+
+- [Calculating mean and apparent sidereal time](http://www2.arnes.si/~gljsentvid10/sidereal.htm)
+- [Astronomical Calculations: Sidereal Time](https://squarewidget.com/astronomical-calculations-sidereal-time/)
+- [Sidereal Time Calculator For Any Date, Time and Longitude](http://www.neoprogrammics.com/sidereal_time_calculator/index.php)
+- [Local Sidereal Time](https://www.localsiderealtime.com/)
+- [Sidereal time calculator](https://astro.subhashbose.com/siderealtime)
+- [Converting RA and DEC to ALT and AZ](http://www.stargazing.net/kepler/altaz.html)
+
 ### Hardware
 
 - [Comparing Gyroscope Datasheets](https://learn.adafruit.com/comparing-gyroscope-datasheets)
@@ -68,3 +78,7 @@ Byte-order is little-endian. Least significiant bytes are stored first.
 ### Networking
 
 - [curl tutorial](https://curl.se/docs/manual.html)
+
+### Astronomy related
+
+- [Light pollution map](https://www.lightpollutionmap.info/)
