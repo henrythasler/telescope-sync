@@ -48,6 +48,9 @@ STATUS | 20 | 4 | int32 | status of the telescope, currently unused; 0=ok
 
 Byte-order is little-endian. Least significiant bytes are stored first.
 
+see also [TelescopeTCP::telescopeGoto](https://github.com/Stellarium/stellarium/blob/29df37b6c590ed32266f8269fde94bcb95eb5aa1/plugins/TelescopeControl/src/TelescopeClient.cpp#L276)
+
+
 ## References
 
 ### Similar Projects
@@ -60,6 +63,7 @@ Byte-order is little-endian. Least significiant bytes are stored first.
 ### Math
 
 - [Calculating mean and apparent sidereal time](http://www2.arnes.si/~gljsentvid10/sidereal.htm)
+- [Data: Converting Alt-Az to RA-Dec – Example](http://jonvoisey.net/blog/2018/07/data-converting-alt-az-to-ra-dec-example/)
 - [Astronomical Calculations: Sidereal Time](https://squarewidget.com/astronomical-calculations-sidereal-time/)
 - [Sidereal Time Calculator For Any Date, Time and Longitude](http://www.neoprogrammics.com/sidereal_time_calculator/index.php)
 - [Local Sidereal Time](https://www.localsiderealtime.com/)

@@ -87,7 +87,10 @@ function onConnect(socket: net.Socket) {
         // counter++;
         // telescope.position.ra = Math.sin(counter / 10) + 1;
 
-        socket.write(packCurrentPosition(telescope.position), (err) => {
+        const fakePosition = new Telescope();
+        fakePosition.setPosition({dec: 16.5527, ra: 69.298 / 360 * 24})
+
+        socket.write(packCurrentPosition(fakePosition.position), (err) => {
             if (err) console.log(err);
         });
     }, 200);
@@ -100,6 +103,7 @@ function onConnect(socket: net.Socket) {
     socket.on('data', (data: Buffer) => {
         if (data.length >= 20) {
             const message = unpackGoto(data);
+
             console.log(`Received ${data.length} Bytes: {`
                 + `length: ${message.length.toString()}, `
                 + `type: ${message.type.toString()}, `
@@ -107,6 +111,8 @@ function onConnect(socket: net.Socket) {
                 + `ra: ${message.ra.toFixed(4).toString()}h, `
                 + `dec: ${message.dec.toFixed(4).toString()}°, `
                 + `}`);
+
+            // telescope.setPosition({ dec: message.dec, ra: message.ra });
             telescope.setPosition({ dec: message.dec, ra: message.ra });
 
             console.log(telescope.getHorizontalPosition());
