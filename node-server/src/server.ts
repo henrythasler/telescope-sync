@@ -62,16 +62,75 @@ function unpackGoto(input: Buffer): Goto {
 
 
 class Telescope {
-    position: Equatorial = { ra: 0, dec: 0 };
+    position: Equatorial = { 
+        ra: 0,  // hours
+        dec: 0  // degrees
+    };
+
+    offset: Equatorial = { 
+        ra: 0,  // hours
+        dec: 0  // degrees
+    };
+
+    getCorrected(): Equatorial {
+        return {
+            ra: this.position.ra + this.offset.ra,
+            dec: this.position.dec + this.offset.dec,
+        }
+    }
 
     setPosition(newPos: Equatorial) {
         this.position = newPos;
     }
 
-    getHorizontalPosition(): Horizontal {
+    calibrate(reference: Equatorial) {
+        this.offset.ra = reference.ra - this.position.ra;
+        this.offset.dec = reference.dec - this.position.dec;
+        console.log(`raOffset=${this.offset.ra}, decOffset=${this.offset.dec}`)
+    }
+
+    toHorizontalPosition(): Horizontal {
         let altAz: Horizontal = { alt: 0, az: 0 }
 
         return altAz;
+    }
+
+    fromHorizontalPosition(azimuth: number, altitude: number, latitude: number, localSiderealTimeDegrees: number) {
+        const az = this.rad(azimuth);
+        const el = this.rad(altitude);
+        const phi = this.rad(latitude);
+
+        const sa = Math.sin(az);
+        const ca = Math.cos(az);
+        const se = Math.sin(el);
+        const ce = Math.cos(el);
+        const sp = Math.sin(phi);
+        const cp = Math.cos(phi);
+
+        const x = - ca * ce * sp + se * cp;
+        const y = - sa * ce;
+        const z = ca * ce * cp + se * sp;
+
+        const r = Math.sqrt(x * x + y * y);
+        const ha = (r != 0.0) ? Math.atan2(y, x) : 0.0;
+        this.position.dec = this.deg(Math.atan2(z, r));
+        this.position.ra = this.degToHours(localSiderealTimeDegrees - this.deg(ha));
+        if(this.position.ra < 0) {
+            this.position.ra += 24;
+        }
+        // console.log(`setting to ra=${this.position.ra}, dec=${this.position.dec}`);
+    }
+
+    rad(degrees: number): number {
+        return (degrees * Math.PI / 180);
+    }
+
+    deg(radians: number): number {
+        return (radians / Math.PI * 180);
+    }
+
+    degToHours(degrees: number): number {
+        return(degrees/360*24);
     }
 };
 
@@ -80,20 +139,18 @@ function onConnect(socket: net.Socket) {
 
     console.log(`Connection from '${socket.remoteAddress}'`);
     const telescope = new Telescope();
-    let counter = 0;
+    telescope.fromHorizontalPosition(135.54, 52.71, 48, 32.166);
+
+    telescope.offset = {
+        ra: -0.018416198265134298,
+        dec: -0.02824170708658258
+    }
 
     const timer = setInterval(() => {
-        // insert fake movement
-        // counter++;
-        // telescope.position.ra = Math.sin(counter / 10) + 1;
-
-        const fakePosition = new Telescope();
-        fakePosition.setPosition({dec: 16.5527, ra: 69.298 / 360 * 24})
-
-        socket.write(packCurrentPosition(fakePosition.position), (err) => {
+        socket.write(packCurrentPosition(telescope.getCorrected()), (err) => {
             if (err) console.log(err);
         });
-    }, 200);
+    }, 1000);
 
     socket.on('end', () => {
         clearInterval(timer);
@@ -113,9 +170,9 @@ function onConnect(socket: net.Socket) {
                 + `}`);
 
             // telescope.setPosition({ dec: message.dec, ra: message.ra });
-            telescope.setPosition({ dec: message.dec, ra: message.ra });
+            // telescope.calibrate({ dec: message.dec, ra: message.ra });
 
-            console.log(telescope.getHorizontalPosition());
+            console.log(telescope.toHorizontalPosition());
         }
         else {
             console.log(`Received ${data.length} Bytes: ${data.toString('hex')}`)

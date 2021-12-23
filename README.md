@@ -6,7 +6,11 @@ This readme will be my notebook during development and should provide detailled 
 
 ## Introduction
 
-To achieve the goal of finding an object in the sky more easily, we need to link the telescope's current orientation to a star chart where we can compare the current orientation with the orientation needed to  
+To achieve the goal of finding an object in the sky more easily, we need to link the telescope's current orientation to a star chart where we can compare the current orientation with the orientation needed to 
+
+## Calculations
+
+see jupyter-notebook
 
 ## Determining telescope orientation
 
@@ -64,6 +68,8 @@ see also [TelescopeTCP::telescopeGoto](https://github.com/Stellarium/stellarium/
 
 - [Calculating mean and apparent sidereal time](http://www2.arnes.si/~gljsentvid10/sidereal.htm)
 - [Data: Converting Alt-Az to RA-Dec – Example](http://jonvoisey.net/blog/2018/07/data-converting-alt-az-to-ra-dec-example/)
+- [International Astronomical Union Standards of Fundamental Astronomy](http://www.iausofa.org/)
+- [The Astropy Project](https://www.astropy.org/)
 - [Astronomical Calculations: Sidereal Time](https://squarewidget.com/astronomical-calculations-sidereal-time/)
 - [Sidereal Time Calculator For Any Date, Time and Longitude](http://www.neoprogrammics.com/sidereal_time_calculator/index.php)
 - [Local Sidereal Time](https://www.localsiderealtime.com/)
