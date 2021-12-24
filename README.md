@@ -29,9 +29,13 @@ Rank | Name | Pros | Cons
 
 Stellarium expects the right ascension and declination of the telescope as input. To compute these values, we need the exact location and a timestamp. A simple GPS Receiver ([GP-20U7](docs/GP-20U7.pdf)) should provide this information with sufficient precision.
 
-## Host-Controller
+## Hardware Setup
 
 Either [ESP8266](http://esp8266.net/) or [ESP32](http://esp32.net/) where the ESP32 provides additional Bluetooth capabilities.
+
+### Wire diagram
+
+![Wire Diagram](docs/ESP32-Devkit-v1-30pin_bb.png)
 
 ## Interfacing with Stellarium
 
