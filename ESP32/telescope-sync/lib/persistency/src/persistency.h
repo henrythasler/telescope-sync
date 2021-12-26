@@ -7,6 +7,9 @@
 
 using namespace std;
 
+#include <stdint.h>
+#include <stddef.h>
+
 class Persistency
 {
 private:

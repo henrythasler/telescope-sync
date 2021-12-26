@@ -1,5 +1,6 @@
 #include <bnodata.h>
 
+#ifdef ARDUINO
 BnoData::BnoData(int32_t id, uint8_t address)
 {
     sensorID = id;
@@ -14,3 +15,4 @@ void BnoData::printSensorOffsets()
                   calibrationData.mag_offset_x, calibrationData.mag_offset_y, calibrationData.mag_offset_z,
                   calibrationData.accel_radius, calibrationData.mag_radius);
 }
+#endif

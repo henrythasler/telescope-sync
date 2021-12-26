@@ -4,6 +4,8 @@
 using namespace std;
 
 #include <stdint.h>
+
+#ifdef ARDUINO
 #include <Adafruit_BNO055.h>
 
 class BnoData
@@ -25,6 +27,7 @@ public:
         uint8_t calAccel = 0;
         uint8_t calMag = 0;
         bool fullyCalibrated = false;
+        bool partlyCalibrated = false;
         bool calibrationDataAvailable = false;
         bool calibrationDataSaved = false;
     } BnoStatus;
@@ -36,4 +39,5 @@ public:
 
 private:    
 };
+#endif
 #endif

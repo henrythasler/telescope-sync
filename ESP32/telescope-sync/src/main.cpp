@@ -24,13 +24,15 @@
 
 #define DEBUG (true)
 
+#define M_PI (3.14159265358979323846)
+
 #define BNO055_PIN_I2C_SCL (22)
 #define BNO055_PIN_I2C_SDA (21)
 #define BNO055_BUS_ID (0)
 #define BNO055_PIN_VCC (4)
 
-TwoWire I2CBME = TwoWire(BNO055_BUS_ID); // set up a new Wire-Instance for BNO055 Intelligent Absolute Orientation Sensor
-Adafruit_BNO055 bno = Adafruit_BNO055(BNO055_ID, BNO055_ADDRESS_A, &I2CBME);
+TwoWire I2CBus = TwoWire(BNO055_BUS_ID);                                     // set up a new Wire-Instance for BNO055 Intelligent Absolute Orientation Sensor
+Adafruit_BNO055 bno = Adafruit_BNO055(BNO055_ID, BNO055_ADDRESS_A, &I2CBus); // use custom I2C-Instance
 BnoData bnoData(BNO055_ID, BNO055_ADDRESS_A);
 
 Persistency persistency;
@@ -51,6 +53,8 @@ uint32_t counter2s = 0;
 uint32_t counter300s = 0;
 uint32_t counter1h = 0;
 uint32_t initStage = 0;
+
+uint32_t calibrationStable = 0;
 
 uint8_t txBuffer[32] = {0x18, 0x00, 0x00, 0x00, 0x40, 0x7b, 0x0b, 0x16, 0xe5, 0xd3, 0x05, 0x00, 0xc3, 0xdd, 0x78, 0x29, 0xa8, 0x8b, 0x79, 0x0c, 0x00, 0x00, 0x00, 0x00};
 uint8_t rxBuffer[32];
@@ -137,10 +141,10 @@ void setup()
     initStage++;
 
     // Initialize Environment Sensor
-    if (I2CBME.begin(BNO055_PIN_I2C_SDA, BNO055_PIN_I2C_SCL, 250000U)) // set I2C-Clock to 250kHz
+    if (I2CBus.begin(BNO055_PIN_I2C_SDA, BNO055_PIN_I2C_SCL, 250000U)) // set I2C-Clock to 250kHz
     {
         initStage++;
-        if (bno.begin(bno.OPERATION_MODE_CONFIG)) // use custom Wire-Instance to avoid interference with other libraries.
+        if (bno.begin(bno.OPERATION_MODE_NDOF))
         {
             initStage++;
             orientationSensorAvailable = true;
@@ -190,7 +194,13 @@ void setup()
                 if (DEBUG)
                     bnoData.printSensorOffsets();
 
+                // Calibration data: Accel=[8, -38, -32], Gyro=[-1, -2, 1], Mag=[235, -394, -355], Accel Radius=1000, Mag Radius=1282
                 bno.setSensorOffsets(bnoData.calibrationData);
+                delay(100);
+
+                bno.setExtCrystalUse(true);
+                // bno.setMode(bno.OPERATION_MODE_NDOF);
+                delay(1000);
                 Serial.println("[ SENSOR ] ok");
             }
             else
@@ -200,8 +210,6 @@ void setup()
 
             initStage++;
         }
-        delay(50);
-        bno.setMode(bno.OPERATION_MODE_NDOF);
         Serial.println("[ SENSOR ] Orientation sensor enabled");
     }
 
@@ -234,6 +242,35 @@ void checkForConnections()
     }
 }
 
+imu::Vector<3> toEuler(imu::Quaternion q1)
+{
+    imu::Vector<3> ret;
+
+    double test = q1.x() * q1.y() + q1.z() * q1.w();
+    if (test > 0.499)
+    { // singularity at north pole
+        ret.x() = 2 * atan2(q1.x(), q1.w());
+        ret.y() = M_PI / 2;
+        ret.z() = 0;
+        return ret;
+    }
+    if (test < -0.499)
+    { // singularity at south pole
+        ret.x() = -2 * atan2(q1.x(), q1.w());
+        ret.y() = -M_PI / 2;
+        ret.z() = 0;
+        return ret;
+    }
+    double sqx = q1.x() * q1.x();
+    double sqy = q1.y() * q1.y();
+    double sqz = q1.z() * q1.z();
+    ret.x() = atan2(2 * q1.y() * q1.w() - 2 * q1.x() * q1.z(), 1 - 2 * sqy - 2 * sqz);
+    ret.y() = asin(2 * test);
+    ret.z() = atan2(2 * q1.x() * q1.w() - 2 * q1.y() * q1.z(), 1 - 2 * sqx - 2 * sqz);
+
+    return ret;
+}
+
 void loop()
 {
     // base tasks
@@ -258,7 +295,15 @@ void loop()
             }
         }
 
+        bno.getCalibration(&bnoData.status.calSystem, &bnoData.status.calGyro, &bnoData.status.calAccel, &bnoData.status.calMag);
+
         bnoData.status.fullyCalibrated = bno.isFullyCalibrated();
+        bnoData.status.partlyCalibrated = (bnoData.status.calSystem >= 1) && (bnoData.status.calGyro >= 1) && (bnoData.status.calAccel >= 1) && (bnoData.status.calMag >= 1);
+
+        if (!bnoData.status.fullyCalibrated)
+        {
+            calibrationStable = 0;
+        }
     }
 
     // 500ms Tasks
@@ -269,10 +314,39 @@ void loop()
             digitalWrite(LED_BUILTIN, LOW);
         }
 
-        if (bnoData.status.fullyCalibrated)
+        if (bnoData.status.partlyCalibrated)
         {
-            imu::Vector<3> vec = bno.getVector(bno.VECTOR_EULER);
-            Serial.printf("[ SENSOR ] Heading: %3.2f Roll: %3.2f Pitch: %3.2f\n", vec[0], vec[1], vec[2]);
+
+            // see https://forums.adafruit.com/viewtopic.php?f=25&t=108290&p=541754#p541754
+            imu::Quaternion q = bno.getQuat();
+            q.normalize();
+
+            float temp = q.x();
+            q.x() = -q.y();
+            q.y() = temp;
+            q.z() = -q.z();
+
+            // euler.x() = -90 * euler.x() * M_PI;
+            // euler.y() = -90 * euler.y() * M_PI;
+            // euler.z() = -90 * euler.z() * M_PI;
+
+            // imu::Vector<3> euler = bno.getVector(bno.VECTOR_EULER);
+            imu::Vector<3> euler = q.toEuler();
+            // imu::Vector<3> euler = toEuler(imu::Quaternion(0.7071, 0.7071, 0, 0 ));
+            // imu::Vector<3> euler = toEuler(q);
+
+            Serial.printf("[ SENSOR ] Heading: %3.2f Attitude: %3.2f Bank: %3.2f (w=%3.2f x=%3.2f y=%3.2f z=%3.2f)\n",
+                          euler.x() * 180 / M_PI, euler.y() * 180 / M_PI, euler.z() * 180 / M_PI,
+                          q.w(), q.x(), q.y(), q.z());
+
+            // imu::Vector<3> gravity = bno.getVector(bno.VECTOR_GRAVITY);
+            // Serial.printf("[ SENSOR ] Gravity: (x=%3.2f y=%3.2f z=%3.2f)\n",
+            //               gravity.x(), gravity.y(), gravity.z());
+
+            sensors_event_t event;
+            bno.getEvent(&event);
+            Serial.printf("[ SENSOR ] Orientation: (x=%3.2f y=%3.2f z=%3.2f)\n",
+                          event.orientation.x, event.orientation.y, event.orientation.z);
         }
     }
 
@@ -283,11 +357,12 @@ void loop()
         // indicate alive
         if (bnoData.status.fullyCalibrated)
         {
+            calibrationStable++;
             digitalWrite(LED_BUILTIN, LOW);
         }
 
         // save calibration data once per lifecycle after the sensor is fully calibrated
-        if (bnoData.status.fullyCalibrated && !bnoData.status.calibrationDataSaved)
+        if (bnoData.status.fullyCalibrated && !bnoData.status.calibrationDataSaved && calibrationStable > 15)
         {
             Serial.println("[ SENSOR ] Saving calibration data... ");
             bool success = bno.getSensorOffsets(bnoData.calibrationData);
@@ -305,7 +380,7 @@ void loop()
             }
         }
 
-        if (!bnoData.status.fullyCalibrated && DEBUG)
+        if (!bnoData.status.partlyCalibrated && DEBUG)
         {
             bno.getSystemStatus(&bnoData.status.statSystem, &bnoData.status.statSelfTest, &bnoData.status.errSystem);
             bno.getCalibration(&bnoData.status.calSystem, &bnoData.status.calGyro, &bnoData.status.calAccel, &bnoData.status.calMag);
@@ -318,8 +393,9 @@ void loop()
                           bnoData.status.calSystem, bnoData.status.calGyro, bnoData.status.calAccel, bnoData.status.calMag);
         }
 
-        if (remoteClient && remoteClient.connected())
+        if (remoteClient && remoteClient.connected() && bnoData.status.partlyCalibrated)
         {
+            
             remoteClient.write(txBuffer, 24);
         }
     }
