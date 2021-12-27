@@ -3,9 +3,12 @@
 #include <Adafruit_Sensor.h>
 #include <Adafruit_BNO055.h>
 #include <SPIFFS.h>
+// #include <AsyncTCP.h>
+
+// own libraries
 #include <persistency.h>
 #include <bnodata.h>
-// #include <AsyncTCP.h>
+#include <telescope.h>
 
 /**
  * A file called 'secrets.h' must be placed in lib/secrets and contain the following content:
@@ -23,8 +26,6 @@
 #include <secrets.h>
 
 #define DEBUG (true)
-
-#define M_PI (3.14159265358979323846)
 
 #define BNO055_PIN_I2C_SCL (22)
 #define BNO055_PIN_I2C_SDA (21)
@@ -56,7 +57,10 @@ uint32_t initStage = 0;
 
 uint32_t calibrationStable = 0;
 
-uint8_t txBuffer[32] = {0x18, 0x00, 0x00, 0x00, 0x40, 0x7b, 0x0b, 0x16, 0xe5, 0xd3, 0x05, 0x00, 0xc3, 0xdd, 0x78, 0x29, 0xa8, 0x8b, 0x79, 0x0c, 0x00, 0x00, 0x00, 0x00};
+Telescope telescope(101.298, -16.724);
+
+// uint8_t txBuffer[32] = {0x18, 0x00, 0x00, 0x00, 0x40, 0x7b, 0x0b, 0x16, 0xe5, 0xd3, 0x05, 0x00, 0xc3, 0xdd, 0x78, 0x29, 0xa8, 0x8b, 0x79, 0x0c, 0x00, 0x00, 0x00, 0x00};
+uint8_t txBuffer[32] = {0x18, 0x00, 0x00, 0x00, 0xde, 0xad, 0xbe, 0xef, 0x00, 0x00, 0x00, 0x00, 0x74, 0x24, 0x07, 0x48, 0x3a, 0x7d, 0x1b, 0xf4, 0x00, 0x00, 0x00, 0x00};
 uint8_t rxBuffer[32];
 
 void setup()
@@ -347,6 +351,17 @@ void loop()
             bno.getEvent(&event);
             Serial.printf("[ SENSOR ] Orientation: (x=%3.2f y=%3.2f z=%3.2f)\n",
                           event.orientation.x, event.orientation.y, event.orientation.z);
+
+            telescope.fromHorizontalPosition(event.orientation.x, event.orientation.y, 48, 102.3379);
+        }
+
+        if (remoteClient && remoteClient.connected() && bnoData.status.partlyCalibrated)
+        {
+            uint32_t length = telescope.packPosition(txBuffer, sizeof(txBuffer));
+            if (length == 24)
+            {
+                remoteClient.write(txBuffer, length);
+            }
         }
     }
 
@@ -391,12 +406,6 @@ void loop()
                           bnoData.status.statSelfTest,
                           bnoData.status.errSystem,
                           bnoData.status.calSystem, bnoData.status.calGyro, bnoData.status.calAccel, bnoData.status.calMag);
-        }
-
-        if (remoteClient && remoteClient.connected() && bnoData.status.partlyCalibrated)
-        {
-            
-            remoteClient.write(txBuffer, 24);
         }
     }
 

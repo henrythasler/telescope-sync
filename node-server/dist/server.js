@@ -127,7 +127,6 @@ function onConnect(socket) {
         ra: -0.018416198265134298,
         dec: -0.02824170708658258
     };
-    let counter = 0;
     const timer = setInterval(() => {
         socket.write(packCurrentPosition(telescope.getCorrected()), (err) => {
             if (err)
