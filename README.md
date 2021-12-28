@@ -81,6 +81,11 @@ see also [TelescopeTCP::telescopeGoto](https://github.com/Stellarium/stellarium/
 - [Converting RA and DEC to ALT and AZ](http://www.stargazing.net/kepler/altaz.html)
 - [3D Rotation Converter](https://www.andre-gaschler.com/rotationconverter/)
 
+
+### Orientation Sensor
+
+- [Bosch Sensortec MEMS BNO055 sensor driver](https://github.com/BoschSensortec/BNO055_driver)
+
 ### Hardware
 
 - [Comparing Gyroscope Datasheets](https://learn.adafruit.com/comparing-gyroscope-datasheets)

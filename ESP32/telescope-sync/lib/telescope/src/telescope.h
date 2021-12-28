@@ -7,6 +7,12 @@ using namespace std;
 #include <stddef.h>
 #include <math.h>
 
+#ifdef ARDUINO
+#include <Arduino.h>
+#else
+#define PI M_PI
+#endif
+
 #define MESSAGE_CURRENT_POSITION_LENGTH (24)
 #define MESSAGE_CURRENT_POSITION_TYPE (0)
 

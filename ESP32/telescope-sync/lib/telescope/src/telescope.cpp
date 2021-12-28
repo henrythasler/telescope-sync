@@ -30,12 +30,12 @@ void Telescope::getCalibratedPosition(Equatorial *calibratedPosition)
 
 double Telescope::rad(double degrees)
 {
-    return (degrees * M_PI / 180);
+    return (degrees * PI / 180);
 }
 
 double Telescope::deg(double radians)
 {
-    return (radians * 180 / M_PI);
+    return (radians * 180 / PI);
 }
 
 double Telescope::degToHours(double degrees)
@@ -105,7 +105,7 @@ Telescope::Horizontal Telescope::toHorizontalPosition(double latitude, double lo
     double r = sqrt(x * x + y * y);
 
     double a = (r != 0.0) ? atan2(y, x) : 0.0;
-    double az = (a < 0.0) ? a + 2 * M_PI : a;
+    double az = (a < 0.0) ? a + 2 * PI : a;
     double el = atan2(z, r);
     result.az = deg(az);
     result.alt = deg(el);

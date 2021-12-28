@@ -269,14 +269,14 @@ imu::Vector<3> toEuler(imu::Quaternion q1)
     if (test > 0.499)
     { // singularity at north pole
         ret.x() = 2 * atan2(q1.x(), q1.w());
-        ret.y() = M_PI / 2;
+        ret.y() = HALF_PI;
         ret.z() = 0;
         return ret;
     }
     if (test < -0.499)
     { // singularity at south pole
         ret.x() = -2 * atan2(q1.x(), q1.w());
-        ret.y() = -M_PI / 2;
+        ret.y() = -HALF_PI;
         ret.z() = 0;
         return ret;
     }

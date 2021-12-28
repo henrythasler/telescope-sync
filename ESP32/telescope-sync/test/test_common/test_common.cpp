@@ -4,30 +4,33 @@
 #ifndef ARDUINO
 #include <stdio.h>
 #include <chrono>
+#define PI M_PI
+#define HALF_PI M_PI_2
+#define TWO_PI (2 * M_PI)
 #endif
 
 void test_function_rad(void)
 {
     Telescope telescope;
-    TEST_ASSERT_EQUAL_FLOAT(M_PI_2, telescope.rad(90));
-    TEST_ASSERT_EQUAL_FLOAT(M_PI, telescope.rad(180));
-    TEST_ASSERT_EQUAL_FLOAT(2 * M_PI, telescope.rad(360));
+    TEST_ASSERT_EQUAL_FLOAT(HALF_PI, telescope.rad(90));
+    TEST_ASSERT_EQUAL_FLOAT(PI, telescope.rad(180));
+    TEST_ASSERT_EQUAL_FLOAT(TWO_PI, telescope.rad(360));
 
-    TEST_ASSERT_EQUAL_FLOAT(-M_PI_2, telescope.rad(-90));
-    TEST_ASSERT_EQUAL_FLOAT(-M_PI, telescope.rad(-180));
-    TEST_ASSERT_EQUAL_FLOAT(-2 * M_PI, telescope.rad(-360));
+    TEST_ASSERT_EQUAL_FLOAT(-HALF_PI, telescope.rad(-90));
+    TEST_ASSERT_EQUAL_FLOAT(-PI, telescope.rad(-180));
+    TEST_ASSERT_EQUAL_FLOAT(-TWO_PI, telescope.rad(-360));
 }
 
 void test_function_deg(void)
 {
     Telescope telescope;
-    TEST_ASSERT_EQUAL_FLOAT(90, telescope.deg(M_PI_2));
-    TEST_ASSERT_EQUAL_FLOAT(180, telescope.deg(M_PI));
-    TEST_ASSERT_EQUAL_FLOAT(360, telescope.deg(2 * M_PI));
+    TEST_ASSERT_EQUAL_FLOAT(90, telescope.deg(HALF_PI));
+    TEST_ASSERT_EQUAL_FLOAT(180, telescope.deg(PI));
+    TEST_ASSERT_EQUAL_FLOAT(360, telescope.deg(TWO_PI));
 
-    TEST_ASSERT_EQUAL_FLOAT(-90, telescope.deg(-M_PI_2));
-    TEST_ASSERT_EQUAL_FLOAT(-180, telescope.deg(-M_PI));
-    TEST_ASSERT_EQUAL_FLOAT(-360, telescope.deg(-2 * M_PI));
+    TEST_ASSERT_EQUAL_FLOAT(-90, telescope.deg(-HALF_PI));
+    TEST_ASSERT_EQUAL_FLOAT(-180, telescope.deg(-PI));
+    TEST_ASSERT_EQUAL_FLOAT(-360, telescope.deg(-TWO_PI));
 }
 
 void test_function_degToHours(void)
