@@ -13,6 +13,7 @@ class BnoData
 public:
     BnoData(int32_t sensorID = -1, uint8_t address = BNO055_ADDRESS_A);
     void printSensorOffsets(void);
+    bool validateSensorOffsets(void);
 
     typedef struct 
     {

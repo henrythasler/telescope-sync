@@ -79,6 +79,7 @@ see also [TelescopeTCP::telescopeGoto](https://github.com/Stellarium/stellarium/
 - [Local Sidereal Time](https://www.localsiderealtime.com/)
 - [Sidereal time calculator](https://astro.subhashbose.com/siderealtime)
 - [Converting RA and DEC to ALT and AZ](http://www.stargazing.net/kepler/altaz.html)
+- [3D Rotation Converter](https://www.andre-gaschler.com/rotationconverter/)
 
 ### Hardware
 

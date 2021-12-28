@@ -38,9 +38,11 @@ BnoData bnoData(BNO055_ID, BNO055_ADDRESS_A);
 
 Persistency persistency;
 
+#define ENABLE_WIFI (true)
 bool orientationSensorAvailable = false;
 bool gnssModuleAvailable = false;
 bool filesystemAvailable = false;
+bool wifiAvailable = false;
 
 #define TCP_SERVER_PORT (10001)
 // AsyncServer server(TCP_SERVER_PORT);
@@ -55,7 +57,7 @@ uint32_t counter300s = 0;
 uint32_t counter1h = 0;
 uint32_t initStage = 0;
 
-uint32_t calibrationStable = 0;
+uint32_t calibrationStableCounter = 0;
 
 Telescope telescope(101.298, -16.724);
 
@@ -86,27 +88,31 @@ void setup()
                   ESP.getSdkVersion());
     initStage++;
 
-    //connect to your local wi-fi network
-    Serial.printf("[  INIT  ] Connecting to Wifi '%s'", secrets.wifiSsid);
-    WiFi.begin(secrets.wifiSsid, secrets.wifiPassword);
-
-    //check wi-fi is connected to wi-fi network
-    int retries = 5;
-    while (WiFi.status() != WL_CONNECTED)
+    if (ENABLE_WIFI)
     {
-        delay(1000);
-        Serial.print(".");
-        retries--;
-        if (retries <= 0)
+        //connect to your local wi-fi network
+        Serial.printf("[  INIT  ] Connecting to Wifi '%s'", secrets.wifiSsid);
+        WiFi.begin(secrets.wifiSsid, secrets.wifiPassword);
+
+        //check wi-fi is connected to wi-fi network
+        int retries = 5;
+        while (WiFi.status() != WL_CONNECTED)
         {
-            ESP.restart();
+            delay(1000);
+            Serial.print(".");
+            retries--;
+            if (retries <= 0)
+            {
+                ESP.restart();
+            }
         }
+        Serial.print(" connected!");
+        Serial.print(" (IP=");
+        Serial.print(WiFi.localIP());
+        Serial.println(")");
+        wifiAvailable = true;
+        initStage++;
     }
-    Serial.print(" connected!");
-    Serial.print(" (IP=");
-    Serial.print(WiFi.localIP());
-    Serial.println(")");
-    initStage++;
 
     Serial.print("[  INIT  ] Mounting file system... ");
     if (SPIFFS.begin(true))
@@ -168,6 +174,37 @@ void setup()
     {
         initStage++;
 
+        if (filesystemAvailable)
+        {
+            Serial.println("[ SENSOR ] restoring sensor calibration data... ");
+            if (persistency.readBinaryData((uint8_t *)&bnoData.calibrationData, sizeof(bnoData.calibrationData), "/calibration.dat"))
+            {
+                bnoData.status.calibrationDataAvailable = true;
+                if (DEBUG)
+                    bnoData.printSensorOffsets();
+
+                bno.setExtCrystalUse(true);
+                delay(1000);
+
+                bno.setSensorOffsets((uint8_t *)&bnoData.calibrationData);
+                delay(100);
+
+                bool success = bno.getSensorOffsets((uint8_t *)&bnoData.calibrationData);
+                if (success && DEBUG)
+                    bnoData.printSensorOffsets();
+
+                // Calibration data: Accel=[8, -38, -32], Gyro=[-1, -2, 1], Mag=[235, -394, -355], Accel Radius=1000, Mag Radius=1282
+
+                Serial.println("[ SENSOR ] ok");
+            }
+            else
+            {
+                Serial.println("[ SENSOR ] restoring calibration data failed");
+            }
+
+            initStage++;
+        }
+
         sensor_t sensor;
         bno.getSensor(&sensor);
         Serial.print("           Sensor:        ");
@@ -189,37 +226,15 @@ void setup()
         Serial.print("           System Error:  0x");
         Serial.println(system_error, HEX);
 
-        if (filesystemAvailable)
-        {
-            Serial.println("[ SENSOR ] restoring sensor calibration data... ");
-            if (persistency.readBinaryData((uint8_t *)&bnoData.calibrationData, sizeof(bnoData.calibrationData), "/calibration.dat"))
-            {
-                bnoData.status.calibrationDataAvailable = true;
-                if (DEBUG)
-                    bnoData.printSensorOffsets();
-
-                // Calibration data: Accel=[8, -38, -32], Gyro=[-1, -2, 1], Mag=[235, -394, -355], Accel Radius=1000, Mag Radius=1282
-                bno.setSensorOffsets(bnoData.calibrationData);
-                delay(100);
-
-                bno.setExtCrystalUse(true);
-                // bno.setMode(bno.OPERATION_MODE_NDOF);
-                delay(1000);
-                Serial.println("[ SENSOR ] ok");
-            }
-            else
-            {
-                Serial.println("[ SENSOR ] restoring calibration data failed");
-            }
-
-            initStage++;
-        }
         Serial.println("[ SENSOR ] Orientation sensor enabled");
     }
 
-    server.begin();
-    Serial.printf("[ SOCKET ] Listening on port %u\n", TCP_SERVER_PORT);
-    initStage++;
+    if (wifiAvailable)
+    {
+        server.begin();
+        Serial.printf("[ SOCKET ] Listening on port %u\n", TCP_SERVER_PORT);
+        initStage++;
+    }
 
     Serial.printf("[  INIT  ] Completed at stage %u\n\n", initStage);
 }
@@ -278,7 +293,8 @@ imu::Vector<3> toEuler(imu::Quaternion q1)
 void loop()
 {
     // base tasks
-    checkForConnections();
+    if (wifiAvailable)
+        checkForConnections();
 
     // 100ms Tasks
     if (!(counterBase % (100L / SCHEDULER_MAIN_LOOP_MS)))
@@ -296,6 +312,11 @@ void loop()
                     Serial.printf("%02X ", rxBuffer[i]);
                 }
                 Serial.println();
+
+                Telescope::Equatorial reference;
+                
+                telescope.unpackPosition(&reference, NULL, rxBuffer, received);
+                telescope.calibrate(&reference);
             }
         }
 
@@ -306,7 +327,7 @@ void loop()
 
         if (!bnoData.status.fullyCalibrated)
         {
-            calibrationStable = 0;
+            calibrationStableCounter = 0;
         }
     }
 
@@ -318,11 +339,11 @@ void loop()
             digitalWrite(LED_BUILTIN, LOW);
         }
 
-        if (bnoData.status.partlyCalibrated)
+        if (bnoData.status.fullyCalibrated)
         {
-
             // see https://forums.adafruit.com/viewtopic.php?f=25&t=108290&p=541754#p541754
             imu::Quaternion q = bno.getQuat();
+            // imu::Quaternion q = getQuat();
             q.normalize();
 
             float temp = q.x();
@@ -338,26 +359,31 @@ void loop()
             imu::Vector<3> euler = q.toEuler();
             // imu::Vector<3> euler = toEuler(imu::Quaternion(0.7071, 0.7071, 0, 0 ));
             // imu::Vector<3> euler = toEuler(q);
+            // imu::Vector<3> euler = toEuler2(q);
 
-            Serial.printf("[ SENSOR ] Heading: %3.2f Attitude: %3.2f Bank: %3.2f (w=%3.2f x=%3.2f y=%3.2f z=%3.2f)\n",
-                          euler.x() * 180 / M_PI, euler.y() * 180 / M_PI, euler.z() * 180 / M_PI,
-                          q.w(), q.x(), q.y(), q.z());
-
-            // imu::Vector<3> gravity = bno.getVector(bno.VECTOR_GRAVITY);
-            // Serial.printf("[ SENSOR ] Gravity: (x=%3.2f y=%3.2f z=%3.2f)\n",
-            //               gravity.x(), gravity.y(), gravity.z());
+            // Serial.printf("[ SENSOR ] Heading: %3.2f Attitude: %3.2f Bank: %3.2f (w=%3.3f x=%3.3f y=%3.3f z=%3.3f)\n",
+            //               euler.x() * 180 / M_PI, euler.y() * 180 / M_PI, euler.z() * 180 / M_PI,
+            //               q.w(), q.x(), q.y(), q.z());
 
             sensors_event_t event;
             bno.getEvent(&event);
+            event.orientation.x = fmodf(event.orientation.x + 90, 360);
+
             Serial.printf("[ SENSOR ] Orientation: (x=%3.2f y=%3.2f z=%3.2f)\n",
                           event.orientation.x, event.orientation.y, event.orientation.z);
-
-            telescope.fromHorizontalPosition(event.orientation.x, event.orientation.y, 48, 102.3379);
         }
 
         if (remoteClient && remoteClient.connected() && bnoData.status.partlyCalibrated)
         {
-            uint32_t length = telescope.packPosition(txBuffer, sizeof(txBuffer));
+            sensors_event_t event;
+            bno.getEvent(&event);
+            event.orientation.x = fmodf(event.orientation.x + 90, 360);
+
+            telescope.fromHorizontalPosition(event.orientation.x, event.orientation.y, 48, 102.3379);
+
+            Telescope::Equatorial corrected;
+            telescope.getCalibratedPosition(&corrected);
+            uint32_t length = telescope.packPosition(&corrected, &telescope.timestamp, txBuffer, sizeof(txBuffer));
             if (length == 24)
             {
                 remoteClient.write(txBuffer, length);
@@ -372,30 +398,37 @@ void loop()
         // indicate alive
         if (bnoData.status.fullyCalibrated)
         {
-            calibrationStable++;
+            calibrationStableCounter++;
             digitalWrite(LED_BUILTIN, LOW);
         }
 
         // save calibration data once per lifecycle after the sensor is fully calibrated
-        if (bnoData.status.fullyCalibrated && !bnoData.status.calibrationDataSaved && calibrationStable > 15)
+        if (bnoData.status.fullyCalibrated && !bnoData.status.calibrationDataSaved && calibrationStableCounter > 15)
         {
             Serial.println("[ SENSOR ] Saving calibration data... ");
             bool success = bno.getSensorOffsets(bnoData.calibrationData);
             if (success && DEBUG)
                 bnoData.printSensorOffsets();
 
-            if (success && persistency.writeBinaryData((uint8_t *)&bnoData.calibrationData, sizeof(bnoData.calibrationData), "/calibration.dat"))
+            if (bnoData.validateSensorOffsets())
             {
-                Serial.println("[ SENSOR ] ok");
-                bnoData.status.calibrationDataSaved = true;
+                if (success && persistency.writeBinaryData((uint8_t *)&bnoData.calibrationData, sizeof(bnoData.calibrationData), "/calibration.dat"))
+                {
+                    Serial.println("[ SENSOR ] ok");
+                    bnoData.status.calibrationDataSaved = true;
+                }
+                else
+                {
+                    Serial.println("[ SENSOR ] Saving calibration data failed");
+                }
             }
             else
             {
-                Serial.println("[ SENSOR ] Saving calibration data failed");
+                Serial.println("[ SENSOR ] Invalid calibration data!");
             }
         }
 
-        if (!bnoData.status.partlyCalibrated && DEBUG)
+        if (!bnoData.status.fullyCalibrated && DEBUG)
         {
             bno.getSystemStatus(&bnoData.status.statSystem, &bnoData.status.statSelfTest, &bnoData.status.errSystem);
             bno.getCalibration(&bnoData.status.calSystem, &bnoData.status.calGyro, &bnoData.status.calAccel, &bnoData.status.calMag);

@@ -16,6 +16,18 @@ void Telescope::setPosition(double ra, double dec)
     position.dec = dec;
 }
 
+void Telescope::calibrate(Equatorial *reference)
+{
+    offset.ra = reference->ra - position.ra;
+    offset.dec = reference->dec - position.dec;
+}
+
+void Telescope::getCalibratedPosition(Equatorial *calibratedPosition)
+{
+    calibratedPosition->ra = position.ra + offset.ra;
+    calibratedPosition->dec = position.dec + offset.dec;
+}
+
 double Telescope::rad(double degrees)
 {
     return (degrees * M_PI / 180);
@@ -108,7 +120,7 @@ Telescope::Horizontal Telescope::toHorizontalPosition(double latitude, double lo
  * @param bufferSize size of the buffer to check for OOB-access
  * @returns the number of bytes that were serialized. 24 for OK, anything else for ERROR.
  */
-uint32_t Telescope::packPosition(uint8_t *buffer, size_t bufferSize)
+uint32_t Telescope::packPosition(double *ra, double *dec, uint64_t *timestamp, uint8_t *buffer, size_t bufferSize)
 {
     uint32_t encoded = 0;
 
@@ -128,24 +140,24 @@ uint32_t Telescope::packPosition(uint8_t *buffer, size_t bufferSize)
     *writePtr++ = (MESSAGE_CURRENT_POSITION_TYPE >> 8) & 0xFF;
 
     // TIME
-    *writePtr++ = timestamp & 0xFF;
+    *writePtr++ = (*timestamp) & 0xFF;
     ;
-    *writePtr++ = (timestamp >> 8) & 0xFF;
-    *writePtr++ = (timestamp >> 16) & 0xFF;
-    *writePtr++ = (timestamp >> 24) & 0xFF;
-    *writePtr++ = (timestamp >> 32) & 0xFF;
-    *writePtr++ = (timestamp >> 40) & 0xFF;
-    *writePtr++ = (timestamp >> 48) & 0xFF;
-    *writePtr++ = (timestamp >> 56) & 0xFF;
+    *writePtr++ = ((*timestamp) >> 8) & 0xFF;
+    *writePtr++ = ((*timestamp) >> 16) & 0xFF;
+    *writePtr++ = ((*timestamp) >> 24) & 0xFF;
+    *writePtr++ = ((*timestamp) >> 32) & 0xFF;
+    *writePtr++ = ((*timestamp) >> 40) & 0xFF;
+    *writePtr++ = ((*timestamp) >> 48) & 0xFF;
+    *writePtr++ = ((*timestamp) >> 56) & 0xFF;
 
     // this includes conversion from degrees to hours
-    encoded = static_cast<uint32_t>(floor(0.5 + position.ra * static_cast<double>(0x80000000) / 180.));
+    encoded = static_cast<uint32_t>(floor(0.5 + (*ra) * static_cast<double>(0x80000000) / 180.));
     *writePtr++ = encoded & 0xFF;
     *writePtr++ = (encoded >> 8) & 0xFF;
     *writePtr++ = (encoded >> 16) & 0xFF;
     *writePtr++ = (encoded >> 24) & 0xFF;
 
-    encoded = static_cast<uint32_t>(floor(0.5 + position.dec * static_cast<double>(0x80000000) / 180.));
+    encoded = static_cast<uint32_t>(floor(0.5 + (*dec) * static_cast<double>(0x80000000) / 180.));
     *writePtr++ = encoded & 0xFF;
     *writePtr++ = (encoded >> 8) & 0xFF;
     *writePtr++ = (encoded >> 16) & 0xFF;
@@ -158,6 +170,16 @@ uint32_t Telescope::packPosition(uint8_t *buffer, size_t bufferSize)
     *writePtr++ = 0;
 
     return (writePtr - buffer);
+}
+
+uint32_t Telescope::packPosition(Equatorial *equatorial, uint64_t *timestamp, uint8_t *buffer, size_t bufferSize)
+{
+    return packPosition(&equatorial->ra, &equatorial->dec, timestamp, buffer, bufferSize);
+}
+
+uint32_t Telescope::packPosition(uint8_t *buffer, size_t bufferSize)
+{
+    return packPosition(&position.ra, &position.dec, &timestamp, buffer, bufferSize);
 }
 
 /**
@@ -182,16 +204,18 @@ bool Telescope::unpackPosition(double *ra, double *dec, uint64_t *timestamp, uin
     if (type != 0)
         return false;
 
-    *timestamp = (static_cast<uint64_t>(data[4]) +
-                  (static_cast<uint64_t>(data[5]) << 8) +
-                  (static_cast<uint64_t>(data[6]) << 16) +
-                  (static_cast<uint64_t>(data[7]) << 24) +
-                  (static_cast<uint64_t>(data[8]) << 32) +
-                  (static_cast<uint64_t>(data[9]) << 40) +
-                  (static_cast<uint64_t>(data[10]) << 48) +
-                  (static_cast<uint64_t>(data[11]) << 56)) /
-                 1000;
-
+    if (timestamp)
+    {
+        *timestamp = (static_cast<uint64_t>(data[4]) +
+                      (static_cast<uint64_t>(data[5]) << 8) +
+                      (static_cast<uint64_t>(data[6]) << 16) +
+                      (static_cast<uint64_t>(data[7]) << 24) +
+                      (static_cast<uint64_t>(data[8]) << 32) +
+                      (static_cast<uint64_t>(data[9]) << 40) +
+                      (static_cast<uint64_t>(data[10]) << 48) +
+                      (static_cast<uint64_t>(data[11]) << 56)) /
+                     1000;
+    }
     *ra = static_cast<double>(static_cast<uint32_t>(data[12]) +
                               (static_cast<uint32_t>(data[13]) << 8) +
                               (static_cast<uint32_t>(data[14]) << 16) +
@@ -215,4 +239,15 @@ bool Telescope::unpackPosition(double *ra, double *dec, uint64_t *timestamp, uin
 bool Telescope::unpackPosition(uint8_t *data, size_t dataLength)
 {
     return unpackPosition(&position.ra, &position.dec, &timestamp, data, dataLength);
+}
+
+/**
+ * Another wrapper for unpackPosition() where the values are stored in a given Equatorial struct 'equatorial' and 'timestamp'
+ * @param data pointer to the serialized input data
+ * @param dataLength size of the input data to check for OOB-access
+ * @returns true for OK, false for ERROR.
+ */
+bool Telescope::unpackPosition(Equatorial *equatorial, uint64_t *timestamp, uint8_t *data, size_t dataLength)
+{
+    return unpackPosition(&equatorial->ra, &equatorial->dec, timestamp, data, dataLength);
 }

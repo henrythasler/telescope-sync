@@ -15,4 +15,12 @@ void BnoData::printSensorOffsets()
                   calibrationData.mag_offset_x, calibrationData.mag_offset_y, calibrationData.mag_offset_z,
                   calibrationData.accel_radius, calibrationData.mag_radius);
 }
+
+bool BnoData::validateSensorOffsets()
+{
+    return( (calibrationData.mag_radius >= 144) &&
+    (calibrationData.mag_radius <= 1280)
+    );
+}
+
 #endif

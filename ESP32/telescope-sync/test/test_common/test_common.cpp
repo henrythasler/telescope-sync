@@ -63,13 +63,32 @@ void test_function_toHorizontalPosition(void)
 void test_function_packPosition(void)
 {
     // Sirius on 2021-12-28 00:38:39 UTC+1 at lng=11 lat=48
+    Telescope telescope;
+    double ra = 101.289;
+    double dec = -16.724;
+    uint64_t timestamp = 0;
+
+    uint8_t buffer[24];
+    const uint8_t expected[24] = {0x18, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x88, 0x19, 0x07, 0x48, 0x1C, 0x7d, 0x1b, 0xf4, 0x00, 0x00, 0x00, 0x00};
+
+    uint32_t res = 0;
+    res = telescope.packPosition(&ra, &dec, &timestamp, buffer, sizeof(buffer));
+    TEST_ASSERT_EQUAL_UINT32(24, res);
+    TEST_ASSERT_EQUAL_UINT8_ARRAY(expected, buffer, 24);
+}
+
+void test_function_packPositionWrapper(void)
+{
+    // Sirius on 2021-12-28 00:38:39 UTC+1 at lng=11 lat=48
     Telescope telescope(101.289, -16.724);
     telescope.timestamp = 0xefbeadde;
+    uint32_t res = 0;
 
     uint8_t buffer[24];
     const uint8_t expected1[24] = {0x18, 0x00, 0x00, 0x00, 0xde, 0xad, 0xbe, 0xef, 0x00, 0x00, 0x00, 0x00, 0x88, 0x19, 0x07, 0x48, 0x1C, 0x7d, 0x1b, 0xf4, 0x00, 0x00, 0x00, 0x00};
 
-    telescope.packPosition(buffer, sizeof(buffer));
+    res = telescope.packPosition(buffer, sizeof(buffer));
+    TEST_ASSERT_EQUAL_UINT32(24, res);
     TEST_ASSERT_EQUAL_UINT8_ARRAY(expected1, buffer, 24);
 
     // M13 for 10th August 1998 at 2310 hrs UT, for Birmingham UK (lat=52.5)
@@ -78,8 +97,27 @@ void test_function_packPosition(void)
 
     const uint8_t expected2[24] = {0x18, 0x00, 0x00, 0x00, 0xde, 0xad, 0xbe, 0xef, 0x00, 0x00, 0x00, 0x00, 0xE1, 0x7A, 0x14, 0xB2, 0xDC, 0x8D, 0xEE, 0x19, 0x00, 0x00, 0x00, 0x00};
 
-    telescope.packPosition(buffer, sizeof(buffer));
+    res = telescope.packPosition(buffer, sizeof(buffer));
+    TEST_ASSERT_EQUAL_UINT32(24, res);
     TEST_ASSERT_EQUAL_UINT8_ARRAY(expected2, buffer, 24);
+}
+
+void test_function_packPositionAnotherWrapper(void)
+{
+    // Sirius on 2021-12-28 00:38:39 UTC+1 at lng=11 lat=48
+    Telescope telescope;
+    Telescope::Equatorial position;
+    position.ra = 101.289;
+    position.dec = -16.724;
+    uint64_t timestamp = 0;
+
+    uint8_t buffer[24];
+    const uint8_t expected[24] = {0x18, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x88, 0x19, 0x07, 0x48, 0x1C, 0x7d, 0x1b, 0xf4, 0x00, 0x00, 0x00, 0x00};
+
+    uint32_t res = 0;
+    res = telescope.packPosition(&position, &timestamp, buffer, sizeof(buffer));
+    TEST_ASSERT_EQUAL_UINT32(24, res);
+    TEST_ASSERT_EQUAL_UINT8_ARRAY(expected, buffer, 24);
 }
 
 void test_function_unpackPosition(void)
@@ -91,7 +129,7 @@ void test_function_unpackPosition(void)
     double ra, dec;
     uint64_t timestamp;
     bool res = false;
-    res = telescope.unpackPosition(&ra, &dec, &timestamp, static_cast<uint8_t*>(dataA), sizeof(dataA));
+    res = telescope.unpackPosition(&ra, &dec, &timestamp, static_cast<uint8_t *>(dataA), sizeof(dataA));
     TEST_ASSERT_TRUE(res);
     TEST_ASSERT_FLOAT_WITHIN(0.001, 101.289, ra);
     TEST_ASSERT_FLOAT_WITHIN(0.001, -16.724 + 360.0, dec);
@@ -99,10 +137,26 @@ void test_function_unpackPosition(void)
     // Betelgeuse on 2021-12-28 00:38:39 UTC+1 at lng=11 lat=48
     uint8_t dataB[] = {0x14, 0x00, 0x00, 0x00, 0xE5, 0xE3, 0xA5, 0xCD, 0x21, 0xD4, 0x05, 0x00, 0x58, 0x59, 0x25, 0x3F, 0x12, 0x66, 0x44, 0x05};
 
-    res = telescope.unpackPosition(&ra, &dec, &timestamp, static_cast<uint8_t*>(dataB), sizeof(dataB));
+    res = telescope.unpackPosition(&ra, &dec, &timestamp, static_cast<uint8_t *>(dataB), sizeof(dataB));
     TEST_ASSERT_TRUE(res);
     TEST_ASSERT_FLOAT_WITHIN(0.001, 88.79891, ra);
-    TEST_ASSERT_FLOAT_WITHIN(0.001, 7.4070, dec);    
+    TEST_ASSERT_FLOAT_WITHIN(0.001, 7.4070, dec);
+}
+
+void test_function_unpackPositionNegative(void)
+{
+    Telescope telescope;
+    bool res = true;
+
+    // LENGTH too small
+    uint8_t dataA[] = {0x13, 0x00, 0x00, 0x00, 0x9C, 0x78, 0x7A, 0x74, 0x21, 0xD4, 0x05, 0x00, 0x74, 0x24, 0x07, 0x48, 0x3A, 0x7D, 0x1B, 0xF4};
+    res = telescope.unpackPosition(static_cast<uint8_t *>(dataA), sizeof(dataA));
+    TEST_ASSERT_FALSE(res);
+
+    // data too short
+    uint8_t dataB[] = {0x14, 0x00, 0x00, 0x00, 0x9C, 0x78, 0x7A, 0x74, 0x21, 0xD4, 0x05, 0x00, 0x74, 0x24, 0x07, 0x48, 0x3A, 0x7D, 0x1B};
+    res = telescope.unpackPosition(static_cast<uint8_t *>(dataB), sizeof(dataB));
+    TEST_ASSERT_FALSE(res);
 }
 
 void test_function_unpackPositionWrapper(void)
@@ -112,7 +166,7 @@ void test_function_unpackPositionWrapper(void)
     uint8_t dataA[] = {0x14, 0x00, 0x00, 0x00, 0x9C, 0x78, 0x7A, 0x74, 0x21, 0xD4, 0x05, 0x00, 0x74, 0x24, 0x07, 0x48, 0x3A, 0x7D, 0x1B, 0xF4};
 
     bool res = false;
-    res = telescope.unpackPosition(static_cast<uint8_t*>(dataA), sizeof(dataA));
+    res = telescope.unpackPosition(static_cast<uint8_t *>(dataA), sizeof(dataA));
     TEST_ASSERT_TRUE(res);
     TEST_ASSERT_FLOAT_WITHIN(0.001, 101.289, telescope.position.ra);
     TEST_ASSERT_FLOAT_WITHIN(0.001, -16.724 + 360.0, telescope.position.dec);
@@ -120,12 +174,49 @@ void test_function_unpackPositionWrapper(void)
     // Betelgeuse on 2021-12-28 00:38:39 UTC+1 at lng=11 lat=48
     uint8_t dataB[] = {0x14, 0x00, 0x00, 0x00, 0xE5, 0xE3, 0xA5, 0xCD, 0x21, 0xD4, 0x05, 0x00, 0x58, 0x59, 0x25, 0x3F, 0x12, 0x66, 0x44, 0x05};
 
-    res = telescope.unpackPosition(static_cast<uint8_t*>(dataB), sizeof(dataB));
+    res = telescope.unpackPosition(static_cast<uint8_t *>(dataB), sizeof(dataB));
     TEST_ASSERT_TRUE(res);
     TEST_ASSERT_FLOAT_WITHIN(0.001, 88.79891, telescope.position.ra);
-    TEST_ASSERT_FLOAT_WITHIN(0.001, 7.4070, telescope.position.dec);    
+    TEST_ASSERT_FLOAT_WITHIN(0.001, 7.4070, telescope.position.dec);
 }
 
+void test_function_unpackPositionAnotherWrapper(void)
+{
+    // Sirius on 2021-12-28 00:38:39 UTC+1 at lng=11 lat=48
+    Telescope telescope;
+    uint8_t dataA[] = {0x14, 0x00, 0x00, 0x00, 0x9C, 0x78, 0x7A, 0x74, 0x21, 0xD4, 0x05, 0x00, 0x74, 0x24, 0x07, 0x48, 0x3A, 0x7D, 0x1B, 0xF4};
+
+    Telescope::Equatorial position;
+    bool res = false;
+    res = telescope.unpackPosition(&position, NULL, static_cast<uint8_t *>(dataA), sizeof(dataA));
+    TEST_ASSERT_TRUE(res);
+    TEST_ASSERT_FLOAT_WITHIN(0.001, 101.289, position.ra);
+    TEST_ASSERT_FLOAT_WITHIN(0.001, -16.724 + 360.0, position.dec);
+
+    // Betelgeuse on 2021-12-28 00:38:39 UTC+1 at lng=11 lat=48
+    uint8_t dataB[] = {0x14, 0x00, 0x00, 0x00, 0xE5, 0xE3, 0xA5, 0xCD, 0x21, 0xD4, 0x05, 0x00, 0x58, 0x59, 0x25, 0x3F, 0x12, 0x66, 0x44, 0x05};
+
+    res = telescope.unpackPosition(&position, NULL, static_cast<uint8_t *>(dataB), sizeof(dataB));
+    TEST_ASSERT_TRUE(res);
+    TEST_ASSERT_FLOAT_WITHIN(0.001, 88.79891, position.ra);
+    TEST_ASSERT_FLOAT_WITHIN(0.001, 7.4070, position.dec);
+}
+
+void test_function_calibrate(void)
+{
+    Telescope telescope(30, 50);
+    Telescope::Equatorial reference;
+    reference.ra = 10;
+    reference.dec = 20;
+    telescope.calibrate(&reference);
+    TEST_ASSERT_FLOAT_WITHIN(0.001, -20, telescope.offset.ra);
+    TEST_ASSERT_FLOAT_WITHIN(0.001, -30, telescope.offset.dec);
+
+    Telescope::Equatorial corrected;
+    telescope.getCalibratedPosition(&corrected);
+    TEST_ASSERT_FLOAT_WITHIN(0.001, 10, corrected.ra);
+    TEST_ASSERT_FLOAT_WITHIN(0.001, 20, corrected.dec);
+}
 
 void process(void)
 {
@@ -136,8 +227,13 @@ void process(void)
     RUN_TEST(test_function_fromHorizontalPosition);
     RUN_TEST(test_function_toHorizontalPosition);
     RUN_TEST(test_function_packPosition);
+    RUN_TEST(test_function_packPositionWrapper);
+    RUN_TEST(test_function_packPositionAnotherWrapper);
     RUN_TEST(test_function_unpackPosition);
     RUN_TEST(test_function_unpackPositionWrapper);
+    RUN_TEST(test_function_unpackPositionAnotherWrapper);
+    RUN_TEST(test_function_unpackPositionNegative);
+    RUN_TEST(test_function_calibrate);
     UNITY_END();
 }
 
