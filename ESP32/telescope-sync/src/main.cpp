@@ -9,6 +9,7 @@
 #include <persistency.h>
 #include <bnodata.h>
 #include <telescope.h>
+#include <gnss.h>
 
 /**
  * A file called 'secrets.h' must be placed in lib/secrets and contain the following content:
@@ -39,10 +40,12 @@ BnoData bnoData(BNO055_ID, BNO055_ADDRESS_A);
 Persistency persistency;
 
 #define ENABLE_WIFI (true)
+#define ENABLE_GNSS (true)
 bool orientationSensorAvailable = false;
 bool gnssModuleAvailable = false;
 bool filesystemAvailable = false;
 bool wifiAvailable = false;
+bool gnssAvailable = false;
 
 #define TCP_SERVER_PORT (10001)
 // AsyncServer server(TCP_SERVER_PORT);
@@ -63,7 +66,7 @@ Telescope telescope(101.298, -16.724);
 
 // uint8_t txBuffer[32] = {0x18, 0x00, 0x00, 0x00, 0x40, 0x7b, 0x0b, 0x16, 0xe5, 0xd3, 0x05, 0x00, 0xc3, 0xdd, 0x78, 0x29, 0xa8, 0x8b, 0x79, 0x0c, 0x00, 0x00, 0x00, 0x00};
 uint8_t txBuffer[32] = {0x18, 0x00, 0x00, 0x00, 0xde, 0xad, 0xbe, 0xef, 0x00, 0x00, 0x00, 0x00, 0x74, 0x24, 0x07, 0x48, 0x3a, 0x7d, 0x1b, 0xf4, 0x00, 0x00, 0x00, 0x00};
-uint8_t rxBuffer[32];
+uint8_t rxBuffer[265];
 
 void setup()
 {
@@ -236,6 +239,12 @@ void setup()
         initStage++;
     }
 
+    if (ENABLE_GNSS)
+    {
+        Serial2.begin(9600u);
+        gnssAvailable = true;
+    }
+
     Serial.printf("[  INIT  ] Completed at stage %u\n\n", initStage);
 }
 
@@ -301,7 +310,7 @@ void loop()
     {
         digitalWrite(LED_BUILTIN, HIGH); // regularly turn on LED again
 
-        if (remoteClient && remoteClient.connected())
+        if (remoteClient && remoteClient.connected() && orientationSensorAvailable)
         {
             int received = remoteClient.read(rxBuffer, sizeof(rxBuffer));
             if (received > 0)
@@ -314,79 +323,101 @@ void loop()
                 Serial.println();
 
                 Telescope::Equatorial reference;
-                
+
                 telescope.unpackPosition(&reference, NULL, rxBuffer, received);
                 telescope.calibrate(&reference);
             }
         }
 
-        bno.getCalibration(&bnoData.status.calSystem, &bnoData.status.calGyro, &bnoData.status.calAccel, &bnoData.status.calMag);
-
-        bnoData.status.fullyCalibrated = bno.isFullyCalibrated();
-        bnoData.status.partlyCalibrated = (bnoData.status.calSystem >= 1) && (bnoData.status.calGyro >= 1) && (bnoData.status.calAccel >= 1) && (bnoData.status.calMag >= 1);
-
-        if (!bnoData.status.fullyCalibrated)
+        if (orientationSensorAvailable)
         {
-            calibrationStableCounter = 0;
+            bno.getCalibration(&bnoData.status.calSystem, &bnoData.status.calGyro, &bnoData.status.calAccel, &bnoData.status.calMag);
+
+            bnoData.status.fullyCalibrated = bno.isFullyCalibrated();
+            bnoData.status.partlyCalibrated = (bnoData.status.calSystem >= 1) && (bnoData.status.calGyro >= 1) && (bnoData.status.calAccel >= 1) && (bnoData.status.calMag >= 1);
+
+            if (!bnoData.status.fullyCalibrated)
+            {
+                calibrationStableCounter = 0;
+            }
         }
     }
 
     // 500ms Tasks
     if (!(counterBase % (500L / SCHEDULER_MAIN_LOOP_MS)))
     {
-        if (!bnoData.status.fullyCalibrated)
+        if (orientationSensorAvailable)
         {
-            digitalWrite(LED_BUILTIN, LOW);
-        }
 
-        if (bnoData.status.fullyCalibrated)
-        {
-            // see https://forums.adafruit.com/viewtopic.php?f=25&t=108290&p=541754#p541754
-            imu::Quaternion q = bno.getQuat();
-            // imu::Quaternion q = getQuat();
-            q.normalize();
-
-            float temp = q.x();
-            q.x() = -q.y();
-            q.y() = temp;
-            q.z() = -q.z();
-
-            // euler.x() = -90 * euler.x() * M_PI;
-            // euler.y() = -90 * euler.y() * M_PI;
-            // euler.z() = -90 * euler.z() * M_PI;
-
-            // imu::Vector<3> euler = bno.getVector(bno.VECTOR_EULER);
-            imu::Vector<3> euler = q.toEuler();
-            // imu::Vector<3> euler = toEuler(imu::Quaternion(0.7071, 0.7071, 0, 0 ));
-            // imu::Vector<3> euler = toEuler(q);
-            // imu::Vector<3> euler = toEuler2(q);
-
-            // Serial.printf("[ SENSOR ] Heading: %3.2f Attitude: %3.2f Bank: %3.2f (w=%3.3f x=%3.3f y=%3.3f z=%3.3f)\n",
-            //               euler.x() * 180 / M_PI, euler.y() * 180 / M_PI, euler.z() * 180 / M_PI,
-            //               q.w(), q.x(), q.y(), q.z());
-
-            sensors_event_t event;
-            bno.getEvent(&event);
-            event.orientation.x = fmodf(event.orientation.x + 90, 360);
-
-            Serial.printf("[ SENSOR ] Orientation: (x=%3.2f y=%3.2f z=%3.2f)\n",
-                          event.orientation.x, event.orientation.y, event.orientation.z);
-        }
-
-        if (remoteClient && remoteClient.connected() && bnoData.status.partlyCalibrated)
-        {
-            sensors_event_t event;
-            bno.getEvent(&event);
-            event.orientation.x = fmodf(event.orientation.x + 90, 360);
-
-            telescope.fromHorizontalPosition(event.orientation.x, event.orientation.y, 48, 102.3379);
-
-            Telescope::Equatorial corrected;
-            telescope.getCalibratedPosition(&corrected);
-            uint32_t length = telescope.packPosition(&corrected, &telescope.timestamp, txBuffer, sizeof(txBuffer));
-            if (length == 24)
+            if (!bnoData.status.fullyCalibrated)
             {
-                remoteClient.write(txBuffer, length);
+                digitalWrite(LED_BUILTIN, LOW);
+            }
+
+            if (bnoData.status.fullyCalibrated && DEBUG)
+            {
+                // see https://forums.adafruit.com/viewtopic.php?f=25&t=108290&p=541754#p541754
+                imu::Quaternion q = bno.getQuat();
+                // imu::Quaternion q = getQuat();
+                q.normalize();
+
+                float temp = q.x();
+                q.x() = -q.y();
+                q.y() = temp;
+                q.z() = -q.z();
+
+                // euler.x() = -90 * euler.x() * M_PI;
+                // euler.y() = -90 * euler.y() * M_PI;
+                // euler.z() = -90 * euler.z() * M_PI;
+
+                // imu::Vector<3> euler = bno.getVector(bno.VECTOR_EULER);
+                imu::Vector<3> euler = q.toEuler();
+                // imu::Vector<3> euler = toEuler(imu::Quaternion(0.7071, 0.7071, 0, 0 ));
+                // imu::Vector<3> euler = toEuler(q);
+                // imu::Vector<3> euler = toEuler2(q);
+
+                // Serial.printf("[ SENSOR ] Heading: %3.2f Attitude: %3.2f Bank: %3.2f (w=%3.3f x=%3.3f y=%3.3f z=%3.3f)\n",
+                //               euler.x() * 180 / M_PI, euler.y() * 180 / M_PI, euler.z() * 180 / M_PI,
+                //               q.w(), q.x(), q.y(), q.z());
+
+                sensors_event_t event;
+                bno.getEvent(&event);
+                event.orientation.x = fmodf(event.orientation.x + 90, 360);
+
+                Serial.printf("[ SENSOR ] Orientation: (x=%3.2f y=%3.2f z=%3.2f)\n",
+                              event.orientation.x, event.orientation.y, event.orientation.z);
+            }
+
+            if (remoteClient && remoteClient.connected() && bnoData.status.partlyCalibrated)
+            {
+                sensors_event_t event;
+                bno.getEvent(&event);
+                event.orientation.x = fmodf(event.orientation.x + 90, 360);
+
+                telescope.fromHorizontalPosition(event.orientation.x, event.orientation.y, 48, 102.3379);
+
+                Telescope::Equatorial corrected;
+                telescope.getCalibratedPosition(&corrected);
+                uint32_t length = telescope.packPosition(&corrected, &telescope.timestamp, txBuffer, sizeof(txBuffer));
+                if (length == 24)
+                {
+                    remoteClient.write(txBuffer, length);
+                }
+            }
+        }
+        if (gnssAvailable)
+        {
+            // need "$GPRMC,083055.00,A,4815.69961,N,01059.02625,E,2.158,,291221,,,A*79"
+            int received = Serial2.read(rxBuffer, sizeof(rxBuffer)-1);
+            if (received > 0)
+            {
+                rxBuffer[received] = 0;
+                for (int i = 0; i < received; i++)
+                {
+                    if((rxBuffer[i] == 0x0D) || (rxBuffer[i] == 0x0A)) rxBuffer[i] = ' ';
+                }
+
+                Serial.printf("[  GNSS  ] %s\n", rxBuffer);
             }
         }
     }
@@ -396,49 +427,57 @@ void loop()
     {
         counter2s++;
         // indicate alive
-        if (bnoData.status.fullyCalibrated)
-        {
-            calibrationStableCounter++;
-            digitalWrite(LED_BUILTIN, LOW);
-        }
 
-        // save calibration data once per lifecycle after the sensor is fully calibrated
-        if (bnoData.status.fullyCalibrated && !bnoData.status.calibrationDataSaved && calibrationStableCounter > 15)
+        if (orientationSensorAvailable)
         {
-            Serial.println("[ SENSOR ] Saving calibration data... ");
-            bool success = bno.getSensorOffsets(bnoData.calibrationData);
-            if (success && DEBUG)
-                bnoData.printSensorOffsets();
-
-            if (bnoData.validateSensorOffsets())
+            if (bnoData.status.fullyCalibrated)
             {
-                if (success && persistency.writeBinaryData((uint8_t *)&bnoData.calibrationData, sizeof(bnoData.calibrationData), "/calibration.dat"))
+                calibrationStableCounter++;
+                digitalWrite(LED_BUILTIN, LOW);
+            }
+
+            // save calibration data once per lifecycle after the sensor is fully calibrated
+            if (bnoData.status.fullyCalibrated && !bnoData.status.calibrationDataSaved && calibrationStableCounter > 15)
+            {
+                Serial.println("[ SENSOR ] Saving calibration data... ");
+                bool success = bno.getSensorOffsets(bnoData.calibrationData);
+                if (success && DEBUG)
+                    bnoData.printSensorOffsets();
+
+                if (bnoData.validateSensorOffsets())
                 {
-                    Serial.println("[ SENSOR ] ok");
-                    bnoData.status.calibrationDataSaved = true;
+                    if (success && persistency.writeBinaryData((uint8_t *)&bnoData.calibrationData, sizeof(bnoData.calibrationData), "/calibration.dat"))
+                    {
+                        Serial.println("[ SENSOR ] ok");
+                        bnoData.status.calibrationDataSaved = true;
+                    }
+                    else
+                    {
+                        Serial.println("[ SENSOR ] Saving calibration data failed");
+                    }
                 }
                 else
                 {
-                    Serial.println("[ SENSOR ] Saving calibration data failed");
+                    Serial.println("[ SENSOR ] Invalid calibration data!");
                 }
             }
-            else
+
+            if (!bnoData.status.fullyCalibrated && DEBUG)
             {
-                Serial.println("[ SENSOR ] Invalid calibration data!");
+                bno.getSystemStatus(&bnoData.status.statSystem, &bnoData.status.statSelfTest, &bnoData.status.errSystem);
+                bno.getCalibration(&bnoData.status.calSystem, &bnoData.status.calGyro, &bnoData.status.calAccel, &bnoData.status.calMag);
+
+                // show overall system state
+                Serial.printf("[ SENSOR ] Sys: %X ST: %X Err: %X  Cal: %u%u%u%u\n",
+                              bnoData.status.statSystem,
+                              bnoData.status.statSelfTest,
+                              bnoData.status.errSystem,
+                              bnoData.status.calSystem, bnoData.status.calGyro, bnoData.status.calAccel, bnoData.status.calMag);
             }
         }
-
-        if (!bnoData.status.fullyCalibrated && DEBUG)
+        else
         {
-            bno.getSystemStatus(&bnoData.status.statSystem, &bnoData.status.statSelfTest, &bnoData.status.errSystem);
-            bno.getCalibration(&bnoData.status.calSystem, &bnoData.status.calGyro, &bnoData.status.calAccel, &bnoData.status.calMag);
-
-            // show overall system state
-            Serial.printf("[ SENSOR ] Sys: %X ST: %X Err: %X  Cal: %u%u%u%u\n",
-                          bnoData.status.statSystem,
-                          bnoData.status.statSelfTest,
-                          bnoData.status.errSystem,
-                          bnoData.status.calSystem, bnoData.status.calGyro, bnoData.status.calAccel, bnoData.status.calMag);
+            digitalWrite(LED_BUILTIN, LOW);
         }
     }
 

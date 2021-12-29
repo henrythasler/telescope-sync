@@ -1,5 +1,6 @@
 #include <unity.h>
 #include <telescope.h>
+#include <gnss.h>
 
 #ifndef ARDUINO
 #include <stdio.h>
@@ -221,9 +222,35 @@ void test_function_calibrate(void)
     TEST_ASSERT_FLOAT_WITHIN(0.001, 20, corrected.dec);
 }
 
+void test_function_gnss_gprmc(void)
+{
+    GNSS gnss;
+    bool res = false;
+
+    string frame1 = "$GPRMC,083055.00,A,4815.69961,N,01059.02625,E,2.158,,291221,,,A*79";
+
+    res = gnss.fromGPRMC(frame1, sizeof(frame1));
+    TEST_ASSERT_TRUE(res);
+
+    TEST_ASSERT_TRUE(gnss.valid);
+    TEST_ASSERT_TRUE(gnss.north);
+    TEST_ASSERT_TRUE(gnss.east);
+
+    TEST_ASSERT_EQUAL_UINT32(8, gnss.utcTimestamp.tm_hour);
+    TEST_ASSERT_EQUAL_UINT32(30, gnss.utcTimestamp.tm_min);
+    TEST_ASSERT_EQUAL_UINT32(55, gnss.utcTimestamp.tm_sec);
+
+    TEST_ASSERT_FLOAT_WITHIN(0.0001, 48.2616, gnss.latitude);
+    TEST_ASSERT_FLOAT_WITHIN(0.0001, 10.9838, gnss.longitude);
+
+    TEST_ASSERT_FLOAT_WITHIN(0.0001, 1.1101, gnss.speed);
+    TEST_ASSERT_FLOAT_WITHIN(0.0001, 0, gnss.course);
+}
+
 void process(void)
 {
     UNITY_BEGIN();
+    // Telescope Class
     RUN_TEST(test_function_rad);
     RUN_TEST(test_function_deg);
     RUN_TEST(test_function_degToHours);
@@ -237,6 +264,9 @@ void process(void)
     RUN_TEST(test_function_unpackPositionAnotherWrapper);
     RUN_TEST(test_function_unpackPositionNegative);
     RUN_TEST(test_function_calibrate);
+
+    // GNSS Class
+    RUN_TEST(test_function_gnss_gprmc);
     UNITY_END();
 }
 

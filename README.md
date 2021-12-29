@@ -27,7 +27,7 @@ Rank | Name | Pros | Cons
 5 | [LSM6DSOX + LIS3MDL](https://github.com/adafruit/Adafruit_LSM6DS) |  | Out of Stock
 6 | MPU-9250 | | High Zero-rate Offset
 
-Stellarium expects the right ascension and declination of the telescope as input. To compute these values, we need the exact location and a timestamp. A simple GPS Receiver ([GP-20U7](docs/GP-20U7.pdf)) should provide this information with sufficient precision.
+Stellarium expects the right ascension and declination of the telescope as input. To compute these values, we need the exact location and a timestamp. A simple GPS Receiver ([GP-20U7](http://www.adh-tech.com.tw/?50,gp-20u7)) should provide this information with sufficient precision.
 
 ## Hardware Setup
 
@@ -89,6 +89,7 @@ see also [TelescopeTCP::telescopeGoto](https://github.com/Stellarium/stellarium/
 ### Hardware
 
 - [Comparing Gyroscope Datasheets](https://learn.adafruit.com/comparing-gyroscope-datasheets)
+- [DOIT ESP32 DevKit-v1 (30P)](https://github.com/TronixLab/DOIT_ESP32_DevKit-v1_30P)
 
 ### Stellarium
 
