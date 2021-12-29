@@ -86,6 +86,11 @@ see also [TelescopeTCP::telescopeGoto](https://github.com/Stellarium/stellarium/
 
 - [Bosch Sensortec MEMS BNO055 sensor driver](https://github.com/BoschSensortec/BNO055_driver)
 
+### GPS, GNSS, NMEA
+
+- [GPS - NMEA sentence information](http://aprs.gids.nl/nmea/)
+- [Common NMEA Sentences](http://www.satsleuth.com/GPS_NMEA_sentences.aspx)
+
 ### Hardware
 
 - [Comparing Gyroscope Datasheets](https://learn.adafruit.com/comparing-gyroscope-datasheets)

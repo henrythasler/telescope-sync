@@ -18,18 +18,29 @@ class GNSS
 public:
     GNSS();
 
-    bool fromGPRMC(string gprmc, size_t length);
+    bool fromRMC(string sentence, size_t length);
+    bool fromGGA(string sentence, size_t length);
+
+    bool fromNMEA(string sentence, size_t length);
+
+    uint32_t fromBuffer(uint8_t *buffer, size_t length);
 
     tm utcTimestamp;
+
     bool valid = false;
+    uint32_t numSat = 0;
+    float dilution = 0.0;
+
     float latitude = 0.0;
     float longitude = 0.0;
     bool north = true;
     bool east = true;
     float speed = 0.0;
     float course = 0.0;
+    float altitude = 0.0;    
 
 private:
-    const std::string GPRMC_HEADER = "$GPRMC,";
+    const std::string RMC_HEADER = "$GPRMC";
+    const std::string GGA_HEADER = "$GPGGA";
 };
 #endif

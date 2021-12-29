@@ -134,7 +134,7 @@ void test_function_unpackPosition(void)
     uint64_t timestamp;
     bool res = false;
     res = telescope.unpackPosition(&ra, &dec, &timestamp, static_cast<uint8_t *>(dataA), sizeof(dataA));
-    TEST_ASSERT_TRUE(res);
+    TEST_ASSERT_TRUE_MESSAGE(res, "return value");
     TEST_ASSERT_FLOAT_WITHIN(0.001, 101.289, ra);
     TEST_ASSERT_FLOAT_WITHIN(0.001, -16.724 + 360.0, dec);
 
@@ -142,7 +142,7 @@ void test_function_unpackPosition(void)
     uint8_t dataB[] = {0x14, 0x00, 0x00, 0x00, 0xE5, 0xE3, 0xA5, 0xCD, 0x21, 0xD4, 0x05, 0x00, 0x58, 0x59, 0x25, 0x3F, 0x12, 0x66, 0x44, 0x05};
 
     res = telescope.unpackPosition(&ra, &dec, &timestamp, static_cast<uint8_t *>(dataB), sizeof(dataB));
-    TEST_ASSERT_TRUE(res);
+    TEST_ASSERT_TRUE_MESSAGE(res, "return value");
     TEST_ASSERT_FLOAT_WITHIN(0.001, 88.79891, ra);
     TEST_ASSERT_FLOAT_WITHIN(0.001, 7.4070, dec);
 }
@@ -171,7 +171,7 @@ void test_function_unpackPositionWrapper(void)
 
     bool res = false;
     res = telescope.unpackPosition(static_cast<uint8_t *>(dataA), sizeof(dataA));
-    TEST_ASSERT_TRUE(res);
+    TEST_ASSERT_TRUE_MESSAGE(res, "return value");
     TEST_ASSERT_FLOAT_WITHIN(0.001, 101.289, telescope.position.ra);
     TEST_ASSERT_FLOAT_WITHIN(0.001, -16.724 + 360.0, telescope.position.dec);
 
@@ -179,7 +179,7 @@ void test_function_unpackPositionWrapper(void)
     uint8_t dataB[] = {0x14, 0x00, 0x00, 0x00, 0xE5, 0xE3, 0xA5, 0xCD, 0x21, 0xD4, 0x05, 0x00, 0x58, 0x59, 0x25, 0x3F, 0x12, 0x66, 0x44, 0x05};
 
     res = telescope.unpackPosition(static_cast<uint8_t *>(dataB), sizeof(dataB));
-    TEST_ASSERT_TRUE(res);
+    TEST_ASSERT_TRUE_MESSAGE(res, "return value");
     TEST_ASSERT_FLOAT_WITHIN(0.001, 88.79891, telescope.position.ra);
     TEST_ASSERT_FLOAT_WITHIN(0.001, 7.4070, telescope.position.dec);
 }
@@ -193,7 +193,7 @@ void test_function_unpackPositionAnotherWrapper(void)
     Telescope::Equatorial position;
     bool res = false;
     res = telescope.unpackPosition(&position, NULL, static_cast<uint8_t *>(dataA), sizeof(dataA));
-    TEST_ASSERT_TRUE(res);
+    TEST_ASSERT_TRUE_MESSAGE(res, "return value");
     TEST_ASSERT_FLOAT_WITHIN(0.001, 101.289, position.ra);
     TEST_ASSERT_FLOAT_WITHIN(0.001, -16.724 + 360.0, position.dec);
 
@@ -201,7 +201,7 @@ void test_function_unpackPositionAnotherWrapper(void)
     uint8_t dataB[] = {0x14, 0x00, 0x00, 0x00, 0xE5, 0xE3, 0xA5, 0xCD, 0x21, 0xD4, 0x05, 0x00, 0x58, 0x59, 0x25, 0x3F, 0x12, 0x66, 0x44, 0x05};
 
     res = telescope.unpackPosition(&position, NULL, static_cast<uint8_t *>(dataB), sizeof(dataB));
-    TEST_ASSERT_TRUE(res);
+    TEST_ASSERT_TRUE_MESSAGE(res, "return value");
     TEST_ASSERT_FLOAT_WITHIN(0.001, 88.79891, position.ra);
     TEST_ASSERT_FLOAT_WITHIN(0.001, 7.4070, position.dec);
 }
@@ -222,19 +222,88 @@ void test_function_calibrate(void)
     TEST_ASSERT_FLOAT_WITHIN(0.001, 20, corrected.dec);
 }
 
-void test_function_gnss_gprmc(void)
+void test_function_gnss_rmc(void)
 {
     GNSS gnss;
     bool res = false;
 
-    string frame1 = "$GPRMC,083055.00,A,4815.69961,N,01059.02625,E,2.158,,291221,,,A*79";
+    string sentenceA = "$GPRMC,083055.00,A,4815.69961,N,01059.02625,E,2.158,,291221,,,A*79";
+    res = gnss.fromRMC(sentenceA, sizeof(sentenceA));
+    TEST_ASSERT_TRUE_MESSAGE(res, "return value");
 
-    res = gnss.fromGPRMC(frame1, sizeof(frame1));
-    TEST_ASSERT_TRUE(res);
+    TEST_ASSERT_TRUE_MESSAGE(gnss.valid, "valid");
+    TEST_ASSERT_TRUE_MESSAGE(gnss.north, "north");
+    TEST_ASSERT_TRUE_MESSAGE(gnss.east, "east");
 
-    TEST_ASSERT_TRUE(gnss.valid);
-    TEST_ASSERT_TRUE(gnss.north);
-    TEST_ASSERT_TRUE(gnss.east);
+    TEST_ASSERT_EQUAL_UINT32(8, gnss.utcTimestamp.tm_hour);
+    TEST_ASSERT_EQUAL_UINT32(30, gnss.utcTimestamp.tm_min);
+    TEST_ASSERT_EQUAL_UINT32(55, gnss.utcTimestamp.tm_sec);
+    TEST_ASSERT_EQUAL_UINT32(21, gnss.utcTimestamp.tm_year);
+    TEST_ASSERT_EQUAL_UINT32(12, gnss.utcTimestamp.tm_mon);
+    TEST_ASSERT_EQUAL_UINT32(29, gnss.utcTimestamp.tm_mday);
+
+    TEST_ASSERT_FLOAT_WITHIN(0.0001, 48.2616, gnss.latitude);
+    TEST_ASSERT_FLOAT_WITHIN(0.0001, 10.9838, gnss.longitude);
+
+    TEST_ASSERT_FLOAT_WITHIN(0.0001, 1.1101, gnss.speed);
+    TEST_ASSERT_FLOAT_WITHIN(0.0001, 0, gnss.course);
+
+    string sentenceB = "$GPRMC,082804.683,A,5205.9421,N,00506.4368,E,0.02,146.61,190408,,*0C";
+    res = gnss.fromRMC(sentenceB, sizeof(sentenceB));
+    TEST_ASSERT_TRUE_MESSAGE(res, "return value");
+
+    TEST_ASSERT_TRUE_MESSAGE(gnss.valid, "valid");
+    TEST_ASSERT_TRUE_MESSAGE(gnss.north, "north");
+    TEST_ASSERT_TRUE_MESSAGE(gnss.east, "east");
+
+    TEST_ASSERT_EQUAL_UINT32(8, gnss.utcTimestamp.tm_hour);
+    TEST_ASSERT_EQUAL_UINT32(28, gnss.utcTimestamp.tm_min);
+    TEST_ASSERT_EQUAL_UINT32(4, gnss.utcTimestamp.tm_sec);
+    TEST_ASSERT_EQUAL_UINT32(8, gnss.utcTimestamp.tm_year);
+    TEST_ASSERT_EQUAL_UINT32(4, gnss.utcTimestamp.tm_mon);
+    TEST_ASSERT_EQUAL_UINT32(19, gnss.utcTimestamp.tm_mday);
+
+    TEST_ASSERT_FLOAT_WITHIN(0.0001, 52.0990, gnss.latitude);
+    TEST_ASSERT_FLOAT_WITHIN(0.0001, 5.1073, gnss.longitude);
+
+    TEST_ASSERT_FLOAT_WITHIN(0.0001, 0.0103, gnss.speed);
+    TEST_ASSERT_FLOAT_WITHIN(0.0001, 146.61, gnss.course);
+
+
+    string sentenceC = "$GPRMC,165011.00,V,,,,,,,291221,,,N*74";
+    res = gnss.fromRMC(sentenceC, sizeof(sentenceC));
+    TEST_ASSERT_TRUE_MESSAGE(res, "return value");
+
+    TEST_ASSERT_FALSE_MESSAGE(gnss.valid, "valid");
+    TEST_ASSERT_FALSE_MESSAGE(gnss.north, "north");
+    TEST_ASSERT_FALSE_MESSAGE(gnss.east, "east");
+
+    TEST_ASSERT_EQUAL_UINT32(16, gnss.utcTimestamp.tm_hour);
+    TEST_ASSERT_EQUAL_UINT32(50, gnss.utcTimestamp.tm_min);
+    TEST_ASSERT_EQUAL_UINT32(11, gnss.utcTimestamp.tm_sec);
+    TEST_ASSERT_EQUAL_UINT32(21, gnss.utcTimestamp.tm_year);
+    TEST_ASSERT_EQUAL_UINT32(12, gnss.utcTimestamp.tm_mon);
+    TEST_ASSERT_EQUAL_UINT32(29, gnss.utcTimestamp.tm_mday);
+
+    TEST_ASSERT_FLOAT_WITHIN(0.0001, 0, gnss.latitude);
+    TEST_ASSERT_FLOAT_WITHIN(0.0001, 0, gnss.longitude);
+
+    TEST_ASSERT_FLOAT_WITHIN(0.0001, 0, gnss.speed);
+    TEST_ASSERT_FLOAT_WITHIN(0.0001, 0, gnss.course);    
+}
+
+void test_function_gnss_gga(void)
+{
+    GNSS gnss;
+    bool res = false;
+
+    string sentenceA = "$GPGGA,083055.00,4815.69961,N,01059.02625,E,1,04,7.80,485.8,M,46.8,M,,*50";
+    res = gnss.fromGGA(sentenceA, sizeof(sentenceA));
+    TEST_ASSERT_TRUE_MESSAGE(res, "return value");
+
+    TEST_ASSERT_TRUE_MESSAGE(gnss.valid, "valid");
+    TEST_ASSERT_TRUE_MESSAGE(gnss.north, "north");
+    TEST_ASSERT_TRUE_MESSAGE(gnss.east, "east");
 
     TEST_ASSERT_EQUAL_UINT32(8, gnss.utcTimestamp.tm_hour);
     TEST_ASSERT_EQUAL_UINT32(30, gnss.utcTimestamp.tm_min);
@@ -243,8 +312,90 @@ void test_function_gnss_gprmc(void)
     TEST_ASSERT_FLOAT_WITHIN(0.0001, 48.2616, gnss.latitude);
     TEST_ASSERT_FLOAT_WITHIN(0.0001, 10.9838, gnss.longitude);
 
-    TEST_ASSERT_FLOAT_WITHIN(0.0001, 1.1101, gnss.speed);
-    TEST_ASSERT_FLOAT_WITHIN(0.0001, 0, gnss.course);
+    TEST_ASSERT_FLOAT_WITHIN(0.0001, 485.8, gnss.altitude);
+    TEST_ASSERT_FLOAT_WITHIN(0.0001, 7.8, gnss.dilution);
+
+    TEST_ASSERT_EQUAL_UINT32(4, gnss.numSat);
+
+
+    string sentenceB = "$GPGGA,092204.999,4250.5589,S,14718.5084,E,1,04,24.4,19.7,M,,,,0000*1F";
+    res = gnss.fromGGA(sentenceB, sizeof(sentenceB));
+    TEST_ASSERT_TRUE_MESSAGE(res, "return value");
+
+    TEST_ASSERT_TRUE_MESSAGE(gnss.valid, "valid");
+    TEST_ASSERT_FALSE_MESSAGE(gnss.north, "north");
+    TEST_ASSERT_TRUE_MESSAGE(gnss.east, "east");
+
+    TEST_ASSERT_EQUAL_UINT32(9, gnss.utcTimestamp.tm_hour);
+    TEST_ASSERT_EQUAL_UINT32(22, gnss.utcTimestamp.tm_min);
+    TEST_ASSERT_EQUAL_UINT32(5, gnss.utcTimestamp.tm_sec);
+
+    TEST_ASSERT_FLOAT_WITHIN(0.0001, -42.8426, gnss.latitude);
+    TEST_ASSERT_FLOAT_WITHIN(0.0001, 147.3085, gnss.longitude);
+
+    TEST_ASSERT_FLOAT_WITHIN(0.0001, 19.7, gnss.altitude);
+    TEST_ASSERT_FLOAT_WITHIN(0.0001, 24.4, gnss.dilution);
+
+    TEST_ASSERT_EQUAL_UINT32(4, gnss.numSat);
+
+
+    string sentenceC = "$GPGGA,165011.00,,,,,0,00,99.99,,,,,,*64";
+    res = gnss.fromGGA(sentenceC, sizeof(sentenceC));
+    TEST_ASSERT_TRUE_MESSAGE(res, "return value");
+
+    TEST_ASSERT_FALSE_MESSAGE(gnss.valid, "valid");
+    TEST_ASSERT_FALSE_MESSAGE(gnss.north, "north");
+    TEST_ASSERT_FALSE_MESSAGE(gnss.east, "east");
+
+    TEST_ASSERT_EQUAL_UINT32(16, gnss.utcTimestamp.tm_hour);
+    TEST_ASSERT_EQUAL_UINT32(50, gnss.utcTimestamp.tm_min);
+    TEST_ASSERT_EQUAL_UINT32(11, gnss.utcTimestamp.tm_sec);
+
+    TEST_ASSERT_FLOAT_WITHIN(0.0001, 0, gnss.latitude);
+    TEST_ASSERT_FLOAT_WITHIN(0.0001, 0, gnss.longitude);
+
+    TEST_ASSERT_FLOAT_WITHIN(0.0001, 0, gnss.altitude);
+    TEST_ASSERT_FLOAT_WITHIN(0.0001, 99.99, gnss.dilution);
+
+    TEST_ASSERT_EQUAL_UINT32(0, gnss.numSat);
+}
+
+void test_function_gnss_nmea(void)
+{
+    GNSS gnss;
+    bool res = false;
+
+    string sentenceA = "$GPRMC,083055.00,A,4815.69961,N,01059.02625,E,2.158,,291221,,,A*79";
+    res = gnss.fromNMEA(sentenceA, sizeof(sentenceA));
+    TEST_ASSERT_TRUE_MESSAGE(res, "sentenceA");
+
+    string sentenceB = "$GPRMC,082804.683,A,5205.9421,N,00506.4368,E,0.02,146.61,190408,,*0C";
+    res = gnss.fromNMEA(sentenceB, sizeof(sentenceB));
+    TEST_ASSERT_TRUE_MESSAGE(res, "sentenceB");
+
+    string sentenceC = "$NOTFOUND,082804.683,A,5205.9421,N,00506.4368,E,0.02,146.61,190408,,*0C";
+    res = gnss.fromNMEA(sentenceC, sizeof(sentenceC));
+    TEST_ASSERT_FALSE_MESSAGE(res, "sentenceC");
+}
+
+
+void test_function_gnss_buffer(void)
+{
+    GNSS gnss;
+    uint32_t res = 0;
+
+    uint8_t sampleA[] = "$GPRMC,083055.00,A,4815.69961,N,01059.02625,E,2.158,,291221,,,A*79\r\n";
+    res = gnss.fromBuffer(sampleA, sizeof(sampleA));
+    TEST_ASSERT_EQUAL_UINT32_MESSAGE(1, res, "sampleA");
+
+    uint8_t sampleB[] = "$GPRMC,083055.00,A,4815.69961,N,01059.02625,E,2.158,,291221,,,A*79\r";
+    res = gnss.fromBuffer(sampleB, sizeof(sampleB));
+    TEST_ASSERT_EQUAL_UINT32_MESSAGE(0, res, "sampleB");
+
+    uint8_t sampleC[] = "$GPRMC,083055.00,A,4815.69961,N,01059.02625,E,2.158,,291221,,,A*79\r\n$GPVTG,,T,,M,2.158,N,3.997,K,A*29\r\n$GPGGA,083055.00,4815.69961,N,01059.02625,E,1,04,7.80,485.8,M,46.8,M,,*50\r\n$GPGSA,A,3,02,07,30,06,,,,,,,,,14.68,7";
+    res = gnss.fromBuffer(sampleC, sizeof(sampleC));
+    TEST_ASSERT_EQUAL_UINT32_MESSAGE(2, res, "sampleC");
+
 }
 
 void process(void)
@@ -266,7 +417,10 @@ void process(void)
     RUN_TEST(test_function_calibrate);
 
     // GNSS Class
-    RUN_TEST(test_function_gnss_gprmc);
+    RUN_TEST(test_function_gnss_rmc);
+    RUN_TEST(test_function_gnss_gga);
+    RUN_TEST(test_function_gnss_nmea);
+    RUN_TEST(test_function_gnss_buffer);
     UNITY_END();
 }
 

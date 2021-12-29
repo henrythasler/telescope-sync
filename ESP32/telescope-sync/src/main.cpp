@@ -38,6 +38,7 @@ Adafruit_BNO055 bno = Adafruit_BNO055(BNO055_ID, BNO055_ADDRESS_A, &I2CBus); // 
 BnoData bnoData(BNO055_ID, BNO055_ADDRESS_A);
 
 Persistency persistency;
+GNSS gnss;
 
 #define ENABLE_WIFI (true)
 #define ENABLE_GNSS (true)
@@ -64,8 +65,7 @@ uint32_t calibrationStableCounter = 0;
 
 Telescope telescope(101.298, -16.724);
 
-// uint8_t txBuffer[32] = {0x18, 0x00, 0x00, 0x00, 0x40, 0x7b, 0x0b, 0x16, 0xe5, 0xd3, 0x05, 0x00, 0xc3, 0xdd, 0x78, 0x29, 0xa8, 0x8b, 0x79, 0x0c, 0x00, 0x00, 0x00, 0x00};
-uint8_t txBuffer[32] = {0x18, 0x00, 0x00, 0x00, 0xde, 0xad, 0xbe, 0xef, 0x00, 0x00, 0x00, 0x00, 0x74, 0x24, 0x07, 0x48, 0x3a, 0x7d, 0x1b, 0xf4, 0x00, 0x00, 0x00, 0x00};
+uint8_t txBuffer[32];
 uint8_t rxBuffer[265];
 
 void setup()
@@ -407,17 +407,20 @@ void loop()
         }
         if (gnssAvailable)
         {
-            // need "$GPRMC,083055.00,A,4815.69961,N,01059.02625,E,2.158,,291221,,,A*79"
             int received = Serial2.read(rxBuffer, sizeof(rxBuffer)-1);
             if (received > 0)
             {
                 rxBuffer[received] = 0;
-                for (int i = 0; i < received; i++)
-                {
-                    if((rxBuffer[i] == 0x0D) || (rxBuffer[i] == 0x0A)) rxBuffer[i] = ' ';
-                }
 
-                Serial.printf("[  GNSS  ] %s\n", rxBuffer);
+                gnss.fromBuffer(rxBuffer, received);
+                Serial.printf("[  GNSS  ] %s Lat=%.2f, Lng=%.2f (%u Sat)\n", gnss.valid?"Fix":"No fix", gnss.latitude, gnss.longitude, gnss.numSat);
+
+                // for (int i = 0; i < received; i++)
+                // {
+                //     if((rxBuffer[i] == 0x0D) || (rxBuffer[i] == 0x0A)) rxBuffer[i] = ' ';
+                // }
+
+                // Serial.printf("[  GNSS  ] %s\n", rxBuffer);
             }
         }
     }
