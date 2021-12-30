@@ -1,6 +1,7 @@
 #include <unity.h>
 #include <telescope.h>
 #include <gnss.h>
+#include <siderealtime.h>
 
 #ifndef ARDUINO
 #include <stdio.h>
@@ -428,6 +429,24 @@ void test_function_gnss_buffer(void)
 
 }
 
+void test_function_siderealtime_julianday(void)
+{
+    SiderealTime siderealTime;
+    float res = 0;
+
+    tm timestamp {.tm_mday=1, .tm_mon=1, .tm_year=2000};
+    res = siderealTime.julianDay(timestamp);
+    TEST_ASSERT_FLOAT_WITHIN(0.0001, 2451544.5, res);
+
+    timestamp = {.tm_mday=23, .tm_mon=12, .tm_year=2021};
+    res = siderealTime.julianDay(timestamp);
+    TEST_ASSERT_FLOAT_WITHIN(0.0001, 2459571.5, res);
+
+    timestamp = {.tm_mday=13, .tm_mon=7, .tm_year=2025};
+    res = siderealTime.julianDay(timestamp);
+    TEST_ASSERT_FLOAT_WITHIN(0.0001, 2460869.5, res);
+}
+
 void process(void)
 {
     UNITY_BEGIN();
@@ -455,6 +474,9 @@ void process(void)
     // High-Level wrapper
     RUN_TEST(test_function_gnss_nmea);
     RUN_TEST(test_function_gnss_buffer);
+
+    // sidereal time
+    RUN_TEST(test_function_siderealtime_julianday);
 
     UNITY_END();
 }

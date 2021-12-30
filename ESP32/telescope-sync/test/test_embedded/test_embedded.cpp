@@ -1,8 +1,6 @@
 #include <Arduino.h>
 #include <unity.h>
 
-#define LED_BUILTIN (13) // LED is connected to IO13
-
 // void setUp(void) {
 // // set stuff up here
 // }
