@@ -18,17 +18,21 @@ class GNSS
 public:
     GNSS();
 
-    bool fromRMC(string sentence, size_t length);
-    bool fromGGA(string sentence, size_t length);
+    bool verifyChecksum(string sentence);
 
-    bool fromNMEA(string sentence, size_t length);
+    bool fromRMC(string sentence);
+    bool fromGGA(string sentence);
+    bool fromGSV(string sentence);
+
+    bool fromNMEA(string sentence);
 
     uint32_t fromBuffer(uint8_t *buffer, size_t length);
 
     tm utcTimestamp;
 
     bool valid = false;
-    uint32_t numSat = 0;
+    uint32_t satUsed = 0;
+    uint32_t satView = 0;
     float dilution = 0.0;
 
     float latitude = 0.0;
@@ -42,5 +46,6 @@ public:
 private:
     const std::string RMC_HEADER = "$GPRMC";
     const std::string GGA_HEADER = "$GPGGA";
+    const std::string GSV_HEADER = "$GPGSV";
 };
 #endif

@@ -4,28 +4,14 @@ GNSS::GNSS()
 {
 }
 
-bool GNSS::fromRMC(string sentence, size_t length)
+bool GNSS::fromRMC(string sentence)
 {
     int32_t pos = 0;
     char *ptr;
     float rawValue = 0.0;
 
-    // verify checksum first
-    uint32_t startPos = sentence.find('$');
-    uint32_t endPos = sentence.find('*');
-    if ((startPos == string::npos) || (endPos == string::npos))
+    if (!this->verifyChecksum(sentence))
         return false;
-
-    uint32_t expectedChecksum = strtol(sentence.c_str() + endPos + 1, NULL, 16);
-    uint32_t actualChecksum = 0;
-    for (uint32_t i = startPos + 1; i < endPos; i++)
-        actualChecksum ^= sentence.c_str()[i]; // XOR all characters BETWEEN '$' and '*'
-
-    if (expectedChecksum != actualChecksum)
-    {
-        // printf("%X != %X", expectedChecksum, actualChecksum);
-        return false;
-    }
 
     pos = sentence.find(RMC_HEADER);
     if (pos == string::npos)
@@ -63,7 +49,7 @@ bool GNSS::fromRMC(string sentence, size_t length)
     uint32_t rawDate = strtol(ptr, &ptr, 10);
     this->utcTimestamp.tm_mday = rawDate / 10000L;
     this->utcTimestamp.tm_mon = rawDate / 100L - this->utcTimestamp.tm_mday * 100L;
-    this->utcTimestamp.tm_year = rawDate - this->utcTimestamp.tm_mday * 10000L - this->utcTimestamp.tm_mon * 100L;
+    this->utcTimestamp.tm_year = rawDate - this->utcTimestamp.tm_mday * 10000L - this->utcTimestamp.tm_mon * 100L + 2000;
 
     // skip Magnetic Variation and Mode for now
 
@@ -74,29 +60,15 @@ bool GNSS::fromRMC(string sentence, size_t length)
  * Example: "GPGGA,083055.00,4815.69961,N,01059.02625,E,1,04,7.80,485.8,M,46.8,M,,*50"
  **/
 
-bool GNSS::fromGGA(string sentence, size_t length)
+bool GNSS::fromGGA(string sentence)
 {
     int32_t pos = 0;
     char *ptr;
     float rawValue = 0.0;
     uint32_t rawLong = 0;
 
-    // verify checksum first
-    uint32_t startPos = sentence.find('$');
-    uint32_t endPos = sentence.find('*');
-    if ((startPos == string::npos) || (endPos == string::npos))
+    if (!this->verifyChecksum(sentence))
         return false;
-
-    uint32_t expectedChecksum = strtol(sentence.c_str() + endPos + 1, NULL, 16);
-    uint32_t actualChecksum = 0;
-    for (uint32_t i = startPos + 1; i < endPos; i++)
-        actualChecksum ^= sentence.c_str()[i]; // XOR all characters BETWEEN '$' and '*'
-
-    if (expectedChecksum != actualChecksum)
-    {
-        // printf("%X != %X", expectedChecksum, actualChecksum);
-        return false;
-    }
 
     pos = sentence.find(GGA_HEADER);
     if (pos == string::npos)
@@ -128,7 +100,7 @@ bool GNSS::fromGGA(string sentence, size_t length)
     this->valid = (rawLong > 0);
 
     ptr++;
-    this->numSat = strtol(ptr, &ptr, 10);
+    this->satUsed = strtol(ptr, &ptr, 10);
 
     ptr++;
     this->dilution = strtof(ptr, &ptr);
@@ -139,13 +111,62 @@ bool GNSS::fromGGA(string sentence, size_t length)
     return true;
 }
 
-bool GNSS::fromNMEA(string sentence, size_t length)
+bool GNSS::fromGSV(string sentence)
+{
+    int32_t pos = 0;
+    char *ptr;
+
+    if (!this->verifyChecksum(sentence))
+        return false;
+
+    pos = sentence.find(GSV_HEADER);
+    if (pos == string::npos)
+        return false;
+
+    // skip "Number of Messages"
+    strtol(sentence.c_str() + pos + GSV_HEADER.length() + 1, &ptr, 10);
+    ptr++;
+
+    // skip "Sequence Number"
+    strtol(ptr, &ptr, 10);
+    ptr++;
+
+    this->satView = strtol(ptr, &ptr, 10);
+
+    return true;
+}
+
+bool GNSS::verifyChecksum(string sentence)
+{
+    // verify checksum first
+    uint32_t startPos = sentence.find('$');
+    uint32_t endPos = sentence.find('*');
+    if ((startPos == string::npos) || (endPos == string::npos))
+        return false;
+
+    uint32_t expectedChecksum = strtol(sentence.c_str() + endPos + 1, NULL, 16);
+    uint32_t actualChecksum = 0;
+    for (uint32_t i = startPos + 1; i < endPos; i++)
+        actualChecksum ^= sentence.c_str()[i]; // XOR all characters BETWEEN '$' and '*'
+
+    if (expectedChecksum != actualChecksum)
+    {
+        // printf("%X != %X", expectedChecksum, actualChecksum);
+        return false;
+    }
+    return true;
+}
+
+bool GNSS::fromNMEA(string sentence)
 {
     if (sentence.find(RMC_HEADER) != string::npos)
-        return this->fromRMC(sentence, length);
+        return this->fromRMC(sentence);
 
     else if (sentence.find(GGA_HEADER) != string::npos)
-        return this->fromGGA(sentence, length);
+        return this->fromGGA(sentence);
+
+    else if (sentence.find(GSV_HEADER) != string::npos)
+        return this->fromGSV(sentence);
 
     return false;
 }
@@ -164,7 +185,7 @@ uint32_t GNSS::fromBuffer(uint8_t *buffer, size_t length)
         if ((startPos != string::npos) && (endPos != string::npos))
         {
             // printf("'%s' %u..%u\n", rawInput.substr(startPos, endPos - startPos - 1).c_str(), startPos, endPos);
-            if (fromNMEA(rawInput.substr(startPos, endPos - startPos + 1), endPos - startPos + 1))
+            if (this->fromNMEA(rawInput.substr(startPos, endPos - startPos + 1)))
                 sentences++;
         }
 

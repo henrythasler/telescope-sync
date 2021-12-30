@@ -47,6 +47,7 @@ bool gnssModuleAvailable = false;
 bool filesystemAvailable = false;
 bool wifiAvailable = false;
 bool gnssAvailable = false;
+float headingOffset = -90;
 
 #define TCP_SERVER_PORT (10001)
 // AsyncServer server(TCP_SERVER_PORT);
@@ -62,6 +63,7 @@ uint32_t counter1h = 0;
 uint32_t initStage = 0;
 
 uint32_t calibrationStableCounter = 0;
+uint32_t gnssTimeout = 0;
 
 Telescope telescope(101.298, -16.724);
 
@@ -242,7 +244,6 @@ void setup()
     if (ENABLE_GNSS)
     {
         Serial2.begin(9600u);
-        gnssAvailable = true;
     }
 
     Serial.printf("[  INIT  ] Completed at stage %u\n\n", initStage);
@@ -382,7 +383,7 @@ void loop()
 
                 sensors_event_t event;
                 bno.getEvent(&event);
-                event.orientation.x = fmodf(event.orientation.x + 90, 360);
+                event.orientation.x = fmodf(event.orientation.x + headingOffset, 360);
 
                 Serial.printf("[ SENSOR ] Orientation: (x=%3.2f y=%3.2f z=%3.2f)\n",
                               event.orientation.x, event.orientation.y, event.orientation.z);
@@ -392,7 +393,7 @@ void loop()
             {
                 sensors_event_t event;
                 bno.getEvent(&event);
-                event.orientation.x = fmodf(event.orientation.x + 90, 360);
+                event.orientation.x = fmodf(event.orientation.x + headingOffset, 360);
 
                 telescope.fromHorizontalPosition(event.orientation.x, event.orientation.y, 48, 102.3379);
 
@@ -405,22 +406,25 @@ void loop()
                 }
             }
         }
-        if (gnssAvailable)
+        if (ENABLE_GNSS)
         {
-            int received = Serial2.read(rxBuffer, sizeof(rxBuffer)-1);
+            int received = Serial2.read(rxBuffer, sizeof(rxBuffer) - 1);
             if (received > 0)
             {
                 rxBuffer[received] = 0;
-
-                gnss.fromBuffer(rxBuffer, received);
-                Serial.printf("[  GNSS  ] %s Lat=%.2f, Lng=%.2f (%u Sat)\n", gnss.valid?"Fix":"No fix", gnss.latitude, gnss.longitude, gnss.numSat);
-
-                // for (int i = 0; i < received; i++)
-                // {
-                //     if((rxBuffer[i] == 0x0D) || (rxBuffer[i] == 0x0A)) rxBuffer[i] = ' ';
-                // }
-
+                if (gnss.fromBuffer(rxBuffer, received) > 0)
+                {
+                    // reset timeout counter if we received a valid NMEA sentence
+                    gnssTimeout = 4 * 5; // 5s
+                    gnssAvailable = true;
+                }
                 // Serial.printf("[  GNSS  ] %s\n", rxBuffer);
+            }
+            else
+            {
+                // check if there is no data from the gnss-unit for a while and set state accordingly
+                gnssTimeout -= (gnssTimeout > 0) ? 1 : 0;
+                gnssAvailable = gnssTimeout > 0;
             }
         }
     }
@@ -481,6 +485,23 @@ void loop()
         else
         {
             digitalWrite(LED_BUILTIN, LOW);
+        }
+
+        if (gnssAvailable)
+        {
+            Serial.printf("[  GNSS  ] %s Lat=%.2f, Lng=%.2f, Alt=%.0fm, Date=%04u-%02u-%02u Time=%02u:%02u:%02u (Sat %u of %u)\n",
+                          gnss.valid ? "Fix" : "No fix",
+                          gnss.latitude,
+                          gnss.longitude,
+                          gnss.altitude,
+                          gnss.utcTimestamp.tm_year,
+                          gnss.utcTimestamp.tm_mon,
+                          gnss.utcTimestamp.tm_mday,
+                          gnss.utcTimestamp.tm_hour,
+                          gnss.utcTimestamp.tm_min,
+                          gnss.utcTimestamp.tm_sec,
+                          gnss.satUsed,
+                          gnss.satView);
         }
     }
 
