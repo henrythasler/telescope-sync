@@ -1,7 +1,7 @@
 #include <unity.h>
 #include <telescope.h>
 #include <gnss.h>
-#include <siderealtime.h>
+#include <helper.h>
 
 #ifndef ARDUINO
 #include <stdio.h>
@@ -43,6 +43,7 @@ void test_function_degToHours(void)
     TEST_ASSERT_EQUAL_FLOAT(12, telescope.degToHours(180));
     TEST_ASSERT_EQUAL_FLOAT(0, telescope.degToHours(360));
     TEST_ASSERT_EQUAL_FLOAT(0, telescope.degToHours(-360));
+    TEST_ASSERT_EQUAL_FLOAT(22, telescope.degToHours(-30));
 }
 
 void test_function_fromHorizontalPosition(void)
@@ -429,22 +430,44 @@ void test_function_gnss_buffer(void)
 
 }
 
+void test_function_siderealtime_fmod(void)
+{
+    TEST_ASSERT_FLOAT_WITHIN(0.0001, 0.8, MathHelper::f_mod(-5.2, 2.));
+    TEST_ASSERT_FLOAT_WITHIN(0.0001, 40, MathHelper::f_mod(400, 360));
+}
+
 void test_function_siderealtime_julianday(void)
 {
-    SiderealTime siderealTime;
     float res = 0;
 
     tm timestamp {.tm_mday=1, .tm_mon=1, .tm_year=2000};
-    res = siderealTime.julianDay(timestamp);
+    res = MathHelper::julianDay(timestamp);
     TEST_ASSERT_FLOAT_WITHIN(0.0001, 2451544.5, res);
 
     timestamp = {.tm_mday=23, .tm_mon=12, .tm_year=2021};
-    res = siderealTime.julianDay(timestamp);
+    res = MathHelper::julianDay(timestamp);
     TEST_ASSERT_FLOAT_WITHIN(0.0001, 2459571.5, res);
 
     timestamp = {.tm_mday=13, .tm_mon=7, .tm_year=2025};
-    res = siderealTime.julianDay(timestamp);
+    res = MathHelper::julianDay(timestamp);
     TEST_ASSERT_FLOAT_WITHIN(0.0001, 2460869.5, res);
+}
+
+void test_function_siderealtime_LST(void)
+{
+    float res = 0;
+
+    res = MathHelper::getLocalSiderealTimeDegrees({.tm_sec=0, .tm_min=10, .tm_hour=23, .tm_mday=10, .tm_mon=8, .tm_year=1998}, -1.9166667);
+    TEST_ASSERT_FLOAT_WITHIN(0.0001, 304.808, res);
+
+    res = MathHelper::getLocalSiderealTimeDegrees({.tm_sec=0, .tm_min=0, .tm_hour=18, .tm_mday=16, .tm_mon=6, .tm_year=1994}, 0);
+    TEST_ASSERT_FLOAT_WITHIN(0.0001, 174.7711, res);
+
+    res = MathHelper::getLocalSiderealTimeDegrees({.tm_sec=34, .tm_min=30, .tm_hour=8, .tm_mday=23, .tm_mon=12, .tm_year=2021}, -120);
+    TEST_ASSERT_FLOAT_WITHIN(0.0001, 99.7504, res);
+
+    res = MathHelper::getLocalSiderealTimeDegrees({.tm_sec=22, .tm_min=13, .tm_hour=6, .tm_mday=13, .tm_mon=7, .tm_year=2025}, 11);
+    TEST_ASSERT_FLOAT_WITHIN(0.0001, 35.7267, res);
 }
 
 void process(void)
@@ -476,7 +499,9 @@ void process(void)
     RUN_TEST(test_function_gnss_buffer);
 
     // sidereal time
+    RUN_TEST(test_function_siderealtime_fmod);    
     RUN_TEST(test_function_siderealtime_julianday);
+    RUN_TEST(test_function_siderealtime_LST);
 
     UNITY_END();
 }

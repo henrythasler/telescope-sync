@@ -6,26 +6,26 @@ Telescope::Telescope(void)
 
 Telescope::Telescope(double ra, double dec)
 {
-    position.ra = ra;
-    position.dec = dec;
+    this->position.ra = ra;
+    this->position.dec = dec;
 }
 
 void Telescope::setPosition(double ra, double dec)
 {
-    position.ra = ra;
-    position.dec = dec;
+    this->position.ra = ra;
+    this->position.dec = dec;
 }
 
 void Telescope::calibrate(Equatorial *reference)
 {
-    offset.ra = reference->ra - position.ra;
-    offset.dec = reference->dec - position.dec;
+    this->offset.ra = reference->ra - this->position.ra;
+    this->offset.dec = reference->dec - this->position.dec;
 }
 
 void Telescope::getCalibratedPosition(Equatorial *calibratedPosition)
 {
-    calibratedPosition->ra = position.ra + offset.ra;
-    calibratedPosition->dec = position.dec + offset.dec;
+    calibratedPosition->ra = this->position.ra + this->offset.ra;
+    calibratedPosition->dec = this->position.dec + this->offset.dec;
 }
 
 double Telescope::rad(double degrees)
@@ -40,7 +40,7 @@ double Telescope::deg(double radians)
 
 double Telescope::degToHours(double degrees)
 {
-    return fmodf(degrees / 360 * 24, 24.0);
+    return MathHelper::f_mod(degrees / 360 * 24, 24.0);
 }
 
 /**
@@ -70,8 +70,8 @@ void Telescope::fromHorizontalPosition(double azimuth, double altitude, double l
 
     double r = sqrt(x * x + y * y);
     double ha = (r != 0.0) ? atan2(y, x) : 0.0;
-    position.dec = deg(atan2(z, r));
-    position.ra = fmodf(localSiderealTimeDegrees - deg(ha), 360);
+    this->position.dec = deg(atan2(z, r));
+    this->position.ra = MathHelper::f_mod(localSiderealTimeDegrees - deg(ha), 360);
 }
 
 /**
@@ -179,7 +179,7 @@ uint32_t Telescope::packPosition(Equatorial *equatorial, uint64_t *timestamp, ui
 
 uint32_t Telescope::packPosition(uint8_t *buffer, size_t bufferSize)
 {
-    return packPosition(&position.ra, &position.dec, &timestamp, buffer, bufferSize);
+    return packPosition(&this->position.ra, &this->position.dec, &this->timestamp, buffer, bufferSize);
 }
 
 /**
@@ -238,7 +238,7 @@ bool Telescope::unpackPosition(double *ra, double *dec, uint64_t *timestamp, uin
  */
 bool Telescope::unpackPosition(uint8_t *data, size_t dataLength)
 {
-    return unpackPosition(&position.ra, &position.dec, &timestamp, data, dataLength);
+    return unpackPosition(&this->position.ra, &this->position.dec, &this->timestamp, data, dataLength);
 }
 
 /**

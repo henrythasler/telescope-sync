@@ -6,6 +6,7 @@ using namespace std;
 #include <stdint.h>
 #include <stddef.h>
 #include <math.h>
+#include <helper.h>
 
 #ifdef ARDUINO
 #include <Arduino.h>

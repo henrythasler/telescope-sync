@@ -10,6 +10,7 @@
 #include <bnodata.h>
 #include <telescope.h>
 #include <gnss.h>
+#include <helper.h>
 
 /**
  * A file called 'secrets.h' must be placed in lib/secrets and contain the following content:
@@ -40,14 +41,17 @@ BnoData bnoData(BNO055_ID, BNO055_ADDRESS_A);
 Persistency persistency;
 GNSS gnss;
 
+// global switches for connected devices
 #define ENABLE_WIFI (true)
 #define ENABLE_GNSS (true)
+#define ENABLE_ORIENTATION (true)
+
 bool orientationSensorAvailable = false;
 bool gnssModuleAvailable = false;
 bool filesystemAvailable = false;
 bool wifiAvailable = false;
 bool gnssAvailable = false;
-float headingOffset = -90;
+float headingOffset = 0;
 
 #define TCP_SERVER_PORT (10001)
 // AsyncServer server(TCP_SERVER_PORT);
@@ -149,30 +153,33 @@ void setup()
         initStage++;
     }
 
-    // Power-On Motion Sensor
-    pinMode(BNO055_PIN_VCC, OUTPUT);
-    digitalWrite(BNO055_PIN_VCC, HIGH);
-    delay(500); // wait for power up. Takes around 400ms (T_Sup).
-    initStage++;
-
-    // Initialize Environment Sensor
-    if (I2CBus.begin(BNO055_PIN_I2C_SDA, BNO055_PIN_I2C_SCL, 250000U)) // set I2C-Clock to 250kHz
+    if (ENABLE_ORIENTATION)
     {
+        // Power-On Motion Sensor
+        pinMode(BNO055_PIN_VCC, OUTPUT);
+        digitalWrite(BNO055_PIN_VCC, HIGH);
+        delay(500); // wait for power up. Takes around 400ms (T_Sup).
         initStage++;
-        if (bno.begin(bno.OPERATION_MODE_NDOF))
+
+        // Initialize Environment Sensor
+        if (I2CBus.begin(BNO055_PIN_I2C_SDA, BNO055_PIN_I2C_SCL, 250000U)) // set I2C-Clock to 250kHz
         {
             initStage++;
-            orientationSensorAvailable = true;
-            Serial.printf("[  INIT  ] found BNO055 Intelligent Absolute Orientation Sensor (ID=%02X, Addr=%02X)\n", BNO055_ID, BNO055_ADDRESS_A);
+            if (bno.begin(bno.OPERATION_MODE_NDOF))
+            {
+                initStage++;
+                orientationSensorAvailable = true;
+                Serial.printf("[  INIT  ] found BNO055 Intelligent Absolute Orientation Sensor (ID=%02X, Addr=%02X)\n", BNO055_ID, BNO055_ADDRESS_A);
+            }
+            else
+            {
+                Serial.println("[ ERROR  ] Could not find a BNO055 sensor. Check wiring!");
+            }
         }
         else
         {
-            Serial.println("[ ERROR  ] Could not find a BNO055 sensor. Check wiring!");
+            Serial.println("[ ERROR  ] Could not setup I2C Interface!");
         }
-    }
-    else
-    {
-        Serial.println("[ ERROR  ] Could not setup I2C Interface!");
     }
 
     if (orientationSensorAvailable)
@@ -389,13 +396,14 @@ void loop()
                               event.orientation.x, event.orientation.y, event.orientation.z);
             }
 
-            if (remoteClient && remoteClient.connected() && bnoData.status.partlyCalibrated)
+            if (remoteClient && remoteClient.connected() && bnoData.status.partlyCalibrated && gnssAvailable && (gnss.longitude > 0.01 || gnss.longitude < -0.01))
             {
                 sensors_event_t event;
                 bno.getEvent(&event);
                 event.orientation.x = fmodf(event.orientation.x + headingOffset, 360);
 
-                telescope.fromHorizontalPosition(event.orientation.x, event.orientation.y, 48, 102.3379);
+                double localSiderealTimeDegrees = MathHelper::getLocalSiderealTimeDegrees(gnss.utcTimestamp, gnss.longitude);
+                telescope.fromHorizontalPosition(event.orientation.x, event.orientation.y, gnss.latitude, localSiderealTimeDegrees);
 
                 Telescope::Equatorial corrected;
                 telescope.getCalibratedPosition(&corrected);

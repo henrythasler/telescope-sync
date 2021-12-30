@@ -7,13 +7,10 @@ using namespace std;
 #include <ctime>
 #include <math.h>
 
-class SiderealTime
+namespace MathHelper
 {
-public:
-    SiderealTime();
-    float getLocalSiderealTimeDegrees(tm utcTimestamp, float longitude);
+    double f_mod(double a, double n);
+    double getLocalSiderealTimeDegrees(tm utcTimestamp, double longitude);
     float julianDay(tm timestamp);
-
-private:
-};
+}
 #endif
