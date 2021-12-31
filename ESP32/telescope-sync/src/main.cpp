@@ -1,5 +1,6 @@
 #include <Arduino.h>
 #include <WiFi.h>
+#include <PubSubClient.h>
 #include <Adafruit_Sensor.h>
 #include <Adafruit_BNO055.h>
 #include <SPIFFS.h>
@@ -21,6 +22,7 @@
  * {
  *     const char *wifiSsid = "test";   // WiFi AP-Name
  *     const char *wifiPassword = "1234";
+ *     IPAddress mqttBroker = IPAddress(192, 168, 1, 1);    // your MQTT-Broker
  * } secrets;
  * #endif
  * 
@@ -43,6 +45,7 @@ GNSS gnss;
 
 // global switches for connected devices
 #define ENABLE_WIFI (true)
+#define ENABLE_MQTT (true)
 #define ENABLE_GNSS (true)
 #define ENABLE_ORIENTATION (true)
 
@@ -51,12 +54,15 @@ bool gnssModuleAvailable = false;
 bool filesystemAvailable = false;
 bool wifiAvailable = false;
 bool gnssAvailable = false;
+bool mqttAvailable = false;
 float headingOffset = 0;
 
 #define TCP_SERVER_PORT (10001)
 // AsyncServer server(TCP_SERVER_PORT);
 WiFiServer server(TCP_SERVER_PORT);
 WiFiClient remoteClient;
+WiFiClient wifiClient;
+PubSubClient mqttClient(wifiClient);
 
 // Flow control, basic task scheduler
 #define SCHEDULER_MAIN_LOOP_MS (10) // ms
@@ -71,8 +77,21 @@ uint32_t gnssTimeout = 0;
 
 Telescope telescope(101.298, -16.724);
 
-uint8_t txBuffer[32];
+uint8_t txBuffer[265];
 uint8_t rxBuffer[265];
+
+void mqttCallback(char *topic, byte *payload, unsigned int length)
+{
+    Serial.print("[  MQTT  ] Message arrived [");
+    Serial.print(topic);
+    Serial.print("]: ");
+    uint32_t i;
+    for (i = 0; i < length; i++)
+    {
+        Serial.print((char)payload[i]);
+    }
+    Serial.println();
+}
 
 void setup()
 {
@@ -246,6 +265,16 @@ void setup()
         server.begin();
         Serial.printf("[ SOCKET ] Listening on port %u\n", TCP_SERVER_PORT);
         initStage++;
+
+        if (ENABLE_MQTT)
+        {
+            Serial.print("[  INIT  ] Connecting to MQTT-Server... ");
+            mqttClient.setServer(secrets.mqttBroker, 1883);
+            mqttClient.setCallback(mqttCallback);
+            Serial.println("ok");
+            initStage++;
+            mqttAvailable = true;
+        }
     }
 
     if (ENABLE_GNSS)
@@ -278,33 +307,18 @@ void checkForConnections()
     }
 }
 
-imu::Vector<3> toEuler(imu::Quaternion q1)
+void reconnectMQTTClient()
 {
-    imu::Vector<3> ret;
-
-    double test = q1.x() * q1.y() + q1.z() * q1.w();
-    if (test > 0.499)
-    { // singularity at north pole
-        ret.x() = 2 * atan2(q1.x(), q1.w());
-        ret.y() = HALF_PI;
-        ret.z() = 0;
-        return ret;
+    Serial.print("[  MQTT  ] Attempting MQTT connection... ");
+    if (mqttClient.connect(WiFi.getHostname()))
+    {
+        Serial.println("connected");
     }
-    if (test < -0.499)
-    { // singularity at south pole
-        ret.x() = -2 * atan2(q1.x(), q1.w());
-        ret.y() = -HALF_PI;
-        ret.z() = 0;
-        return ret;
+    else
+    {
+        Serial.print("failed, rc=");
+        Serial.print(mqttClient.state());
     }
-    double sqx = q1.x() * q1.x();
-    double sqy = q1.y() * q1.y();
-    double sqz = q1.z() * q1.z();
-    ret.x() = atan2(2 * q1.y() * q1.w() - 2 * q1.x() * q1.z(), 1 - 2 * sqy - 2 * sqz);
-    ret.y() = asin(2 * test);
-    ret.z() = atan2(2 * q1.x() * q1.w() - 2 * q1.y() * q1.z(), 1 - 2 * sqx - 2 * sqz);
-
-    return ret;
 }
 
 void loop()
@@ -348,6 +362,11 @@ void loop()
             {
                 calibrationStableCounter = 0;
             }
+        }
+
+        if (mqttAvailable)
+        {
+            mqttClient.loop();
         }
     }
 
@@ -396,10 +415,11 @@ void loop()
                               event.orientation.x, event.orientation.y, event.orientation.z);
             }
 
+            sensors_event_t event;
+            bno.getEvent(&event);
+
             if (remoteClient && remoteClient.connected() && bnoData.status.partlyCalibrated && gnssAvailable && (gnss.longitude > 0.01 || gnss.longitude < -0.01))
             {
-                sensors_event_t event;
-                bno.getEvent(&event);
                 event.orientation.x = fmodf(event.orientation.x + headingOffset, 360);
 
                 double localSiderealTimeDegrees = MathHelper::getLocalSiderealTimeDegrees(gnss.utcTimestamp, gnss.longitude);
@@ -412,6 +432,17 @@ void loop()
                 {
                     remoteClient.write(txBuffer, length);
                 }
+            }
+            if (mqttAvailable)
+            {
+                int32_t len = 0;
+                len = snprintf((char *)txBuffer, sizeof(txBuffer), "{\"azimuth\":%.2f,\"elevation\":%.2f,\"ra\":%.2f,\"dec\":%.2f,\"lst\":%.3f}",
+                               event.orientation.x,
+                               event.orientation.y,
+                               telescope.position.ra,
+                               telescope.position.dec,
+                               MathHelper::getLocalSiderealTimeDegrees(gnss.utcTimestamp, gnss.longitude) / 15.); // to hours
+                mqttClient.publish("home/appliance/telescope/orientation", txBuffer, len);
             }
         }
         if (ENABLE_GNSS)
@@ -477,17 +508,26 @@ void loop()
                 }
             }
 
+            bno.getSystemStatus(&bnoData.status.statSystem, &bnoData.status.statSelfTest, &bnoData.status.errSystem);
+            bno.getCalibration(&bnoData.status.calSystem, &bnoData.status.calGyro, &bnoData.status.calAccel, &bnoData.status.calMag);
             if (!bnoData.status.fullyCalibrated && DEBUG)
             {
-                bno.getSystemStatus(&bnoData.status.statSystem, &bnoData.status.statSelfTest, &bnoData.status.errSystem);
-                bno.getCalibration(&bnoData.status.calSystem, &bnoData.status.calGyro, &bnoData.status.calAccel, &bnoData.status.calMag);
-
                 // show overall system state
                 Serial.printf("[ SENSOR ] Sys: %X ST: %X Err: %X  Cal: %u%u%u%u\n",
                               bnoData.status.statSystem,
                               bnoData.status.statSelfTest,
                               bnoData.status.errSystem,
                               bnoData.status.calSystem, bnoData.status.calGyro, bnoData.status.calAccel, bnoData.status.calMag);
+            }
+            if (mqttAvailable)
+            {
+                int32_t len = 0;
+                len = snprintf((char *)txBuffer, sizeof(txBuffer), "{\"system\":\"0x%X\",\"selftest\":\"0x%X\",\"error\":\"0x%X\",\"cal\":\"0x%04X\"}",
+                               bnoData.status.statSystem,
+                               bnoData.status.statSelfTest,
+                               bnoData.status.errSystem,
+                               (uint32_t(bnoData.status.calSystem) << 12) + (uint32_t(bnoData.status.calGyro) << 8) + (uint32_t(bnoData.status.calAccel) << 4) + uint32_t(bnoData.status.calMag));
+                mqttClient.publish("home/appliance/telescope/sensor", txBuffer, len);
             }
         }
         else
@@ -510,6 +550,29 @@ void loop()
                           gnss.utcTimestamp.tm_sec,
                           gnss.satUsed,
                           gnss.satView);
+            if (mqttAvailable)
+            {
+                int32_t len = 0;
+                len = snprintf((char *)txBuffer, sizeof(txBuffer), "{\"valid\":%s,\"lat\":%.3f,\"lng\":%.3f,\"alt\":%.0f,\"date\":\"%04u-%02u-%02u\",\"time\":\"%02u:%02u:%02u\",\"satUse\":%u,\"satView\":%u}",
+                               gnss.valid ? "true" : "false",
+                               gnss.latitude,
+                               gnss.longitude,
+                               gnss.altitude,
+                               gnss.utcTimestamp.tm_year,
+                               gnss.utcTimestamp.tm_mon,
+                               gnss.utcTimestamp.tm_mday,
+                               gnss.utcTimestamp.tm_hour,
+                               gnss.utcTimestamp.tm_min,
+                               gnss.utcTimestamp.tm_sec,
+                               gnss.satUsed,
+                               gnss.satView);
+                mqttClient.publish("home/appliance/telescope/gnss", txBuffer, len);
+            }
+        }
+
+        if (mqttAvailable && !mqttClient.connected())
+        {
+            reconnectMQTTClient();
         }
     }
 
