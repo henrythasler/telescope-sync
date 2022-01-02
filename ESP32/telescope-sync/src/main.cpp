@@ -184,7 +184,9 @@ void setup()
         if (I2CBus.begin(BNO055_PIN_I2C_SDA, BNO055_PIN_I2C_SCL, 250000U)) // set I2C-Clock to 250kHz
         {
             initStage++;
-            if (bno.begin(bno.OPERATION_MODE_NDOF))
+            // in NDOF, too many errors are introduced by the magentometer. Especially when the sensor is attached to the metal tube of the telescope
+            // IMU-Mode hat no absolute azimuth-orientation but less variations and better repeatability.
+            if (bno.begin(bno.OPERATION_MODE_IMUPLUS))
             {
                 initStage++;
                 orientationSensorAvailable = true;
@@ -346,8 +348,11 @@ void loop()
 
                 Telescope::Equatorial reference;
 
-                telescope.unpackPosition(&reference, NULL, rxBuffer, received);
-                telescope.calibrate(&reference);
+                // check if the packet could be decoded correctly before using it to calibrate the offset
+                if (telescope.unpackPosition(&reference, NULL, rxBuffer, received))
+                {
+                    telescope.calibrate(&reference);
+                }
             }
         }
 
@@ -375,55 +380,20 @@ void loop()
     {
         if (orientationSensorAvailable)
         {
-
             if (!bnoData.status.fullyCalibrated)
             {
                 digitalWrite(LED_BUILTIN, LOW);
             }
 
-            if (bnoData.status.fullyCalibrated && DEBUG)
-            {
-                // see https://forums.adafruit.com/viewtopic.php?f=25&t=108290&p=541754#p541754
-                imu::Quaternion q = bno.getQuat();
-                // imu::Quaternion q = getQuat();
-                q.normalize();
-
-                float temp = q.x();
-                q.x() = -q.y();
-                q.y() = temp;
-                q.z() = -q.z();
-
-                // euler.x() = -90 * euler.x() * M_PI;
-                // euler.y() = -90 * euler.y() * M_PI;
-                // euler.z() = -90 * euler.z() * M_PI;
-
-                // imu::Vector<3> euler = bno.getVector(bno.VECTOR_EULER);
-                imu::Vector<3> euler = q.toEuler();
-                // imu::Vector<3> euler = toEuler(imu::Quaternion(0.7071, 0.7071, 0, 0 ));
-                // imu::Vector<3> euler = toEuler(q);
-                // imu::Vector<3> euler = toEuler2(q);
-
-                // Serial.printf("[ SENSOR ] Heading: %3.2f Attitude: %3.2f Bank: %3.2f (w=%3.3f x=%3.3f y=%3.3f z=%3.3f)\n",
-                //               euler.x() * 180 / M_PI, euler.y() * 180 / M_PI, euler.z() * 180 / M_PI,
-                //               q.w(), q.x(), q.y(), q.z());
-
-                sensors_event_t event;
-                bno.getEvent(&event);
-                event.orientation.x = fmodf(event.orientation.x + headingOffset, 360);
-
-                Serial.printf("[ SENSOR ] Orientation: (x=%3.2f y=%3.2f z=%3.2f)\n",
-                              event.orientation.x, event.orientation.y, event.orientation.z);
-            }
-
-            sensors_event_t event;
-            bno.getEvent(&event);
+            // ZYX-Order. Sensor xy-plane is aligned with earth's surface => x=azimuth; y=altitude
+            imu::Quaternion q = bno.getQuat();
+            imu::Vector<3> euler = q.toEuler() * 180. / PI;
+            euler.x() *= -1; // convert to Azimuth where north=0° and a rotation towards east (right) increases the value
 
             if (remoteClient && remoteClient.connected() && bnoData.status.partlyCalibrated && gnssAvailable && (gnss.longitude > 0.01 || gnss.longitude < -0.01))
             {
-                event.orientation.x = fmodf(event.orientation.x + headingOffset, 360);
-
                 double localSiderealTimeDegrees = MathHelper::getLocalSiderealTimeDegrees(gnss.utcTimestamp, gnss.longitude);
-                telescope.fromHorizontalPosition(event.orientation.x, event.orientation.y, gnss.latitude, localSiderealTimeDegrees);
+                telescope.fromHorizontalPosition(euler.x(), euler.y(), gnss.latitude, localSiderealTimeDegrees);
 
                 Telescope::Equatorial corrected;
                 telescope.getCalibratedPosition(&corrected);
@@ -436,13 +406,31 @@ void loop()
             if (mqttAvailable)
             {
                 int32_t len = 0;
-                len = snprintf((char *)txBuffer, sizeof(txBuffer), "{\"azimuth\":%.2f,\"elevation\":%.2f,\"ra\":%.2f,\"dec\":%.2f,\"lst\":%.3f}",
-                               event.orientation.x,
-                               event.orientation.y,
+                len = snprintf((char *)txBuffer, sizeof(txBuffer), "{\"az\":%.2f,\"alt\":%.2f,\"ra\":%.2f,\"dec\":%.2f,\"lst\":%.3f}",
+                               euler.x(),
+                               euler.y(),
                                telescope.position.ra,
                                telescope.position.dec,
                                MathHelper::getLocalSiderealTimeDegrees(gnss.utcTimestamp, gnss.longitude) / 15.); // to hours
                 mqttClient.publish("home/appliance/telescope/orientation", txBuffer, len);
+            }
+
+            if (DEBUG)
+            {
+                Serial.printf("[ SENSOR ] Roll: %3.2f Pitch: %3.2f Yaw: %3.2f (w=%3.3f x=%3.3f y=%3.3f z=%3.3f)\n", euler.x(), euler.y(), euler.z(), q.w(), q.x(), q.y(), q.z());
+
+                if (mqttAvailable)
+                {
+                    int32_t len = 0;
+                    len = snprintf((char *)txBuffer, sizeof(txBuffer), "%.3f", euler.x());
+                    mqttClient.publish("home/appliance/telescope/orientation/roll", txBuffer, len);
+                    len = snprintf((char *)txBuffer, sizeof(txBuffer), "%.3f", euler.y());
+                    mqttClient.publish("home/appliance/telescope/orientation/pitch", txBuffer, len);
+                    len = snprintf((char *)txBuffer, sizeof(txBuffer), "%.3f", euler.z());
+                    mqttClient.publish("home/appliance/telescope/orientation/yaw", txBuffer, len);
+                    len = snprintf((char *)txBuffer, sizeof(txBuffer), "[%.4f, %.4f, %.4f, %.4f]", q.w(), q.x(), q.y(), q.z());
+                    mqttClient.publish("home/appliance/telescope/orientation/quat", txBuffer, len);
+                }
             }
         }
         if (ENABLE_GNSS)

@@ -6,11 +6,15 @@ This readme will be my notebook during development and should provide detailled 
 
 ## Introduction
 
-To achieve the goal of finding an object in the sky more easily, we need to link the telescope's current orientation to a star chart where we can compare the current orientation with the orientation needed to 
+To achieve the goal of finding an object in the sky more easily, we need to link the telescope's current orientation to a star chart where we can compare the current orientation with the orientation needed to view a specific object within the ocular.
+
+As most objects that need to be located with this method will be very dim and dificult to spot, we need to center the object in the ocular view with a certain precision.
+
+My requirement is, that an object appears near the center of my 8mm ocular that has a FOV of 0.45° (f=1200mm). This means an overall deviation of 0.2° compared to the real position is acceptable.
 
 ## Calculations
 
-see jupyter-notebook
+see [jupyter-notebook](docs/calculations.ipynb)
 
 ## Determining telescope orientation
 
@@ -28,6 +32,8 @@ Rank | Name | Pros | Cons
 6 | MPU-9250 | | High Zero-rate Offset
 
 Stellarium expects the right ascension and declination of the telescope as input. To compute these values, we need the exact location and a timestamp. A simple GPS Receiver ([GP-20U7](http://www.adh-tech.com.tw/?50,gp-20u7)) should provide this information with sufficient precision.
+
+
 
 ## Hardware Setup
 
