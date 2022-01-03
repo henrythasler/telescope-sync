@@ -17,6 +17,7 @@ class GNSS
 {
 public:
     GNSS();
+    GNSS(float initialLatitude, float initialLongitude);
 
     bool verifyChecksum(string sentence);
 

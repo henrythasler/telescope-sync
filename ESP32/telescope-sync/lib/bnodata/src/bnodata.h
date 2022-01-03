@@ -40,5 +40,5 @@ public:
 
 private:    
 };
-#endif
-#endif
+#endif // ARDUINO
+#endif // BNODATA_H

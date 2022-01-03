@@ -4,28 +4,31 @@ Telescope::Telescope(void)
 {
 }
 
-Telescope::Telescope(double ra, double dec)
+Telescope::Telescope(double alt, double az)
 {
-    this->position.ra = ra;
-    this->position.dec = dec;
+    this->orientation.alt = alt;
+    this->orientation.az = az;
 }
 
-void Telescope::setPosition(double ra, double dec)
+void Telescope::setOrientation(double alt, double az)
 {
-    this->position.ra = ra;
-    this->position.dec = dec;
+    this->orientation.alt = alt;
+    this->orientation.az = az;
 }
 
-void Telescope::calibrate(Equatorial *reference)
+void Telescope::calibrate(Equatorial reference, double latitude, double localSiderealTimeDegrees)
 {
-    this->offset.ra = reference->ra - this->position.ra;
-    this->offset.dec = reference->dec - this->position.dec;
+    Horizontal hRef = this->equatorialToHorizontal(reference, latitude, localSiderealTimeDegrees);
+    this->offset.alt = hRef.alt - this->orientation.alt;
+    this->offset.az = hRef.az - this->orientation.az;
 }
 
-void Telescope::getCalibratedPosition(Equatorial *calibratedPosition)
+Telescope::Horizontal Telescope::getCalibratedOrientation(void)
 {
-    calibratedPosition->ra = this->position.ra + this->offset.ra;
-    calibratedPosition->dec = this->position.dec + this->offset.dec;
+    Telescope::Horizontal result;
+    result.alt = this->offset.alt + this->orientation.alt;
+    result.az = this->offset.az + this->orientation.az;
+    return result;
 }
 
 double Telescope::rad(double degrees)
@@ -51,7 +54,7 @@ double Telescope::degToHours(double degrees)
  * @param localSiderealTimeDegrees 
  * @returns a struct containing the ALT/AZ values
  */
-void Telescope::fromHorizontalPosition(double azimuth, double altitude, double latitude, double localSiderealTimeDegrees)
+void Telescope::horizontalToEquatorial(double azimuth, double altitude, double latitude, double localSiderealTimeDegrees, Telescope::Equatorial *result)
 {
     double az = rad(azimuth);
     double el = rad(altitude);
@@ -70,25 +73,45 @@ void Telescope::fromHorizontalPosition(double azimuth, double altitude, double l
 
     double r = sqrt(x * x + y * y);
     double ha = (r != 0.0) ? atan2(y, x) : 0.0;
-    this->position.dec = deg(atan2(z, r));
-    this->position.ra = MathHelper::f_mod(localSiderealTimeDegrees - deg(ha), 360);
+    result->dec = deg(atan2(z, r));
+    result->ra = MathHelper::f_mod(localSiderealTimeDegrees - deg(ha), 360);
+}
+
+void Telescope::horizontalToEquatorial(Horizontal horizontal, double latitude, double localSiderealTimeDegrees, Telescope::Equatorial *result)
+{
+    this->horizontalToEquatorial(horizontal.az, horizontal.alt, latitude, localSiderealTimeDegrees, result);
+}
+
+Telescope::Equatorial Telescope::horizontalToEquatorial(double azimuth, double altitude, double latitude, double localSiderealTimeDegrees)
+{
+    Telescope::Equatorial equatorial;
+    this->horizontalToEquatorial(azimuth, altitude, latitude, localSiderealTimeDegrees, &equatorial);
+    return equatorial;
+}
+
+Telescope::Equatorial Telescope::horizontalToEquatorial(Horizontal horizontal, double latitude, double localSiderealTimeDegrees)
+{
+    Telescope::Equatorial equatorial;
+    this->horizontalToEquatorial(horizontal.az, horizontal.alt, latitude, localSiderealTimeDegrees, &equatorial);
+    return equatorial;
 }
 
 /**
  * Converts the current position to horizontal coordinates
  * based on: iauHd2ae() from http://www.iausofa.org 
  * according to SOFA Software License this function contains modifications regarding input/output types.
+ * @param ra in decimal degrees
+ * @param dec in decimal degrees
  * @param latitude in decimal degrees
  * @param localSiderealTimeDegrees 
  * @returns a struct containing the ALT/AZ values
  */
-Telescope::Horizontal Telescope::toHorizontalPosition(double latitude, double localSiderealTimeDegrees)
+void Telescope::equatorialToHorizontal(double ra, double dec, double latitude, double localSiderealTimeDegrees, Telescope::Horizontal *result)
 {
-    Horizontal result;
-    double hourAngle = localSiderealTimeDegrees - position.ra;
+    double hourAngle = localSiderealTimeDegrees - ra;
     double ha = hourAngle >= 0 ? rad(hourAngle) : rad(hourAngle + 360);
 
-    double dec = rad(position.dec);
+    dec = rad(dec);
     double phi = rad(latitude);
 
     double sh = sin(ha);
@@ -107,9 +130,27 @@ Telescope::Horizontal Telescope::toHorizontalPosition(double latitude, double lo
     double a = (r != 0.0) ? atan2(y, x) : 0.0;
     double az = (a < 0.0) ? a + 2 * PI : a;
     double el = atan2(z, r);
-    result.az = deg(az);
-    result.alt = deg(el);
-    return (result);
+    result->az = deg(az);
+    result->alt = deg(el);
+}
+
+void Telescope::equatorialToHorizontal(Equatorial equatorial, double latitude, double localSiderealTimeDegrees, Telescope::Horizontal *result)
+{
+    this->equatorialToHorizontal(equatorial.ra, equatorial.dec, latitude, localSiderealTimeDegrees, result);
+}
+
+Telescope::Horizontal Telescope::equatorialToHorizontal(Equatorial equatorial, double latitude, double localSiderealTimeDegrees)
+{
+    Telescope::Horizontal result;
+    this->equatorialToHorizontal(equatorial.ra, equatorial.dec, latitude, localSiderealTimeDegrees, &result);
+    return result;
+}
+
+Telescope::Horizontal Telescope::equatorialToHorizontal(double ra, double dec, double latitude, double localSiderealTimeDegrees)
+{
+    Telescope::Horizontal result;
+    this->equatorialToHorizontal(ra, dec, latitude, localSiderealTimeDegrees, &result);
+    return result;
 }
 
 /**
@@ -120,7 +161,7 @@ Telescope::Horizontal Telescope::toHorizontalPosition(double latitude, double lo
  * @param bufferSize size of the buffer to check for OOB-access
  * @returns the number of bytes that were serialized. 24 for OK, anything else for ERROR.
  */
-uint32_t Telescope::packPosition(double *ra, double *dec, uint64_t *timestamp, uint8_t *buffer, size_t bufferSize)
+uint32_t Telescope::packPosition(double ra, double dec, uint64_t timestamp, uint8_t *buffer, size_t bufferSize)
 {
     uint32_t encoded = 0;
 
@@ -140,24 +181,24 @@ uint32_t Telescope::packPosition(double *ra, double *dec, uint64_t *timestamp, u
     *writePtr++ = (MESSAGE_CURRENT_POSITION_TYPE >> 8) & 0xFF;
 
     // TIME
-    *writePtr++ = (*timestamp) & 0xFF;
+    *writePtr++ = timestamp & 0xFF;
     ;
-    *writePtr++ = ((*timestamp) >> 8) & 0xFF;
-    *writePtr++ = ((*timestamp) >> 16) & 0xFF;
-    *writePtr++ = ((*timestamp) >> 24) & 0xFF;
-    *writePtr++ = ((*timestamp) >> 32) & 0xFF;
-    *writePtr++ = ((*timestamp) >> 40) & 0xFF;
-    *writePtr++ = ((*timestamp) >> 48) & 0xFF;
-    *writePtr++ = ((*timestamp) >> 56) & 0xFF;
+    *writePtr++ = (timestamp >> 8) & 0xFF;
+    *writePtr++ = (timestamp >> 16) & 0xFF;
+    *writePtr++ = (timestamp >> 24) & 0xFF;
+    *writePtr++ = (timestamp >> 32) & 0xFF;
+    *writePtr++ = (timestamp >> 40) & 0xFF;
+    *writePtr++ = (timestamp >> 48) & 0xFF;
+    *writePtr++ = (timestamp >> 56) & 0xFF;
 
     // this includes conversion from degrees to hours
-    encoded = static_cast<uint32_t>(floor(0.5 + (*ra) * static_cast<double>(0x80000000) / 180.));
+    encoded = static_cast<uint32_t>(floor(0.5 + ra * static_cast<double>(0x80000000) / 180.));
     *writePtr++ = encoded & 0xFF;
     *writePtr++ = (encoded >> 8) & 0xFF;
     *writePtr++ = (encoded >> 16) & 0xFF;
     *writePtr++ = (encoded >> 24) & 0xFF;
 
-    encoded = static_cast<uint32_t>(floor(0.5 + (*dec) * static_cast<double>(0x80000000) / 180.));
+    encoded = static_cast<uint32_t>(floor(0.5 + dec * static_cast<double>(0x80000000) / 180.));
     *writePtr++ = encoded & 0xFF;
     *writePtr++ = (encoded >> 8) & 0xFF;
     *writePtr++ = (encoded >> 16) & 0xFF;
@@ -172,14 +213,9 @@ uint32_t Telescope::packPosition(double *ra, double *dec, uint64_t *timestamp, u
     return (writePtr - buffer);
 }
 
-uint32_t Telescope::packPosition(Equatorial *equatorial, uint64_t *timestamp, uint8_t *buffer, size_t bufferSize)
+uint32_t Telescope::packPosition(Equatorial equatorial, uint64_t timestamp, uint8_t *buffer, size_t bufferSize)
 {
-    return packPosition(&equatorial->ra, &equatorial->dec, timestamp, buffer, bufferSize);
-}
-
-uint32_t Telescope::packPosition(uint8_t *buffer, size_t bufferSize)
-{
-    return packPosition(&this->position.ra, &this->position.dec, &this->timestamp, buffer, bufferSize);
+    return packPosition(equatorial.ra, equatorial.dec, timestamp, buffer, bufferSize);
 }
 
 /**
@@ -228,17 +264,6 @@ bool Telescope::unpackPosition(double *ra, double *dec, uint64_t *timestamp, uin
                                (static_cast<uint32_t>(data[19]) << 24)) /
            static_cast<double>(0x80000000) * 180.;
     return true;
-}
-
-/**
- * Wrapper for unpackPosition() where the values are stored directly in the class properties 'position' and 'timestamp'
- * @param data pointer to the serialized input data
- * @param dataLength size of the input data to check for OOB-access
- * @returns true for OK, false for ERROR.
- */
-bool Telescope::unpackPosition(uint8_t *data, size_t dataLength)
-{
-    return unpackPosition(&this->position.ra, &this->position.dec, &this->timestamp, data, dataLength);
 }
 
 /**

@@ -4,6 +4,12 @@ GNSS::GNSS()
 {
 }
 
+GNSS::GNSS(float initialLatitude, float initialLongitude)
+{
+    this->latitude = initialLatitude;
+    this->longitude = initialLongitude;
+}
+
 bool GNSS::fromRMC(string sentence)
 {
     int32_t pos = 0;
@@ -22,21 +28,26 @@ bool GNSS::fromRMC(string sentence)
     this->utcTimestamp.tm_min = floor(rawTimestamp / 100.0f) - utcTimestamp.tm_hour * 100.0f;
     this->utcTimestamp.tm_sec = floor(rawTimestamp) - utcTimestamp.tm_hour * 10000.0f - utcTimestamp.tm_min * 100.0f;
 
-    this->valid = (*(++ptr) == 'A');
+    ptr++;
+    this->valid = (*ptr == 'A');
 
     ptr += (*ptr == ',') ? 1 : 2;
     rawValue = strtof(ptr, &ptr);
-    this->latitude = floor(rawValue / 100.0f) + (rawValue - floor(rawValue / 100.0f) * 100.0f) / 60.0f; // convert to decimal degrees
 
-    this->north = (*(++ptr) == 'N');
-    this->latitude *= this->north ? 1 : -1; // set sign accoringly (north=positive; south=negative)
+    ptr++;
+    this->north = (*ptr == 'N');
+
+    if (this->valid)
+        this->latitude = (this->north ? 1 : -1) * (floor(rawValue / 100.0f) + (rawValue - floor(rawValue / 100.0f) * 100.0f) / 60.0f); // convert to decimal degrees
 
     ptr += (*ptr == ',') ? 1 : 2;
     rawValue = strtof(ptr, &ptr);
-    this->longitude = floor(rawValue / 100.0f) + (rawValue - floor(rawValue / 100.0f) * 100.0f) / 60.0f;
 
-    this->east = (*(++ptr) == 'E');
-    this->longitude *= this->east ? 1 : -1; // set sign accoringly (east=positive; west=negative)
+    ptr++;
+    this->east = (*ptr == 'E');
+
+    if (this->valid)
+        this->longitude = (this->east ? 1 : -1) * (floor(rawValue / 100.0f) + (rawValue - floor(rawValue / 100.0f) * 100.0f) / 60.0f);
 
     ptr += (*ptr == ',') ? 1 : 2;
     rawValue = strtof(ptr, &ptr);
@@ -64,7 +75,7 @@ bool GNSS::fromGGA(string sentence)
 {
     int32_t pos = 0;
     char *ptr;
-    float rawValue = 0.0;
+    float rawValue = 0.0, rawLatitude = 0.0, rawLongitude = 0.0;
     uint32_t rawLong = 0;
 
     if (!this->verifyChecksum(sentence))
@@ -80,24 +91,26 @@ bool GNSS::fromGGA(string sentence)
     this->utcTimestamp.tm_sec = floor(rawTimestamp) - utcTimestamp.tm_hour * 10000.0f - utcTimestamp.tm_min * 100.0f;
 
     ptr++;
-    rawValue = strtof(ptr, &ptr);
-    this->latitude = floor(rawValue / 100.0f) + (rawValue - floor(rawValue / 100.0f) * 100.0f) / 60.0f; // convert to decimal degrees
+    rawLatitude = strtof(ptr, &ptr);
 
     ptr++;
     this->north = (*ptr == 'N');
-    this->latitude *= this->north ? 1 : -1; // set sign accoringly (north=positive; south=negative)
 
     ptr += (*ptr == ',') ? 1 : 2;
-    rawValue = strtof(ptr, &ptr);
-    this->longitude = floor(rawValue / 100.0f) + (rawValue - floor(rawValue / 100.0f) * 100.0f) / 60.0f;
+    rawLongitude = strtof(ptr, &ptr);
 
     ptr++;
     this->east = (*ptr == 'E');
-    this->longitude *= this->east ? 1 : -1; // set sign accoringly (east=positive; west=negative)
 
     ptr += (*ptr == ',') ? 1 : 2;
     rawLong = strtol(ptr, &ptr, 10);
     this->valid = (rawLong > 0);
+
+    if (this->valid)
+    {
+        this->latitude = (this->north ? 1. : -1.) * (floor(rawLatitude / 100.0f) + (rawLatitude - floor(rawLatitude / 100.0f) * 100.0f) / 60.0f); // convert to decimal degrees
+        this->longitude = (this->east ? 1. : -1.) * (floor(rawLongitude / 100.0f) + (rawLongitude - floor(rawLongitude / 100.0f) * 100.0f) / 60.0f);
+    }
 
     ptr++;
     this->satUsed = strtol(ptr, &ptr, 10);
