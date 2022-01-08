@@ -6,6 +6,7 @@
 #include <Adafruit_BNO055.h>
 #include <SPIFFS.h>
 // #include <AsyncTCP.h>
+#include <sMQTTBroker.h>
 
 // own libraries
 #include <persistency.h>
@@ -50,6 +51,7 @@ GNSS gnss(48, 11); // set initial position to enable operation before GNSS fix
 #define ENABLE_GNSS (true)
 #define ENABLE_ORIENTATION (true)
 #define ENABLE_BROKER (false)
+#define FORCE_AP (true)
 
 bool orientationSensorAvailable = false;
 bool gnssModuleAvailable = false;
@@ -61,11 +63,32 @@ bool localBrokerAvailable = false;
 float headingOffset = 0;
 
 #define TCP_SERVER_PORT (10001)
+#define SSID "ESP32"
 // AsyncServer server(TCP_SERVER_PORT);
 WiFiServer server(TCP_SERVER_PORT);
 WiFiClient remoteClient;
 WiFiClient wifiClient;
 PubSubClient mqttClient(wifiClient);
+
+class MyBroker : public sMQTTBroker
+{
+public:
+    bool onConnect(sMQTTClient *client, const std::string &username, const std::string &password)
+    {
+        Serial.printf("[ BROKER ] Client '%s' connected\n", client->getClientId().c_str());
+        return true;
+    };
+    void onRemove(sMQTTClient *client)
+    {
+        Serial.printf("[ BROKER ] '%s' disconnected\n", client->getClientId().c_str());
+    };
+
+    void onPublish(sMQTTClient *client, const std::string &topic, const std::string &payload)
+    {
+        Serial.printf("[ BROKER ] Client '%s' published topic '%s': '%s'\n", client->getClientId().c_str(), topic.c_str(), payload.c_str());
+    }
+};
+MyBroker broker;
 
 // Flow control, basic task scheduler
 #define SCHEDULER_MAIN_LOOP_MS (10) // ms
@@ -127,21 +150,31 @@ void setup()
 
         //check wi-fi is connected to wi-fi network
         int retries = 5;
-        while (WiFi.status() != WL_CONNECTED)
+        while ((WiFi.status() != WL_CONNECTED) && (retries > 0))
         {
             delay(1000);
             Serial.print(".");
             retries--;
-            if (retries <= 0)
-            {
-                ESP.restart();
-            }
         }
-        Serial.print(" connected!");
-        Serial.print(" (IP=");
-        Serial.print(WiFi.localIP());
-        Serial.println(")");
-        wifiAvailable = true;
+
+        if (WiFi.status() == WL_CONNECTED)
+        {
+            Serial.print(" connected!");
+            Serial.print(" (IP=");
+            Serial.print(WiFi.localIP());
+            Serial.println(")");
+            wifiAvailable = true;
+        }
+        else 
+        {
+            Serial.println(" failed!");
+            Serial.printf("[  INIT  ] Setting up Wifi access point '%s'... ", SSID);
+            WiFi.softAP(SSID);
+            Serial.print(" done (IP=");
+            Serial.print(WiFi.softAPIP());
+            Serial.println(")");
+        }
+
         initStage++;
     }
 
@@ -270,10 +303,14 @@ void setup()
         Serial.printf("[ SOCKET ] Listening on port %u\n", TCP_SERVER_PORT);
         initStage++;
 
+        broker.init(1883);
+        broker.update();
+
         if (ENABLE_MQTT)
         {
             Serial.print("[  INIT  ] Connecting to MQTT-Server... ");
             mqttClient.setServer(secrets.mqttBroker, 1883);
+            // mqttClient.setServer(IPAddress(192, 168, 178, 82), 1883);
             mqttClient.setCallback(mqttCallback);
             Serial.println("ok");
             initStage++;
@@ -330,6 +367,8 @@ void loop()
     // base tasks
     if (wifiAvailable)
         checkForConnections();
+
+    broker.update();
 
     // 100ms Tasks
     if (!(counterBase % (100L / SCHEDULER_MAIN_LOOP_MS)))
@@ -569,6 +608,7 @@ void loop()
                                gnss.satUsed,
                                gnss.satView);
                 mqttClient.publish("home/appliance/telescope/gnss", txBuffer, len);
+                broker.publish("home/appliance/telescope/gnss", (char *)txBuffer);
             }
         }
 
