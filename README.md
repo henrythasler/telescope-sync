@@ -25,11 +25,12 @@ After some research I selected the following list of possible candidates:
 Rank | Name | Pros | Cons
 ---|---|---|---
 1 | [BNO085](https://learn.adafruit.com/adafruit-9-dof-orientation-imu-fusion-breakout-bno085/) | Integrated Sensor Fusion | Out of Stock
-2 | [BNO055](https://learn.adafruit.com/adafruit-bno055-absolute-orientation-sensor/overview) |  Integrated Sensor Fusion | 
-3 | [NXP 9-DOF](https://learn.adafruit.com/nxp-precision-9dof-breakout) |  | Out of Stock
-4 | [ICM-20948](https://learn.adafruit.com/adafruit-tdk-invensense-icm-20948-9-dof-imu) | ok-ish Zero-rate Offset | 
-5 | [LSM6DSOX + LIS3MDL](https://github.com/adafruit/Adafruit_LSM6DS) |  | Out of Stock
-6 | MPU-9250 | | High Zero-rate Offset
+2 | [BNO055](https://learn.adafruit.com/adafruit-bno055-absolute-orientation-sensor/overview) |  Integrated Sensor Fusion | Calibration is cumbersome and is lost frequently
+3 | [LSM6DSOX + LIS3MDL](https://github.com/adafruit/Adafruit-LSM6DSOX-LIS3MDL-PCB) |  | Out of Stock
+4 | [LSM6DS33 + LIS3MDL](https://github.com/adafruit/Adafruit-LSM6DS33-LIS3MDL-PCB) | | 
+5 | [NXP 9-DOF](https://learn.adafruit.com/nxp-precision-9dof-breakout) |  | Out of Stock
+6 | [ICM-20948](https://learn.adafruit.com/adafruit-tdk-invensense-icm-20948-9-dof-imu) | ok-ish Zero-rate Offset | 
+7 | MPU-9250 | | High Zero-rate Offset
 
 Stellarium expects the right ascension and declination of the telescope as input. To compute these values, we need the exact location and a timestamp. A simple GPS Receiver ([GP-20U7](http://www.adh-tech.com.tw/?50,gp-20u7)) should provide this information with sufficient precision.
 
@@ -72,7 +73,9 @@ see also [TelescopeTCP::telescopeGoto](https://github.com/Stellarium/stellarium/
 - [Control Your Telescope Using Stellarium & Arduino](https://www.instructables.com/Control-Your-Telescope-Using-Stellarium-Arduino/)
 - [Arduino Star-Finder for Telescopes](https://www.instructables.com/Arduino-Star-Finder-for-Telescopes/)
 - [SpotNik - StepTo / PushTo / Digital Setting Circles for EQ Mounted Telescopes Based on Arduino](https://www.instructables.com/SpotNik-StepTo-PushTo-Digital-Setting-Circles-for-/)
-
+- [Instrumented Telescope with Raspberry Pi and orientation sensor](https://astrobeano.blogspot.com/2014/01/instrumented-telescope-with-raspberry.html)
+- [Telescope pointing based on inertial measurement unit](http://www.doiserbia.nb.rs/Article.aspx?ID=1450-698X1794101V)
+- [Accurate Telescope Mount Positioning with MEMS Accelerometers](https://arxiv.org/abs/1407.0035)
 
 ### Math
 
@@ -91,6 +94,7 @@ see also [TelescopeTCP::telescopeGoto](https://github.com/Stellarium/stellarium/
 ### Orientation Sensor
 
 - [Bosch Sensortec MEMS BNO055 sensor driver](https://github.com/BoschSensortec/BNO055_driver)
+- [AltIMU-AHRS](https://github.com/jremington/AltIMU-AHRS)
 
 ### GPS, GNSS, NMEA
 
@@ -102,14 +106,14 @@ see also [TelescopeTCP::telescopeGoto](https://github.com/Stellarium/stellarium/
 - [Comparing Gyroscope Datasheets](https://learn.adafruit.com/comparing-gyroscope-datasheets)
 - [DOIT ESP32 DevKit-v1 (30P)](https://github.com/TronixLab/DOIT_ESP32_DevKit-v1_30P)
 
+### ESP32 Programming
+
+- [How to format strings without the String class](https://cpp4arduino.com/2020/02/07/how-to-format-strings-without-the-string-class.html)
+
 ### Stellarium
 
 - [RemoteControl plugin HTTP API description ](http://stellarium.org/doc/head/remoteControlApi.html)
 - [Telescope Control plug-in](http://stellarium.sourceforge.net/wiki/index.php/Telescope_Control_plug-in)
-
-### Networking
-
-- [curl tutorial](https://curl.se/docs/manual.html)
 
 ### Astronomy related
 

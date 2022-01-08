@@ -1,5 +1,6 @@
 #include <Arduino.h>
 #include <WiFi.h>
+
 #include <PubSubClient.h>
 #include <Adafruit_Sensor.h>
 #include <Adafruit_BNO055.h>
@@ -41,13 +42,14 @@ Adafruit_BNO055 bno = Adafruit_BNO055(BNO055_ID, BNO055_ADDRESS_A, &I2CBus); // 
 BnoData bnoData(BNO055_ID, BNO055_ADDRESS_A);
 
 Persistency persistency;
-GNSS gnss(48, 11);  // set initial position to enable operation before GNSS fix
+GNSS gnss(48, 11); // set initial position to enable operation before GNSS fix
 
 // global switches for connected devices
 #define ENABLE_WIFI (true)
 #define ENABLE_MQTT (true)
 #define ENABLE_GNSS (true)
 #define ENABLE_ORIENTATION (true)
+#define ENABLE_BROKER (false)
 
 bool orientationSensorAvailable = false;
 bool gnssModuleAvailable = false;
@@ -55,6 +57,7 @@ bool filesystemAvailable = false;
 bool wifiAvailable = false;
 bool gnssAvailable = false;
 bool mqttAvailable = false;
+bool localBrokerAvailable = false;
 float headingOffset = 0;
 
 #define TCP_SERVER_PORT (10001)
@@ -181,7 +184,7 @@ void setup()
         initStage++;
 
         // Initialize Environment Sensor
-        if (I2CBus.begin(BNO055_PIN_I2C_SDA, BNO055_PIN_I2C_SCL, 250000U)) // set I2C-Clock to 250kHz
+        if (I2CBus.begin(BNO055_PIN_I2C_SDA, BNO055_PIN_I2C_SCL, 100000U)) // set I2C-Clock to 100kHz
         {
             initStage++;
             // in NDOF, too many errors are introduced by the magentometer. Especially when the sensor is attached to the metal tube of the telescope
@@ -206,6 +209,8 @@ void setup()
     if (orientationSensorAvailable)
     {
         initStage++;
+        bno.setExtCrystalUse(true);
+        delay(1000);
 
         if (filesystemAvailable)
         {
@@ -215,9 +220,6 @@ void setup()
                 bnoData.status.calibrationDataAvailable = true;
                 if (DEBUG)
                     bnoData.printSensorOffsets();
-
-                bno.setExtCrystalUse(true);
-                delay(1000);
 
                 bno.setSensorOffsets((uint8_t *)&bnoData.calibrationData);
                 delay(100);
@@ -413,34 +415,36 @@ void loop()
                     remoteClient.write(txBuffer, length);
                 }
             }
-            if (mqttAvailable)
+
+            if (DEBUG && mqttAvailable)
             {
                 int32_t len = 0;
-                len = snprintf((char *)txBuffer, sizeof(txBuffer), "{\"az\":%.2f,\"alt\":%.2f,\"ra\":%.2f,\"dec\":%.2f,\"lst\":%.3f}",
-                               corrected.az,
-                               corrected.alt,
-                               position.ra,
-                               position.dec,
-                               localSiderealTimeDegrees / 15.); // to hours
-                mqttClient.publish("home/appliance/telescope/orientation", txBuffer, len);
-            }
+                len = snprintf((char *)txBuffer, sizeof(txBuffer), "%.3f", corrected.alt);
+                mqttClient.publish("home/appliance/telescope/orientation/alt", txBuffer, len);
 
-            if (DEBUG)
-            {
-                // Serial.printf("[ SENSOR ] Roll: %3.2f Pitch: %3.2f Yaw: %3.2f (w=%3.3f x=%3.3f y=%3.3f z=%3.3f)\n", euler.x(), euler.y(), euler.z(), q.w(), q.x(), q.y(), q.z());
+                len = snprintf((char *)txBuffer, sizeof(txBuffer), "%.3f", corrected.az);
+                mqttClient.publish("home/appliance/telescope/orientation/az", txBuffer, len);
 
-                if (mqttAvailable)
-                {
-                    int32_t len = 0;
-                    len = snprintf((char *)txBuffer, sizeof(txBuffer), "%.3f", euler.x());
-                    mqttClient.publish("home/appliance/telescope/orientation/roll", txBuffer, len);
-                    len = snprintf((char *)txBuffer, sizeof(txBuffer), "%.3f", euler.y());
-                    mqttClient.publish("home/appliance/telescope/orientation/pitch", txBuffer, len);
-                    len = snprintf((char *)txBuffer, sizeof(txBuffer), "%.3f", euler.z());
-                    mqttClient.publish("home/appliance/telescope/orientation/yaw", txBuffer, len);
-                    len = snprintf((char *)txBuffer, sizeof(txBuffer), "[%.4f, %.4f, %.4f, %.4f]", q.w(), q.x(), q.y(), q.z());
-                    mqttClient.publish("home/appliance/telescope/orientation/quat", txBuffer, len);
-                }
+                len = snprintf((char *)txBuffer, sizeof(txBuffer), "%.3f", position.ra);
+                mqttClient.publish("home/appliance/telescope/orientation/ra", txBuffer, len);
+
+                len = snprintf((char *)txBuffer, sizeof(txBuffer), "%.3f", position.dec);
+                mqttClient.publish("home/appliance/telescope/orientation/dec", txBuffer, len);
+
+                len = snprintf((char *)txBuffer, sizeof(txBuffer), "%.3f", localSiderealTimeDegrees / 15.);
+                mqttClient.publish("home/appliance/telescope/orientation/lst", txBuffer, len);
+
+                len = snprintf((char *)txBuffer, sizeof(txBuffer), "%.3f", euler.x());
+                mqttClient.publish("home/appliance/telescope/orientation/roll", txBuffer, len);
+
+                len = snprintf((char *)txBuffer, sizeof(txBuffer), "%.3f", euler.y());
+                mqttClient.publish("home/appliance/telescope/orientation/pitch", txBuffer, len);
+
+                len = snprintf((char *)txBuffer, sizeof(txBuffer), "%.3f", euler.z());
+                mqttClient.publish("home/appliance/telescope/orientation/yaw", txBuffer, len);
+
+                len = snprintf((char *)txBuffer, sizeof(txBuffer), "[%.4f, %.4f, %.4f, %.4f]", q.w(), q.x(), q.y(), q.z());
+                mqttClient.publish("home/appliance/telescope/orientation/quat", txBuffer, len);
             }
         }
         if (ENABLE_GNSS)
