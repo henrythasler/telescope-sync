@@ -18,9 +18,11 @@ public:
     typedef struct 
     {
         // System Status
-        uint8_t statSystem = 0;   // SYS_STAT
-        uint8_t statSelfTest = 0; // ST_RESULT
-        uint8_t errSystem = 0;    // SYS_ERR
+        uint8_t statSystem = 0;     // SYS_STAT
+        uint8_t statSelfTest = 0;   // ST_RESULT
+        uint8_t errSystem = 0;      // SYS_ERR
+
+        int8_t temp = -40;          // TEMP
 
         // Calibration Status via CALIB_STAT register
         uint8_t calSystem = 0;

@@ -482,42 +482,75 @@ void loop()
                 }
             }
 
-                int32_t len = 0;
-                len = snprintf((char *)txBuffer, sizeof(txBuffer), "%.3f", corrected.alt);
-                if (mqttAvailable) mqttClient.publish("home/appliance/telescope/orientation/alt", txBuffer, len);
-                if(localBrokerAvailable) broker.publish("home/appliance/telescope/orientation/alt", (char *)txBuffer);
+            int32_t len = 0;
+            len = snprintf((char *)txBuffer, sizeof(txBuffer), "%.3f", corrected.alt);
+            if (mqttAvailable)
+                mqttClient.publish("home/appliance/telescope/orientation/alt", txBuffer, len);
+            if (localBrokerAvailable)
+                broker.publish("home/appliance/telescope/orientation/alt", (char *)txBuffer);
 
-                len = snprintf((char *)txBuffer, sizeof(txBuffer), "%.3f", corrected.az);
-                if (mqttAvailable) mqttClient.publish("home/appliance/telescope/orientation/az", txBuffer, len);
-                if(localBrokerAvailable) broker.publish("home/appliance/telescope/orientation/az", (char *)txBuffer);
+            len = snprintf((char *)txBuffer, sizeof(txBuffer), "%.3f", corrected.az);
+            if (mqttAvailable)
+                mqttClient.publish("home/appliance/telescope/orientation/az", txBuffer, len);
+            if (localBrokerAvailable)
+                broker.publish("home/appliance/telescope/orientation/az", (char *)txBuffer);
 
-                len = snprintf((char *)txBuffer, sizeof(txBuffer), "%.3f", position.ra);
-                if (mqttAvailable) mqttClient.publish("home/appliance/telescope/orientation/ra", txBuffer, len);
-                if(localBrokerAvailable) broker.publish("home/appliance/telescope/orientation/ra", (char *)txBuffer);
+            len = snprintf((char *)txBuffer, sizeof(txBuffer), "%.3f", position.ra);
+            if (mqttAvailable)
+                mqttClient.publish("home/appliance/telescope/orientation/ra", txBuffer, len);
+            if (localBrokerAvailable)
+                broker.publish("home/appliance/telescope/orientation/ra", (char *)txBuffer);
 
-                len = snprintf((char *)txBuffer, sizeof(txBuffer), "%.3f", position.dec);
-                if (mqttAvailable) mqttClient.publish("home/appliance/telescope/orientation/dec", txBuffer, len);
-                if(localBrokerAvailable) broker.publish("home/appliance/telescope/orientation/dec", (char *)txBuffer);
+            len = snprintf((char *)txBuffer, sizeof(txBuffer), "%.3f", position.dec);
+            if (mqttAvailable)
+                mqttClient.publish("home/appliance/telescope/orientation/dec", txBuffer, len);
+            if (localBrokerAvailable)
+                broker.publish("home/appliance/telescope/orientation/dec", (char *)txBuffer);
 
-                len = snprintf((char *)txBuffer, sizeof(txBuffer), "%.3f", localSiderealTimeDegrees / 15.);
-                if (mqttAvailable) mqttClient.publish("home/appliance/telescope/orientation/lst", txBuffer, len);
-                if(localBrokerAvailable) broker.publish("home/appliance/telescope/orientation/lst", (char *)txBuffer);
+            len = snprintf((char *)txBuffer, sizeof(txBuffer), "%.3f", localSiderealTimeDegrees / 15.);
+            if (mqttAvailable)
+                mqttClient.publish("home/appliance/telescope/orientation/lst", txBuffer, len);
+            if (localBrokerAvailable)
+                broker.publish("home/appliance/telescope/orientation/lst", (char *)txBuffer);
 
-                len = snprintf((char *)txBuffer, sizeof(txBuffer), "%.3f", euler.x());
-                if (mqttAvailable) mqttClient.publish("home/appliance/telescope/orientation/roll", txBuffer, len);
-                if(localBrokerAvailable) broker.publish("home/appliance/telescope/orientation/roll", (char *)txBuffer);
+            len = snprintf((char *)txBuffer, sizeof(txBuffer), "%.3f", euler.x());
+            if (mqttAvailable)
+                mqttClient.publish("home/appliance/telescope/orientation/roll", txBuffer, len);
+            if (localBrokerAvailable)
+                broker.publish("home/appliance/telescope/orientation/roll", (char *)txBuffer);
 
-                len = snprintf((char *)txBuffer, sizeof(txBuffer), "%.3f", euler.y());
-                if (mqttAvailable) mqttClient.publish("home/appliance/telescope/orientation/pitch", txBuffer, len);
-                if(localBrokerAvailable) broker.publish("home/appliance/telescope/orientation/pitch", (char *)txBuffer);
+            len = snprintf((char *)txBuffer, sizeof(txBuffer), "%.3f", euler.y());
+            if (mqttAvailable)
+                mqttClient.publish("home/appliance/telescope/orientation/pitch", txBuffer, len);
+            if (localBrokerAvailable)
+                broker.publish("home/appliance/telescope/orientation/pitch", (char *)txBuffer);
 
-                len = snprintf((char *)txBuffer, sizeof(txBuffer), "%.3f", euler.z());
-                if (mqttAvailable) mqttClient.publish("home/appliance/telescope/orientation/yaw", txBuffer, len);
-                if(localBrokerAvailable) broker.publish("home/appliance/telescope/orientation/yaw", (char *)txBuffer);
+            len = snprintf((char *)txBuffer, sizeof(txBuffer), "%.3f", euler.z());
+            if (mqttAvailable)
+                mqttClient.publish("home/appliance/telescope/orientation/yaw", txBuffer, len);
+            if (localBrokerAvailable)
+                broker.publish("home/appliance/telescope/orientation/yaw", (char *)txBuffer);
 
-                len = snprintf((char *)txBuffer, sizeof(txBuffer), "[%.4f, %.4f, %.4f, %.4f]", q.w(), q.x(), q.y(), q.z());
-                if (mqttAvailable) mqttClient.publish("home/appliance/telescope/orientation/quat", txBuffer, len);
-                if(localBrokerAvailable) broker.publish("home/appliance/telescope/orientation/quat", (char *)txBuffer);
+            len = snprintf((char *)txBuffer, sizeof(txBuffer), "[%.4f, %.4f, %.4f, %.4f]", q.w(), q.x(), q.y(), q.z());
+            if (mqttAvailable)
+                mqttClient.publish("home/appliance/telescope/orientation/quat", txBuffer, len);
+            if (localBrokerAvailable)
+                broker.publish("home/appliance/telescope/orientation/quat", (char *)txBuffer);
+            
+            imu::Vector<3> acc, gyr, mag;
+            acc = bno.getVector(Adafruit_BNO055::VECTOR_ACCELEROMETER);
+            gyr = bno.getVector(Adafruit_BNO055::VECTOR_GYROSCOPE);
+            mag = bno.getVector(Adafruit_BNO055::VECTOR_MAGNETOMETER);
+
+            len = snprintf((char *)txBuffer, sizeof(txBuffer), "{\"ax\":%.3f,\"ay\":%.3f,\"az\":%.3f,\"gx\":%.3f,\"gy\":%.3f,\"gz\":%.3f,\"mx\":%.3f,\"my\":%.3f,\"mz\":%.3f}",
+                           acc.x(), acc.y(), acc.z(),
+                           gyr.x(), gyr.y(), gyr.z(),
+                           mag.x(), mag.y(), mag.z());
+                           
+            if (mqttAvailable)
+                mqttClient.publish("home/appliance/telescope/orientation/raw", txBuffer, len);
+            if (localBrokerAvailable)
+                broker.publish("home/appliance/telescope/orientation/raw", (char *)txBuffer);
         }
         if (ENABLE_GNSS)
         {
@@ -584,22 +617,25 @@ void loop()
 
             bno.getSystemStatus(&bnoData.status.statSystem, &bnoData.status.statSelfTest, &bnoData.status.errSystem);
             bno.getCalibration(&bnoData.status.calSystem, &bnoData.status.calGyro, &bnoData.status.calAccel, &bnoData.status.calMag);
+            bnoData.status.temp = bno.getTemp();
+
             if (!bnoData.status.fullyCalibrated && DEBUG)
             {
                 // show overall system state
-                Serial.printf("[ SENSOR ] Sys: %X ST: %X Err: %X  Cal: %u%u%u%u\n",
+                Serial.printf("[ SENSOR ] Sys: %X ST: %X Err: %X  Cal: %u%u%u%u  Temp: %i°C\n",
                               bnoData.status.statSystem,
                               bnoData.status.statSelfTest,
                               bnoData.status.errSystem,
-                              bnoData.status.calSystem, bnoData.status.calGyro, bnoData.status.calAccel, bnoData.status.calMag);
+                              bnoData.status.calSystem, bnoData.status.calGyro, bnoData.status.calAccel, bnoData.status.calMag,
+                              bnoData.status.temp);
             }
-
             int32_t len = 0;
-            len = snprintf((char *)txBuffer, sizeof(txBuffer), "{\"system\":\"0x%X\",\"selftest\":\"0x%X\",\"error\":\"0x%X\",\"cal\":\"0x%04X\"}",
+            len = snprintf((char *)txBuffer, sizeof(txBuffer), "{\"system\":\"0x%X\",\"selftest\":\"0x%X\",\"error\":\"0x%X\",\"cal\":\"0x%04X\",\"temp\":%i}",
                            bnoData.status.statSystem,
                            bnoData.status.statSelfTest,
                            bnoData.status.errSystem,
-                           (uint32_t(bnoData.status.calSystem) << 12) + (uint32_t(bnoData.status.calGyro) << 8) + (uint32_t(bnoData.status.calAccel) << 4) + uint32_t(bnoData.status.calMag));
+                           (uint32_t(bnoData.status.calSystem) << 12) + (uint32_t(bnoData.status.calGyro) << 8) + (uint32_t(bnoData.status.calAccel) << 4) + uint32_t(bnoData.status.calMag),
+                           bnoData.status.temp);
 
             if (mqttAvailable)
                 mqttClient.publish("home/appliance/telescope/sensor", txBuffer, len);
@@ -663,14 +699,15 @@ void loop()
             bno.getCalibration(&bnoData.status.calSystem, &bnoData.status.calGyro, &bnoData.status.calAccel, &bnoData.status.calMag);
 
             // show overall system state
-            Serial.printf("[ STATUS ] Free: %u KiB (%u KiB)  RSSI: %i dBm  Uptime: %" PRIi64 "s  Sys: %u Err: %u  Cal: %u\n",
+            Serial.printf("[ STATUS ] Free: %u KiB (%u KiB)  RSSI: %i dBm  Uptime: %" PRIi64 "s  Sys: %u Err: %u  Cal: %u Temp: %i°C\n",
                           ESP.getFreeHeap() / 1024,
                           ESP.getMaxAllocHeap() / 1024,
                           WiFi.RSSI(),
                           (esp_timer_get_time() / 1000000LL),
                           bnoData.status.statSystem,
                           bnoData.status.errSystem,
-                          bnoData.status.calSystem);
+                          bnoData.status.calSystem,
+                          bnoData.status.temp);
         }
     }
 
