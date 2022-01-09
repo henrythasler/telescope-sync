@@ -25,6 +25,9 @@
  *     const char *wifiSsid = "test";   // WiFi AP-Name
  *     const char *wifiPassword = "1234";
  *     IPAddress mqttBroker = IPAddress(192, 168, 1, 1);    // your MQTT-Broker
+ *     const char *accessPointSsid = "ESP32";
+ *     const char *accessPointPassword = "12345678";    // must be 8+ characters
+ *     IPAddress accessPointIP = IPAddress(192, 168, 1, 1); 
  * } secrets;
  * #endif
  * 
@@ -47,16 +50,19 @@ GNSS gnss(48, 11); // set initial position to enable operation before GNSS fix
 
 // global switches for connected devices
 #define ENABLE_WIFI (true)
+#define WIFIMODE_AUTO (true)
+#define WIFIMODE_FORCE_AP (false)
+
 #define ENABLE_MQTT (true)
 #define ENABLE_GNSS (true)
 #define ENABLE_ORIENTATION (true)
-#define ENABLE_BROKER (false)
-#define FORCE_AP (true)
+#define ENABLE_BROKER (true)
 
 bool orientationSensorAvailable = false;
 bool gnssModuleAvailable = false;
 bool filesystemAvailable = false;
-bool wifiAvailable = false;
+bool wifiClientMode = false;
+bool wifiAccessPointMode = false;
 bool gnssAvailable = false;
 bool mqttAvailable = false;
 bool localBrokerAvailable = false;
@@ -101,7 +107,7 @@ uint32_t initStage = 0;
 uint32_t calibrationStableCounter = 0;
 uint32_t gnssTimeout = 0;
 
-Telescope telescope(101.298, -16.724);
+Telescope telescope;
 
 uint8_t txBuffer[265];
 uint8_t rxBuffer[265];
@@ -144,37 +150,49 @@ void setup()
 
     if (ENABLE_WIFI)
     {
-        //connect to your local wi-fi network
-        Serial.printf("[  INIT  ] Connecting to Wifi '%s'", secrets.wifiSsid);
-        WiFi.begin(secrets.wifiSsid, secrets.wifiPassword);
-
-        //check wi-fi is connected to wi-fi network
-        int retries = 5;
-        while ((WiFi.status() != WL_CONNECTED) && (retries > 0))
+        if (WIFIMODE_AUTO && !WIFIMODE_FORCE_AP)
         {
-            delay(1000);
-            Serial.print(".");
-            retries--;
+            //connect to your local wi-fi network
+            Serial.printf("[  INIT  ] Connecting to Wifi '%s'", secrets.wifiSsid);
+            WiFi.begin(secrets.wifiSsid, secrets.wifiPassword);
+
+            //check wi-fi is connected to wi-fi network
+            int retries = 5;
+            while ((WiFi.status() != WL_CONNECTED) && (retries > 0))
+            {
+                delay(1000);
+                Serial.print(".");
+                retries--;
+            }
+
+            if (WiFi.status() == WL_CONNECTED)
+            {
+                Serial.print(" connected!");
+                Serial.print(" (IP=");
+                Serial.print(WiFi.localIP());
+                Serial.println(")");
+                wifiClientMode = true;
+            }
+            else
+            {
+                Serial.println(" failed!");
+            }
         }
 
-        if (WiFi.status() == WL_CONNECTED)
+        if ((WIFIMODE_AUTO && !wifiClientMode) || WIFIMODE_FORCE_AP)
         {
-            Serial.print(" connected!");
-            Serial.print(" (IP=");
-            Serial.print(WiFi.localIP());
-            Serial.println(")");
-            wifiAvailable = true;
+            Serial.printf("[  INIT  ] Setting up Wifi access point '%s'...", SSID);
+            if (WiFi.softAP(secrets.accessPointSsid, secrets.accessPointPassword))
+            {
+                WiFi.softAPConfig(secrets.accessPointIP, secrets.accessPointIP, IPAddress(255, 255, 255, 0));
+                Serial.printf(" done (IP=%s)\n", WiFi.softAPIP().toString().c_str());
+                wifiAccessPointMode = true;
+            }
+            else
+            {
+                Serial.println(" failed!");
+            }
         }
-        else 
-        {
-            Serial.println(" failed!");
-            Serial.printf("[  INIT  ] Setting up Wifi access point '%s'... ", SSID);
-            WiFi.softAP(SSID);
-            Serial.print(" done (IP=");
-            Serial.print(WiFi.softAPIP());
-            Serial.println(")");
-        }
-
         initStage++;
     }
 
@@ -297,16 +315,20 @@ void setup()
         Serial.println("[ SENSOR ] Orientation sensor enabled");
     }
 
-    if (wifiAvailable)
+    if (wifiClientMode || wifiAccessPointMode)
     {
         server.begin();
         Serial.printf("[ SOCKET ] Listening on port %u\n", TCP_SERVER_PORT);
         initStage++;
 
-        broker.init(1883);
-        broker.update();
+        if (ENABLE_BROKER)
+        {
+            broker.init(1883);
+            localBrokerAvailable = true;
+            Serial.printf("[ BROKER ] MQTT-Broker listening on port %u\n", 1883);
+        }
 
-        if (ENABLE_MQTT)
+        if (ENABLE_MQTT && wifiClientMode)
         {
             Serial.print("[  INIT  ] Connecting to MQTT-Server... ");
             mqttClient.setServer(secrets.mqttBroker, 1883);
@@ -365,10 +387,15 @@ void reconnectMQTTClient()
 void loop()
 {
     // base tasks
-    if (wifiAvailable)
+    if (wifiClientMode || wifiAccessPointMode)
+    {
         checkForConnections();
+    }
 
-    broker.update();
+    if (localBrokerAvailable)
+    {
+        broker.update();
+    }
 
     // 100ms Tasks
     if (!(counterBase % (100L / SCHEDULER_MAIN_LOOP_MS)))
@@ -455,36 +482,42 @@ void loop()
                 }
             }
 
-            if (DEBUG && mqttAvailable)
-            {
                 int32_t len = 0;
                 len = snprintf((char *)txBuffer, sizeof(txBuffer), "%.3f", corrected.alt);
-                mqttClient.publish("home/appliance/telescope/orientation/alt", txBuffer, len);
+                if (mqttAvailable) mqttClient.publish("home/appliance/telescope/orientation/alt", txBuffer, len);
+                if(localBrokerAvailable) broker.publish("home/appliance/telescope/orientation/alt", (char *)txBuffer);
 
                 len = snprintf((char *)txBuffer, sizeof(txBuffer), "%.3f", corrected.az);
-                mqttClient.publish("home/appliance/telescope/orientation/az", txBuffer, len);
+                if (mqttAvailable) mqttClient.publish("home/appliance/telescope/orientation/az", txBuffer, len);
+                if(localBrokerAvailable) broker.publish("home/appliance/telescope/orientation/az", (char *)txBuffer);
 
                 len = snprintf((char *)txBuffer, sizeof(txBuffer), "%.3f", position.ra);
-                mqttClient.publish("home/appliance/telescope/orientation/ra", txBuffer, len);
+                if (mqttAvailable) mqttClient.publish("home/appliance/telescope/orientation/ra", txBuffer, len);
+                if(localBrokerAvailable) broker.publish("home/appliance/telescope/orientation/ra", (char *)txBuffer);
 
                 len = snprintf((char *)txBuffer, sizeof(txBuffer), "%.3f", position.dec);
-                mqttClient.publish("home/appliance/telescope/orientation/dec", txBuffer, len);
+                if (mqttAvailable) mqttClient.publish("home/appliance/telescope/orientation/dec", txBuffer, len);
+                if(localBrokerAvailable) broker.publish("home/appliance/telescope/orientation/dec", (char *)txBuffer);
 
                 len = snprintf((char *)txBuffer, sizeof(txBuffer), "%.3f", localSiderealTimeDegrees / 15.);
-                mqttClient.publish("home/appliance/telescope/orientation/lst", txBuffer, len);
+                if (mqttAvailable) mqttClient.publish("home/appliance/telescope/orientation/lst", txBuffer, len);
+                if(localBrokerAvailable) broker.publish("home/appliance/telescope/orientation/lst", (char *)txBuffer);
 
                 len = snprintf((char *)txBuffer, sizeof(txBuffer), "%.3f", euler.x());
-                mqttClient.publish("home/appliance/telescope/orientation/roll", txBuffer, len);
+                if (mqttAvailable) mqttClient.publish("home/appliance/telescope/orientation/roll", txBuffer, len);
+                if(localBrokerAvailable) broker.publish("home/appliance/telescope/orientation/roll", (char *)txBuffer);
 
                 len = snprintf((char *)txBuffer, sizeof(txBuffer), "%.3f", euler.y());
-                mqttClient.publish("home/appliance/telescope/orientation/pitch", txBuffer, len);
+                if (mqttAvailable) mqttClient.publish("home/appliance/telescope/orientation/pitch", txBuffer, len);
+                if(localBrokerAvailable) broker.publish("home/appliance/telescope/orientation/pitch", (char *)txBuffer);
 
                 len = snprintf((char *)txBuffer, sizeof(txBuffer), "%.3f", euler.z());
-                mqttClient.publish("home/appliance/telescope/orientation/yaw", txBuffer, len);
+                if (mqttAvailable) mqttClient.publish("home/appliance/telescope/orientation/yaw", txBuffer, len);
+                if(localBrokerAvailable) broker.publish("home/appliance/telescope/orientation/yaw", (char *)txBuffer);
 
                 len = snprintf((char *)txBuffer, sizeof(txBuffer), "[%.4f, %.4f, %.4f, %.4f]", q.w(), q.x(), q.y(), q.z());
-                mqttClient.publish("home/appliance/telescope/orientation/quat", txBuffer, len);
-            }
+                if (mqttAvailable) mqttClient.publish("home/appliance/telescope/orientation/quat", txBuffer, len);
+                if(localBrokerAvailable) broker.publish("home/appliance/telescope/orientation/quat", (char *)txBuffer);
         }
         if (ENABLE_GNSS)
         {
@@ -560,16 +593,19 @@ void loop()
                               bnoData.status.errSystem,
                               bnoData.status.calSystem, bnoData.status.calGyro, bnoData.status.calAccel, bnoData.status.calMag);
             }
+
+            int32_t len = 0;
+            len = snprintf((char *)txBuffer, sizeof(txBuffer), "{\"system\":\"0x%X\",\"selftest\":\"0x%X\",\"error\":\"0x%X\",\"cal\":\"0x%04X\"}",
+                           bnoData.status.statSystem,
+                           bnoData.status.statSelfTest,
+                           bnoData.status.errSystem,
+                           (uint32_t(bnoData.status.calSystem) << 12) + (uint32_t(bnoData.status.calGyro) << 8) + (uint32_t(bnoData.status.calAccel) << 4) + uint32_t(bnoData.status.calMag));
+
             if (mqttAvailable)
-            {
-                int32_t len = 0;
-                len = snprintf((char *)txBuffer, sizeof(txBuffer), "{\"system\":\"0x%X\",\"selftest\":\"0x%X\",\"error\":\"0x%X\",\"cal\":\"0x%04X\"}",
-                               bnoData.status.statSystem,
-                               bnoData.status.statSelfTest,
-                               bnoData.status.errSystem,
-                               (uint32_t(bnoData.status.calSystem) << 12) + (uint32_t(bnoData.status.calGyro) << 8) + (uint32_t(bnoData.status.calAccel) << 4) + uint32_t(bnoData.status.calMag));
                 mqttClient.publish("home/appliance/telescope/sensor", txBuffer, len);
-            }
+
+            if (localBrokerAvailable)
+                broker.publish("home/appliance/telescope/sensor", (char *)txBuffer);
         }
         else
         {
@@ -591,25 +627,25 @@ void loop()
                           gnss.utcTimestamp.tm_sec,
                           gnss.satUsed,
                           gnss.satView);
-            if (mqttAvailable)
-            {
-                int32_t len = 0;
-                len = snprintf((char *)txBuffer, sizeof(txBuffer), "{\"valid\":%s,\"lat\":%.3f,\"lng\":%.3f,\"alt\":%.0f,\"date\":\"%04u-%02u-%02u\",\"time\":\"%02u:%02u:%02u\",\"satUse\":%u,\"satView\":%u}",
-                               gnss.valid ? "true" : "false",
-                               gnss.latitude,
-                               gnss.longitude,
-                               gnss.altitude,
-                               gnss.utcTimestamp.tm_year,
-                               gnss.utcTimestamp.tm_mon,
-                               gnss.utcTimestamp.tm_mday,
-                               gnss.utcTimestamp.tm_hour,
-                               gnss.utcTimestamp.tm_min,
-                               gnss.utcTimestamp.tm_sec,
-                               gnss.satUsed,
-                               gnss.satView);
-                mqttClient.publish("home/appliance/telescope/gnss", txBuffer, len);
+
+            int32_t len = 0;
+            len = snprintf((char *)txBuffer, sizeof(txBuffer), "{\"valid\":%s,\"lat\":%.3f,\"lng\":%.3f,\"alt\":%.0f,\"date\":\"%04u-%02u-%02u\",\"time\":\"%02u:%02u:%02u\",\"satUse\":%u,\"satView\":%u}",
+                           gnss.valid ? "true" : "false",
+                           gnss.latitude,
+                           gnss.longitude,
+                           gnss.altitude,
+                           gnss.utcTimestamp.tm_year,
+                           gnss.utcTimestamp.tm_mon,
+                           gnss.utcTimestamp.tm_mday,
+                           gnss.utcTimestamp.tm_hour,
+                           gnss.utcTimestamp.tm_min,
+                           gnss.utcTimestamp.tm_sec,
+                           gnss.satUsed,
+                           gnss.satView);
+            if (localBrokerAvailable)
                 broker.publish("home/appliance/telescope/gnss", (char *)txBuffer);
-            }
+            if (mqttAvailable)
+                mqttClient.publish("home/appliance/telescope/gnss", txBuffer, len);
         }
 
         if (mqttAvailable && !mqttClient.connected())
