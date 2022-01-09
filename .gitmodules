@@ -1,0 +1,3 @@
+[submodule "esp32-telescope-sync/lib/sMQTTBroker"]
+	path = esp32-telescope-sync/lib/sMQTTBroker
+	url = https://github.com/terrorsl/sMQTTBroker.git
