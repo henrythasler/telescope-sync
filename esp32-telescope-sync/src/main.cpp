@@ -239,8 +239,8 @@ void setup()
         {
             initStage++;
             // in NDOF, too many errors are introduced by the magentometer. Especially when the sensor is attached to the metal tube of the telescope
-            // IMU-Mode hat no absolute azimuth-orientation but less variations and better repeatability.
-            if (bno.begin(bno.OPERATION_MODE_IMUPLUS))
+            // IMU-Mode has no absolute azimuth-orientation but less variations and better repeatability.
+            if (bno.begin(bno.OPERATION_MODE_NDOF))
             {
                 initStage++;
                 orientationSensorAvailable = true;

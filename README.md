@@ -114,7 +114,9 @@ see also [TelescopeTCP::telescopeGoto](https://github.com/Stellarium/stellarium/
 
 - [RemoteControl plugin HTTP API description ](http://stellarium.org/doc/head/remoteControlApi.html)
 - [Telescope Control plug-in](http://stellarium.sourceforge.net/wiki/index.php/Telescope_Control_plug-in)
+- [NexStar Communication Protocol v 1.2](https://www.celestron.com/pages/manuals)
 
 ### Astronomy related
 
 - [Light pollution map](https://www.lightpollutionmap.info/)
+- [NexStar Resource Site](https://www.nexstarsite.com/index.html)

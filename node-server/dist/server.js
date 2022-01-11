@@ -21,7 +21,7 @@ var __importStar = (this && this.__importStar) || function (mod) {
 Object.defineProperty(exports, "__esModule", { value: true });
 const net = __importStar(require("net"));
 const PORT = 10001;
-const IP = '127.0.0.1';
+const IP = '0.0.0.0';
 const BACKLOG = 100;
 /**
  * Implements message serialisation for MessageCurrentPosition of Stellarium Telescope Protocol version 1.0
@@ -119,26 +119,88 @@ class Telescope {
     }
 }
 ;
+class NexStar {
+    constructor() {
+        this.versionMajor = 4;
+        this.versionMinor = 10;
+    }
+    handleRequest(request) {
+        let response = "";
+        // Echo
+        if (request.match(/^K[A-Za-z0-9]$/)) {
+            // console.log(`Received 'Echo': '${request}'`);
+            response = `${request.charAt(1)}#`;
+        }
+        else if (request.match(/^V$/)) {
+            // console.log(`Received 'Get Version': '${request}'`);
+            response = `${String.fromCharCode(this.versionMajor)}${String.fromCharCode(this.versionMinor)}#`;
+        }
+        else if (request.match(/^P\x01(\x10|\x11|\xb0|\xb2)\xfe\x00\x00\x00\x02$/)) {
+            // console.log(`Received 'Get Device Version': '${request}'`);
+            response = `\x00\x00#`;
+        }
+        else if (request.match(/^m$/)) {
+            // console.log(`Received 'Get Model': '${request}'`);
+            response = `\x01#`; // fake 'GPS Series'
+        }
+        else if (request.match(/^w$/)) {
+            // console.log(`Received 'Get Location': '${request}'`);
+            response = `\x00\x00\x00\x00\x00\x00\x00\x00#`; // Fake...
+        }
+        else if (request.match(/^e$/)) {
+            // console.log(`Received 'Get precise RA/DEC': '${request}'`);
+            response = `34AB0500,12CE0500#`; // Fake...
+        }
+        else if (request.match(/^h$/)) {
+            // console.log(`Received 'Get Time': '${request}'`);
+            response = `\x10\x00\x00\x01\x0b\x16\x00\x00#`; // Fake...
+        }
+        else if (request.match(/^L$/)) {
+            // console.log(`Received 'Is GOTO in Progress': '${request}'`);
+            response = `\x00#`; // Fake...
+        }
+        else if (request.match(/^J$/)) {
+            // console.log(`Received 'Is Alignment Complete?': '${request}'`);
+            response = `\x00#`; // Fake...
+        }
+        else if (request.match(/^t$/)) {
+            // console.log(`Received 'Get Tracking Mode': '${request}'`);
+            response = `\x01#`; // Fake Alt/Az ...
+        }
+        else {
+            console.log(`[NexStar] not implemented: '${request}'`);
+        }
+        return response;
+    }
+}
 function onConnect(socket) {
     console.log(`Connection from '${socket.remoteAddress}'`);
     const telescope = new Telescope();
+    const nexStar = new NexStar();
     telescope.fromHorizontalPosition(135.54, 52.71, 48, 32.166);
     telescope.offset = {
         ra: -0.018416198265134298,
         dec: -0.02824170708658258
     };
-    const timer = setInterval(() => {
-        socket.write(packCurrentPosition(telescope.getCorrected()), (err) => {
-            if (err)
-                console.log(err);
-        });
-    }, 1000);
+    // const timer = setInterval(() => {
+    //     socket.write(packCurrentPosition(telescope.getCorrected()), (err) => {
+    //         if (err) console.log(err);
+    //     });
+    // }, 1000);
     socket.on('end', () => {
-        clearInterval(timer);
+        // clearInterval(timer);
         console.log(`Connection to '${socket.remoteAddress}' closed.`);
     });
     socket.on('data', (data) => {
-        if (data.length >= 20) {
+        // console.log(`Received ${data.length} Bytes: ${data.toString('hex')}`)
+        const response = nexStar.handleRequest(data.toString('latin1'));
+        if (response.length > 0) {
+            socket.write(response, (err) => {
+                if (err)
+                    console.log(err);
+            });
+        }
+        else if (data.length >= 20) {
             const message = unpackGoto(data);
             console.log(`Received ${data.length} Bytes: {`
                 + `length: ${message.length.toString()}, `
@@ -148,8 +210,12 @@ function onConnect(socket) {
                 + `dec: ${message.dec.toFixed(4).toString()}°, `
                 + `}`);
             // telescope.setPosition({ dec: message.dec, ra: message.ra });
-            // telescope.calibrate({ dec: message.dec, ra: message.ra });
-            console.log(telescope.toHorizontalPosition());
+            telescope.calibrate({ dec: message.dec, ra: message.ra });
+            // console.log(telescope.toHorizontalPosition());
+            socket.write(packCurrentPosition(telescope.getCorrected()), (err) => {
+                if (err)
+                    console.log(err);
+            });
         }
         else {
             console.log(`Received ${data.length} Bytes: ${data.toString('hex')}`);
