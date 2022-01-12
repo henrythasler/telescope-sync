@@ -145,7 +145,7 @@ class NexStar {
         }
         else if (request.match(/^w$/)) {
             // console.log(`Received 'Get Location': '${request}'`);
-            response = `\x00\x00\x00\x00\x00\x00\x00\x00#`; // Fake...
+            response = `\x30\x07\x00\x00\x0b\x15\x00\x00#`; // Fake... 30 07 3b 00  0b 16 20 00
         }
         else if (request.match(/^e$/)) {
             // console.log(`Received 'Get precise RA/DEC': '${request}'`);

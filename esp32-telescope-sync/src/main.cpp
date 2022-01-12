@@ -13,6 +13,7 @@
 #include <bnodata.h>
 #include <telescope.h>
 #include <gnss.h>
+#include <nexstar.h>
 #include <helper.h>
 
 /**
@@ -45,9 +46,6 @@ TwoWire I2CBus = TwoWire(BNO055_BUS_ID);                                     // 
 Adafruit_BNO055 bno = Adafruit_BNO055(BNO055_ID, BNO055_ADDRESS_A, &I2CBus); // use custom I2C-Instance
 BnoData bnoData(BNO055_ID, BNO055_ADDRESS_A);
 
-Persistency persistency;
-GNSS gnss(48, 11); // set initial position to enable operation before GNSS fix
-
 // global switches for connected devices
 #define ENABLE_WIFI (true)
 #define WIFIMODE_AUTO (true)
@@ -67,6 +65,7 @@ bool gnssAvailable = false;
 bool mqttAvailable = false;
 bool localBrokerAvailable = false;
 float headingOffset = 0;
+bool nexStarMode = false;
 
 #define TCP_SERVER_PORT (10001)
 #define SSID "ESP32"
@@ -75,6 +74,11 @@ WiFiServer server(TCP_SERVER_PORT);
 WiFiClient remoteClient;
 WiFiClient wifiClient;
 PubSubClient mqttClient(wifiClient);
+
+Persistency persistency;
+GNSS gnss(48, 11); // set initial position to enable operation before GNSS fix
+Telescope telescope;
+NexStar nexstar(&telescope, &gnss);
 
 class MyBroker : public sMQTTBroker
 {
@@ -106,8 +110,6 @@ uint32_t initStage = 0;
 
 uint32_t calibrationStableCounter = 0;
 uint32_t gnssTimeout = 0;
-
-Telescope telescope;
 
 uint8_t txBuffer[265];
 uint8_t rxBuffer[265];
@@ -402,9 +404,10 @@ void loop()
     {
         digitalWrite(LED_BUILTIN, HIGH); // regularly turn on LED again
 
-        if (remoteClient && remoteClient.connected() && orientationSensorAvailable)
+        if (remoteClient && remoteClient.connected())
         {
-            int received = remoteClient.read(rxBuffer, sizeof(rxBuffer));
+            uint32_t received = remoteClient.read(rxBuffer, sizeof(rxBuffer));
+
             if (received > 0)
             {
                 Serial.print("[ SOCKET ] Rx: ");
@@ -414,21 +417,31 @@ void loop()
                 }
                 Serial.println();
 
-                Telescope::Equatorial reference;
+                int32_t nexstarResponseLength = nexstar.handleRequest(rxBuffer, sizeof(rxBuffer), txBuffer, sizeof(txBuffer));
 
-                // check if the packet could be decoded correctly before using it to calibrate the offset
-                if (telescope.unpackPosition(&reference, NULL, rxBuffer, received))
+                if (nexstarResponseLength > 0)
                 {
-                    imu::Quaternion q = bno.getQuat();
-                    imu::Vector<3> euler = q.toEuler() * 180. / PI;
-                    euler.x() *= -1; // convert to Azimuth where north=0° and a rotation towards east (right) increases the value
+                    remoteClient.write(txBuffer, nexstarResponseLength);
+                    nexStarMode = true;
+                }
+                else
+                {
+                    Telescope::Equatorial reference;
 
-                    telescope.setOrientation(euler.y(), euler.x());
-                    double localSiderealTimeDegrees = MathHelper::getLocalSiderealTimeDegrees(gnss.utcTimestamp, gnss.longitude);
+                    // check if the packet could be decoded correctly before using it to calibrate the offset
+                    if (telescope.unpackPosition(&reference, NULL, rxBuffer, received))
+                    {
+                        imu::Quaternion q = bno.getQuat();
+                        imu::Vector<3> euler = q.toEuler() * 180. / PI;
+                        euler.x() *= -1; // convert to Azimuth where north=0° and a rotation towards east (right) increases the value
 
-                    Serial.printf("[ SENSOR ] Received Calibration Data  Ra: %.3f Dec: %.3f\n", reference.ra, reference.dec);
+                        telescope.setOrientation(euler.y(), euler.x());
+                        double localSiderealTimeDegrees = MathHelper::getLocalSiderealTimeDegrees(gnss.utcTimestamp, gnss.longitude);
 
-                    telescope.calibrate(reference, gnss.latitude, localSiderealTimeDegrees);
+                        Serial.printf("[ SENSOR ] Received Calibration Data  Ra: %.3f Dec: %.3f\n", reference.ra, reference.dec);
+
+                        telescope.calibrate(reference, gnss.latitude, localSiderealTimeDegrees);
+                    }
                 }
             }
         }
@@ -472,7 +485,7 @@ void loop()
             Telescope::Equatorial position = telescope.horizontalToEquatorial(corrected, gnss.latitude, localSiderealTimeDegrees);
 
             // if (remoteClient && remoteClient.connected() && bnoData.status.partlyCalibrated && gnssAvailable && (abs(gnss.longitude) > 0.01))
-            if (remoteClient && remoteClient.connected() && gnssAvailable)
+            if (remoteClient && remoteClient.connected() && gnssAvailable && !nexStarMode)
             {
                 uint64_t timestamp = 0;
                 uint32_t length = telescope.packPosition(position, timestamp, txBuffer, sizeof(txBuffer));
@@ -536,7 +549,7 @@ void loop()
                 mqttClient.publish("home/appliance/telescope/orientation/quat", txBuffer, len);
             if (localBrokerAvailable)
                 broker.publish("home/appliance/telescope/orientation/quat", (char *)txBuffer);
-            
+
             imu::Vector<3> acc, gyr, mag;
             acc = bno.getVector(Adafruit_BNO055::VECTOR_ACCELEROMETER);
             gyr = bno.getVector(Adafruit_BNO055::VECTOR_GYROSCOPE);
@@ -546,7 +559,7 @@ void loop()
                            acc.x(), acc.y(), acc.z(),
                            gyr.x(), gyr.y(), gyr.z(),
                            mag.x(), mag.y(), mag.z());
-                           
+
             if (mqttAvailable)
                 mqttClient.publish("home/appliance/telescope/orientation/raw", txBuffer, len);
             if (localBrokerAvailable)

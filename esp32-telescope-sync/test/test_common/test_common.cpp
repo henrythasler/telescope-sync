@@ -1,6 +1,7 @@
 #include <unity.h>
 #include <telescope.h>
 #include <gnss.h>
+#include <nexstar.h>
 #include <helper.h>
 
 #ifndef ARDUINO
@@ -70,7 +71,8 @@ void test_function_toHorizontalPosition(void)
     TEST_ASSERT_FLOAT_WITHIN(0.01, 49.169122, res.alt);
 
     Telescope::Equatorial pos;
-    pos.ra = 250.425; pos.dec = 36.467;
+    pos.ra = 250.425;
+    pos.dec = 36.467;
     res = telescope.equatorialToHorizontal(pos, 52.5, 304.808);
     TEST_ASSERT_FLOAT_WITHIN(0.01, 269.14634, res.az);
     TEST_ASSERT_FLOAT_WITHIN(0.01, 49.169122, res.alt);
@@ -94,8 +96,8 @@ void test_function_packPosition(void)
     TEST_ASSERT_EQUAL_UINT32(24, res);
     TEST_ASSERT_EQUAL_UINT8_ARRAY(expected2, buffer, 24);
 
-    position.ra=250.425; 
-    position.dec=36.466667;
+    position.ra = 250.425;
+    position.dec = 36.466667;
     const uint8_t expected3[24] = {0x18, 0x00, 0x00, 0x00, 0xde, 0xad, 0xbe, 0xef, 0x00, 0x00, 0x00, 0x00, 0xE1, 0x7A, 0x14, 0xB2, 0xDC, 0x8D, 0xEE, 0x19, 0x00, 0x00, 0x00, 0x00};
     res = telescope.packPosition(position, 0xefbeadde, buffer, sizeof(buffer));
     TEST_ASSERT_EQUAL_UINT32(24, res);
@@ -147,7 +149,7 @@ void test_function_unpackPositionNegative(void)
 
     // data too short
     uint8_t dataB[] = {0x14, 0x00, 0x00, 0x00, 0x9C, 0x78, 0x7A, 0x74, 0x21, 0xD4, 0x05, 0x00, 0x74, 0x24, 0x07, 0x48, 0x3A, 0x7D, 0x1B};
-    res = telescope.unpackPosition(&position, &timestamp,static_cast<uint8_t *>(dataB), sizeof(dataB));
+    res = telescope.unpackPosition(&position, &timestamp, static_cast<uint8_t *>(dataB), sizeof(dataB));
     TEST_ASSERT_FALSE(res);
 }
 
@@ -203,7 +205,7 @@ void test_function_calibrate(void)
     reference.ra = 101.29;
     reference.dec = -16.72;
     telescope.setOrientation(45, 180);
-    double localSiderealTimeDegrees = MathHelper::getLocalSiderealTimeDegrees({.tm_sec=0, .tm_min=0, .tm_hour=1, .tm_mday=2, .tm_mon=1, .tm_year=2022}, 11);
+    double localSiderealTimeDegrees = MathHelper::getLocalSiderealTimeDegrees({.tm_sec = 0, .tm_min = 0, .tm_hour = 1, .tm_mday = 2, .tm_mon = 1, .tm_year = 2022}, 11);
     TEST_ASSERT_FLOAT_WITHIN(0.0001, 127.6567, localSiderealTimeDegrees);
 
     telescope.calibrate(reference, 48, localSiderealTimeDegrees);
@@ -258,7 +260,6 @@ void test_function_gnss_rmc(void)
     TEST_ASSERT_FLOAT_WITHIN(0.0001, 0, gnss.speed);
     TEST_ASSERT_FLOAT_WITHIN(0.0001, 360, gnss.course);
 
-
     GNSS gnss2;
     string sentenceC = "$GPRMC,165011.00,V,,,,,,,291221,,,N*74";
     res = gnss2.fromRMC(sentenceC);
@@ -279,7 +280,7 @@ void test_function_gnss_rmc(void)
     TEST_ASSERT_FLOAT_WITHIN(0.0001, 0, gnss2.longitude);
 
     TEST_ASSERT_FLOAT_WITHIN(0.0001, 0, gnss2.speed);
-    TEST_ASSERT_FLOAT_WITHIN(0.0001, 0, gnss2.course);    
+    TEST_ASSERT_FLOAT_WITHIN(0.0001, 0, gnss2.course);
 }
 
 void test_function_gnss_gga(void)
@@ -307,7 +308,6 @@ void test_function_gnss_gga(void)
 
     TEST_ASSERT_EQUAL_UINT32(4, gnss.satUsed);
 
-
     string sentenceB = "$GPGGA,092204.999,4250.5589,S,14718.5084,E,1,04,24.4,19.7,M,,,,0000*1F";
     res = gnss.fromGGA(sentenceB);
     TEST_ASSERT_TRUE_MESSAGE(res, "return value");
@@ -327,7 +327,6 @@ void test_function_gnss_gga(void)
     TEST_ASSERT_FLOAT_WITHIN(0.0001, 24.4, gnss.dilution);
 
     TEST_ASSERT_EQUAL_UINT32(4, gnss.satUsed);
-
 
     GNSS gnss2;
     string sentenceC = "$GPGGA,165011.00,,,,,0,00,99.99,,,,,,*64";
@@ -399,7 +398,6 @@ void test_function_gnss_nmea(void)
     TEST_ASSERT_FALSE_MESSAGE(res, "sentenceC");
 }
 
-
 void test_function_gnss_buffer(void)
 {
     GNSS gnss;
@@ -416,7 +414,6 @@ void test_function_gnss_buffer(void)
     uint8_t sampleC[] = "$GPRMC,083055.00,A,4815.69961,N,01059.02625,E,2.158,,291221,,,A*79\r\n$GPVTG,,T,,M,2.158,N,3.997,K,A*29\r\n$GPGGA,083055.00,4815.69961,N,01059.02625,E,1,04,7.80,485.8,M,46.8,M,,*50\r\n$GPGSA,A,3,02,07,30,06,,,,,,,,,14.68,7";
     res = gnss.fromBuffer(sampleC, sizeof(sampleC));
     TEST_ASSERT_EQUAL_UINT32_MESSAGE(2, res, "sampleC");
-
 }
 
 void test_function_siderealtime_fmod(void)
@@ -429,19 +426,19 @@ void test_function_siderealtime_julianday(void)
 {
     float res = 0;
 
-    tm timestamp {.tm_mday=1, .tm_mon=1, .tm_year=2000};
+    tm timestamp{.tm_mday = 1, .tm_mon = 1, .tm_year = 2000};
     res = MathHelper::julianDay(timestamp);
     TEST_ASSERT_FLOAT_WITHIN(0.0001, 2451544.5, res);
 
-    timestamp = {.tm_mday=23, .tm_mon=12, .tm_year=2021};
+    timestamp = {.tm_mday = 23, .tm_mon = 12, .tm_year = 2021};
     res = MathHelper::julianDay(timestamp);
     TEST_ASSERT_FLOAT_WITHIN(0.0001, 2459571.5, res);
 
-    timestamp = {.tm_mday=2, .tm_mon=1, .tm_year=2022};
+    timestamp = {.tm_mday = 2, .tm_mon = 1, .tm_year = 2022};
     res = MathHelper::julianDay(timestamp);
     TEST_ASSERT_FLOAT_WITHIN(0.0001, 2459581.5, res);
 
-    timestamp = {.tm_mday=13, .tm_mon=7, .tm_year=2025};
+    timestamp = {.tm_mday = 13, .tm_mon = 7, .tm_year = 2025};
     res = MathHelper::julianDay(timestamp);
     TEST_ASSERT_FLOAT_WITHIN(0.0001, 2460869.5, res);
 }
@@ -450,21 +447,71 @@ void test_function_siderealtime_LST(void)
 {
     float res = 0;
 
-    res = MathHelper::getLocalSiderealTimeDegrees({.tm_sec=0, .tm_min=10, .tm_hour=23, .tm_mday=10, .tm_mon=8, .tm_year=1998}, -1.9166667);
+    res = MathHelper::getLocalSiderealTimeDegrees({.tm_sec = 0, .tm_min = 10, .tm_hour = 23, .tm_mday = 10, .tm_mon = 8, .tm_year = 1998}, -1.9166667);
     TEST_ASSERT_FLOAT_WITHIN(0.0001, 304.808, res);
 
-    res = MathHelper::getLocalSiderealTimeDegrees({.tm_sec=0, .tm_min=0, .tm_hour=18, .tm_mday=16, .tm_mon=6, .tm_year=1994}, 0);
+    res = MathHelper::getLocalSiderealTimeDegrees({.tm_sec = 0, .tm_min = 0, .tm_hour = 18, .tm_mday = 16, .tm_mon = 6, .tm_year = 1994}, 0);
     TEST_ASSERT_FLOAT_WITHIN(0.0001, 174.7711, res);
 
-    res = MathHelper::getLocalSiderealTimeDegrees({.tm_sec=34, .tm_min=30, .tm_hour=8, .tm_mday=23, .tm_mon=12, .tm_year=2021}, -120);
+    res = MathHelper::getLocalSiderealTimeDegrees({.tm_sec = 34, .tm_min = 30, .tm_hour = 8, .tm_mday = 23, .tm_mon = 12, .tm_year = 2021}, -120);
     TEST_ASSERT_FLOAT_WITHIN(0.0001, 99.7504, res);
 
-    res = MathHelper::getLocalSiderealTimeDegrees({.tm_sec=22, .tm_min=13, .tm_hour=6, .tm_mday=13, .tm_mon=7, .tm_year=2025}, 11);
+    res = MathHelper::getLocalSiderealTimeDegrees({.tm_sec = 22, .tm_min = 13, .tm_hour = 6, .tm_mday = 13, .tm_mon = 7, .tm_year = 2025}, 11);
     TEST_ASSERT_FLOAT_WITHIN(0.0001, 35.7267, res);
 
-    res = MathHelper::getLocalSiderealTimeDegrees({.tm_sec=0, .tm_min=0, .tm_hour=1, .tm_mday=2, .tm_mon=1, .tm_year=2022}, 11);
+    res = MathHelper::getLocalSiderealTimeDegrees({.tm_sec = 0, .tm_min = 0, .tm_hour = 1, .tm_mday = 2, .tm_mon = 1, .tm_year = 2022}, 11);
     TEST_ASSERT_FLOAT_WITHIN(0.0001, 127.6567, res);
+}
 
+void test_function_nexstar_echo(void)
+{
+    uint8_t response[32];
+    int32_t bytes = 0;
+
+    GNSS gnss; // set initial position to enable operation before GNSS fix
+    Telescope telescope;
+    NexStar nexstar(&telescope, &gnss);
+
+    uint8_t sampleA[] = "Ka";
+    bytes = nexstar.handleRequest(sampleA, sizeof(sampleA), response, sizeof(response));
+    TEST_ASSERT_EQUAL(2, bytes);
+    TEST_ASSERT_EQUAL_HEX8_ARRAY("a#", response, bytes);
+}
+
+void test_function_nexstar_get_radec(void)
+{
+    uint8_t response[32];
+    int32_t bytes = 0;
+
+    // see http://jonvoisey.net/blog/2018/07/data-converting-alt-az-to-ra-dec-example/
+
+    // Birmingham UK, 10th August 1998 at 2310
+    GNSS gnss(52.5, -1.91667);
+    gnss.utcTimestamp.tm_year = 1998;
+    gnss.utcTimestamp.tm_mon = 8;
+    gnss.utcTimestamp.tm_mday = 10;
+    gnss.utcTimestamp.tm_hour = 23;
+    gnss.utcTimestamp.tm_min = 10;
+    gnss.utcTimestamp.tm_sec = 0;
+
+    Telescope telescope;
+
+    telescope.orientation.az = 269.14634;
+    telescope.orientation.alt = 49.169122;
+
+    // make sure the input is correct
+    double localSiderealTimeDegrees = MathHelper::getLocalSiderealTimeDegrees(gnss.utcTimestamp, gnss.longitude);
+    auto res = telescope.horizontalToEquatorial(269.14634, 49.169122, gnss.latitude, localSiderealTimeDegrees);
+    TEST_ASSERT_FLOAT_WITHIN(0.01, 250.43, res.ra);
+    TEST_ASSERT_FLOAT_WITHIN(0.01, 36.47, res.dec);    
+
+    NexStar nexstar(&telescope, &gnss);
+
+    uint8_t sampleA[] = "e";
+    bytes = nexstar.handleRequest(sampleA, sizeof(sampleA), response, sizeof(response));
+    // printf("%s", (char *)response);
+    TEST_ASSERT_EQUAL(18, bytes);
+    TEST_ASSERT_EQUAL_HEX8_ARRAY("B2148DFE,19EE8DF9#", response, bytes);
 }
 
 void process(void)
@@ -494,9 +541,13 @@ void process(void)
     RUN_TEST(test_function_gnss_buffer);
 
     // sidereal time
-    RUN_TEST(test_function_siderealtime_fmod);    
+    RUN_TEST(test_function_siderealtime_fmod);
     RUN_TEST(test_function_siderealtime_julianday);
     RUN_TEST(test_function_siderealtime_LST);
+
+    // nexstar
+    RUN_TEST(test_function_nexstar_echo);
+    RUN_TEST(test_function_nexstar_get_radec);
 
     UNITY_END();
 }
