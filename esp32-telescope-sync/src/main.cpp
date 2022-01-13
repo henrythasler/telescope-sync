@@ -435,7 +435,7 @@ void loop()
                         imu::Vector<3> euler = q.toEuler() * 180. / PI;
                         euler.x() *= -1; // convert to Azimuth where north=0° and a rotation towards east (right) increases the value
 
-                        telescope.setOrientation(euler.y(), euler.x());
+                        telescope.setOrientation(euler.y(), euler.x() + headingOffset);
                         double localSiderealTimeDegrees = MathHelper::getLocalSiderealTimeDegrees(gnss.utcTimestamp, gnss.longitude);
 
                         Serial.printf("[ SENSOR ] Received Calibration Data  Ra: %.3f Dec: %.3f\n", reference.ra, reference.dec);
@@ -478,7 +478,7 @@ void loop()
             imu::Vector<3> euler = q.toEuler() * 180. / PI;
             euler.x() *= -1; // convert to Azimuth where north=0° and a rotation towards east (right) increases the value
 
-            telescope.setOrientation(euler.y(), euler.x());
+            telescope.setOrientation(euler.y(), euler.x() + headingOffset);
 
             Telescope::Horizontal corrected = telescope.getCalibratedOrientation();
             double localSiderealTimeDegrees = MathHelper::getLocalSiderealTimeDegrees(gnss.utcTimestamp, gnss.longitude);

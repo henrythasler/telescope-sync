@@ -43,6 +43,7 @@ public:
 
     void setOrientation(double alt, double az);
 
+    bool isCalibrated = false;
     void calibrate(Equatorial reference, double latitude, double localSiderealTimeDegrees);
     Horizontal getCalibratedOrientation(void);
 

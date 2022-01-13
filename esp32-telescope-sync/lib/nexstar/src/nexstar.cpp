@@ -30,20 +30,20 @@ uint32_t NexStar::handleRequest(uint8_t *request, size_t requestLength, uint8_t 
     {
         return snprintf((char *)response, responseMaxLength, "%c#", 12);
     }
-    // Get Location 
+    // Get Location
     // 57 30 07 3b 00  0b 16 20 00
     // W  48  7 59 N   11 22 32 E
     else if (requestLength >= 1 && request[0] == 'w')
     {
-        return snprintf((char *)response, responseMaxLength, "%c%c%c%c%c%c%c%c#", 
-            uint8_t(abs(floor(gnss->latitude))), 
-            uint8_t((abs(gnss->latitude) - abs(floor(gnss->latitude))) * 60), 
-            0, 
-            uint8_t(!gnss->north), 
-            uint8_t(abs(floor(gnss->longitude))), 
-            uint8_t((abs(gnss->longitude) - abs(floor(gnss->longitude))) * 60), 
-            0, 
-            uint8_t(!gnss->east));
+        return snprintf((char *)response, responseMaxLength, "%c%c%c%c%c%c%c%c#",
+                        uint8_t(abs(floor(gnss->latitude))),
+                        uint8_t((abs(gnss->latitude) - abs(floor(gnss->latitude))) * 60),
+                        0,
+                        uint8_t(!gnss->north),
+                        uint8_t(abs(floor(gnss->longitude))),
+                        uint8_t((abs(gnss->longitude) - abs(floor(gnss->longitude))) * 60),
+                        0,
+                        uint8_t(!gnss->east));
     }
     // Get precise RA/DEC
     else if (requestLength >= 1 && request[0] == 'e')
@@ -51,9 +51,9 @@ uint32_t NexStar::handleRequest(uint8_t *request, size_t requestLength, uint8_t 
         Telescope::Horizontal corrected = this->telescope->getCalibratedOrientation();
         double localSiderealTimeDegrees = MathHelper::getLocalSiderealTimeDegrees(this->gnss->utcTimestamp, this->gnss->longitude);
         Telescope::Equatorial position = this->telescope->horizontalToEquatorial(corrected, this->gnss->latitude, localSiderealTimeDegrees);
-        return snprintf((char *)response, responseMaxLength, "%08X,%08X#", 
-            uint32_t(position.ra / 360.0L * 4294967296.0L), 
-            uint32_t(position.dec / 360.0L * 4294967296.0L));
+        return snprintf((char *)response, responseMaxLength, "%08X,%08X#",
+                        uint32_t(position.ra / 360.0L * 4294967296.0L),
+                        uint32_t(position.dec / 360.0L * 4294967296.0L));
     }
     // Get Time
     else if (requestLength >= 1 && request[0] == 'h')
@@ -76,12 +76,29 @@ uint32_t NexStar::handleRequest(uint8_t *request, size_t requestLength, uint8_t 
     // Is Alignment Complete?
     else if (requestLength >= 1 && request[0] == 'J')
     {
-        return snprintf((char *)response, responseMaxLength, "%c#", 0);
+        return snprintf((char *)response, responseMaxLength, "%c#", telescope->isCalibrated);
     }
     // Get Tracking Mode
     else if (requestLength >= 1 && request[0] == 't')
     {
         return snprintf((char *)response, responseMaxLength, "%c#", 1);
+    }
+    // Sync precise RA/DEC (e.g. 's2DE3C3B7,0F20C28D')
+    else if (requestLength >= 18 && request[0] == 's')
+    {
+        char hexString[8];
+        Telescope::Equatorial reference;
+
+        strncpy(hexString, (char *)request + 1, sizeof(hexString));
+        reference.ra = (double)strtol(hexString, NULL, 16) * 360L / 4294967296.0L;
+
+        strncpy(hexString, (char *)request + 10, sizeof(hexString));
+        reference.dec = (double)strtol(hexString, NULL, 16) * 360L / 4294967296.0L;
+
+        double localSiderealTimeDegrees = MathHelper::getLocalSiderealTimeDegrees(this->gnss->utcTimestamp, this->gnss->longitude);
+        telescope->calibrate(reference, this->gnss->latitude, localSiderealTimeDegrees);
+        telescope->isCalibrated = true;
+        return snprintf((char *)response, responseMaxLength, "#");
     }
     return 0;
 }

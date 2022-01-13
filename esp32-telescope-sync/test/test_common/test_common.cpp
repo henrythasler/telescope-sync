@@ -503,7 +503,7 @@ void test_function_nexstar_get_radec(void)
     double localSiderealTimeDegrees = MathHelper::getLocalSiderealTimeDegrees(gnss.utcTimestamp, gnss.longitude);
     auto res = telescope.horizontalToEquatorial(269.14634, 49.169122, gnss.latitude, localSiderealTimeDegrees);
     TEST_ASSERT_FLOAT_WITHIN(0.01, 250.43, res.ra);
-    TEST_ASSERT_FLOAT_WITHIN(0.01, 36.47, res.dec);    
+    TEST_ASSERT_FLOAT_WITHIN(0.01, 36.47, res.dec);
 
     NexStar nexstar(&telescope, &gnss);
 
@@ -512,6 +512,46 @@ void test_function_nexstar_get_radec(void)
     // printf("%s", (char *)response);
     TEST_ASSERT_EQUAL(18, bytes);
     TEST_ASSERT_EQUAL_HEX8_ARRAY("B2148DFE,19EE8DF9#", response, bytes);
+}
+
+void test_function_nexstar_sync_precise(void)
+{
+    uint8_t response[32];
+    int32_t bytes = 0;
+
+    GNSS gnss(48, 11);
+    gnss.utcTimestamp.tm_year = 2022;
+    gnss.utcTimestamp.tm_mon = 1;
+    gnss.utcTimestamp.tm_mday = 13;
+    gnss.utcTimestamp.tm_hour = 16;
+    gnss.utcTimestamp.tm_min = 25;
+    gnss.utcTimestamp.tm_sec = 9;
+
+    Telescope telescope;
+    telescope.setOrientation(0, 0);
+    TEST_ASSERT_FLOAT_WITHIN(0.01, 0.0, telescope.offset.alt);
+    TEST_ASSERT_FLOAT_WITHIN(0.01, 0.0, telescope.offset.az);
+
+    NexStar nexstar(&telescope, &gnss);
+
+    // not yet aligned
+    uint8_t isAlignmentComplete[] = "J";
+    bytes = nexstar.handleRequest(isAlignmentComplete, sizeof(isAlignmentComplete), response, sizeof(response));
+    TEST_ASSERT_EQUAL(2, bytes);
+    TEST_ASSERT_EQUAL_HEX8_ARRAY("\x00#", response, bytes);
+
+    uint8_t sampleA[] = "s2E0F3189,0F32CD10";   // Moon
+    bytes = nexstar.handleRequest(sampleA, sizeof(sampleA), response, sizeof(response));
+    TEST_ASSERT_EQUAL(1, bytes);
+    TEST_ASSERT_EQUAL_HEX8_ARRAY("#", response, bytes);
+    TEST_ASSERT_TRUE(telescope.isCalibrated);
+    TEST_ASSERT_FLOAT_WITHIN(0.01, 39.34, telescope.offset.alt);
+    TEST_ASSERT_FLOAT_WITHIN(0.01, 101.90, telescope.offset.az);
+
+    // should report aligned now
+    bytes = nexstar.handleRequest(isAlignmentComplete, sizeof(isAlignmentComplete), response, sizeof(response));
+    TEST_ASSERT_EQUAL(2, bytes);
+    TEST_ASSERT_EQUAL_HEX8_ARRAY("\x01#", response, bytes);
 }
 
 void process(void)
@@ -548,6 +588,7 @@ void process(void)
     // nexstar
     RUN_TEST(test_function_nexstar_echo);
     RUN_TEST(test_function_nexstar_get_radec);
+    RUN_TEST(test_function_nexstar_sync_precise);
 
     UNITY_END();
 }

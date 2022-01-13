@@ -137,15 +137,15 @@ class NexStar {
         }
         else if (request.match(/^P\x01(\x10|\x11|\xb0|\xb2)\xfe\x00\x00\x00\x02$/)) {
             // console.log(`Received 'Get Device Version': '${request}'`);
-            response = `\x00\x00#`;
+            response = `\x01\x00#`;
         }
         else if (request.match(/^m$/)) {
             // console.log(`Received 'Get Model': '${request}'`);
-            response = `\x01#`; // fake 'GPS Series'
+            response = `\x0c#`; // fake 'GPS Series'
         }
         else if (request.match(/^w$/)) {
             // console.log(`Received 'Get Location': '${request}'`);
-            response = `\x30\x07\x00\x00\x0b\x15\x00\x00#`; // Fake... 30 07 3b 00  0b 16 20 00
+            response = `\x30\x0f\x29\x00\x0a\x3b\x01\x00#`; // Fake... 
         }
         else if (request.match(/^e$/)) {
             // console.log(`Received 'Get precise RA/DEC': '${request}'`);
@@ -153,7 +153,15 @@ class NexStar {
         }
         else if (request.match(/^h$/)) {
             // console.log(`Received 'Get Time': '${request}'`);
-            response = `\x10\x00\x00\x01\x0b\x16\x00\x00#`; // Fake...
+            const today = new Date();
+            response = `${String.fromCharCode(today.getHours())}` +
+                `${String.fromCharCode(today.getMinutes())}` +
+                `${String.fromCharCode(today.getSeconds())}` +
+                `${String.fromCharCode(today.getMonth() + 1)}` +
+                `${String.fromCharCode(today.getDate())}` +
+                `${String.fromCharCode(today.getFullYear() - 2000)}` +
+                `\x01\x00#`;
+            // response = `\x10\x0d\x10\x01\x0d\x16\x01\x00#`;    // Fake... 48100c07010d160100
         }
         else if (request.match(/^L$/)) {
             // console.log(`Received 'Is GOTO in Progress': '${request}'`);
@@ -166,6 +174,11 @@ class NexStar {
         else if (request.match(/^t$/)) {
             // console.log(`Received 'Get Tracking Mode': '${request}'`);
             response = `\x01#`; // Fake Alt/Az ...
+        }
+        else if (request.match(/^s/)) {
+            const today = new Date();
+            console.log(`Received 'Sync precise RA/DEC' on ${today.toLocaleString("de-DE")}: '${request}'`);
+            response = `#`; // Fake Alt/Az ...
         }
         else {
             console.log(`[NexStar] not implemented: '${request}'`);

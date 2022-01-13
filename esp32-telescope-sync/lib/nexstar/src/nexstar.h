@@ -6,6 +6,7 @@ using namespace std;
 #include <stdint.h>
 #include <stddef.h>
 #include <stdio.h>
+#include <string.h> 
 
 #include <telescope.h>
 #include <gnss.h>
