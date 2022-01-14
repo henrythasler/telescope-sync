@@ -36,6 +36,8 @@ public:
     } BnoStatus;
 
     BnoStatus status;
+    sensor_t properties;
+
     adafruit_bno055_offsets_t calibrationData;
 
     int32_t sensorID, sensorAddress;

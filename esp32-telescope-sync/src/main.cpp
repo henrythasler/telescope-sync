@@ -127,6 +127,21 @@ void mqttCallback(char *topic, byte *payload, unsigned int length)
     Serial.println();
 }
 
+void onWifiDisconnect(WiFiEvent_t event, WiFiEventInfo_t info)
+{
+    Serial.printf("[  WIFI  ] Disconnected from `` (%i). Reconnecting...\n", info.disconnected.reason);
+    WiFi.begin(secrets.wifiSsid, secrets.wifiPassword);
+}
+
+void onWifiConnected(WiFiEvent_t event, WiFiEventInfo_t info){
+  Serial.println("[  WIFI  ] WiFi connected!");
+}
+
+void onWifiIPAddress(WiFiEvent_t event, WiFiEventInfo_t info)
+{
+    Serial.printf("[  WIFI  ] IP=%s\n", WiFi.localIP().toString().c_str());
+}
+
 void setup()
 {
     // LED output
@@ -141,7 +156,7 @@ void setup()
     Serial.println("[  INIT  ] Begin");
     initStage++;
 
-    Serial.printf("[  INIT  ] ChipRevision: 0x%02X    CpuFreq: %uMHz   FlashChipSize: %uKiB   HeapSize: %uKiB   MAC: %s   SdkVersion: %s\n",
+    Serial.printf("[  INIT  ] ChipRevision: 0x%02X   CpuFreq: %uMHz   FlashChipSize: %uKiB   HeapSize: %uKiB   MAC: %s   SdkVersion: %s\n",
                   ESP.getChipRevision(),
                   ESP.getCpuFreqMHz(),
                   ESP.getFlashChipSize() / 1024,
@@ -169,10 +184,10 @@ void setup()
 
             if (WiFi.status() == WL_CONNECTED)
             {
-                Serial.print(" connected!");
-                Serial.print(" (IP=");
-                Serial.print(WiFi.localIP());
-                Serial.println(")");
+                Serial.printf(" connected! (IP=%s)\n", WiFi.localIP().toString().c_str());
+                WiFi.onEvent(onWifiDisconnect, SYSTEM_EVENT_STA_DISCONNECTED);
+                WiFi.onEvent(onWifiConnected, SYSTEM_EVENT_STA_CONNECTED);
+                WiFi.onEvent(onWifiIPAddress, SYSTEM_EVENT_STA_GOT_IP);
                 wifiClientMode = true;
             }
             else
@@ -202,24 +217,24 @@ void setup()
     if (SPIFFS.begin(true))
     {
         Serial.println("ok");
-        Serial.printf("[  FILE  ] total: %u KiB  available: %u KiB\n", SPIFFS.totalBytes() / 1024, (SPIFFS.totalBytes() - SPIFFS.usedBytes()) / 1024);
+        Serial.printf("[  INIT  ] Flash total: %u KiB  available: %u KiB\n", SPIFFS.totalBytes() / 1024, (SPIFFS.totalBytes() - SPIFFS.usedBytes()) / 1024);
         filesystemAvailable = true;
     }
     else
     {
         Serial.println("failed");
-        Serial.println("[ ERROR  ] An Error has occurred while mounting SPIFFS");
+        Serial.println("[! INIT  ] An Error has occurred while mounting SPIFFS");
     }
     initStage++;
 
     if (filesystemAvailable)
     {
-        Serial.println("[  INIT  ] file list");
+        Serial.println("[  INIT  ] file list:");
         File root = SPIFFS.open("/");
         File file = root.openNextFile();
         while (file)
         {
-            Serial.printf("[  FILE  ] %s - %u Bytes\n", file.name(), file.size());
+            Serial.printf("[  INIT  ]       %s - %u Bytes\n", file.name(), file.size());
             file = root.openNextFile();
         }
         root.close();
@@ -246,16 +261,16 @@ void setup()
             {
                 initStage++;
                 orientationSensorAvailable = true;
-                Serial.printf("[  INIT  ] found BNO055 Intelligent Absolute Orientation Sensor (ID=%02X, Addr=%02X)\n", BNO055_ID, BNO055_ADDRESS_A);
+                Serial.printf("[  INIT  ] Found BNO055 Intelligent Absolute Orientation Sensor (ID=%02X, Addr=%02X)\n", BNO055_ID, BNO055_ADDRESS_A);
             }
             else
             {
-                Serial.println("[ ERROR  ] Could not find a BNO055 sensor. Check wiring!");
+                Serial.println("[! INIT  ] Could not find a BNO055 sensor. Check wiring!");
             }
         }
         else
         {
-            Serial.println("[ ERROR  ] Could not setup I2C Interface!");
+            Serial.println("[! INIT  ] Could not setup I2C Interface!");
         }
     }
 
@@ -267,7 +282,7 @@ void setup()
 
         if (filesystemAvailable)
         {
-            Serial.println("[ SENSOR ] restoring sensor calibration data... ");
+            Serial.println("[  INIT  ] restoring sensor calibration data... ");
             if (persistency.readBinaryData((uint8_t *)&bnoData.calibrationData, sizeof(bnoData.calibrationData), "/calibration.dat"))
             {
                 bnoData.status.calibrationDataAvailable = true;
@@ -283,56 +298,43 @@ void setup()
 
                 // Calibration data: Accel=[8, -38, -32], Gyro=[-1, -2, 1], Mag=[235, -394, -355], Accel Radius=1000, Mag Radius=1282
 
-                Serial.println("[ SENSOR ] ok");
+                Serial.println("[  INIT  ] ok");
             }
             else
             {
-                Serial.println("[ SENSOR ] restoring calibration data failed");
+                Serial.println("[! INIT  ] restoring calibration data failed");
             }
 
             initStage++;
         }
 
-        sensor_t sensor;
-        bno.getSensor(&sensor);
-        Serial.print("           Sensor:        ");
-        Serial.println(sensor.name);
-        Serial.print("           Driver Ver:    ");
-        Serial.println(sensor.version);
-        Serial.print("           Unique ID:     ");
-        Serial.println(sensor.sensor_id);
+        // read sensor properties and status
+        bno.getSensor(&bnoData.properties);
+        bno.getSystemStatus(&bnoData.status.statSystem, &bnoData.status.statSelfTest, &bnoData.status.errSystem);
 
-        /* Get the system status values (mostly for debugging purposes) */
-        uint8_t system_status, self_test_results, system_error;
-        system_status = self_test_results = system_error = 0;
-        bno.getSystemStatus(&system_status, &self_test_results, &system_error);
+        Serial.printf("[  INIT  ] Sensor: %s (v%i)   ID: 0x%02X   Status: 0x%02X   Self Test: 0x%02X   Error: 0x%02X\n", 
+        bnoData.properties.name, bnoData.properties.version, bnoData.properties.sensor_id,
+        bnoData.status.statSystem, bnoData.status.statSelfTest, bnoData.status.errSystem);
 
-        Serial.print("           System Status: 0x");
-        Serial.println(system_status, HEX);
-        Serial.print("           Self Test:     0x");
-        Serial.println(self_test_results, HEX);
-        Serial.print("           System Error:  0x");
-        Serial.println(system_error, HEX);
-
-        Serial.println("[ SENSOR ] Orientation sensor enabled");
+        Serial.println("[  INIT  ] Orientation sensor enabled");
     }
 
     if (wifiClientMode || wifiAccessPointMode)
     {
         server.begin();
-        Serial.printf("[ SOCKET ] Listening on port %u\n", TCP_SERVER_PORT);
+        Serial.printf("[  INIT  ] TCP-Server listening on port %u\n", TCP_SERVER_PORT);
         initStage++;
 
         if (ENABLE_BROKER)
         {
             broker.init(1883);
             localBrokerAvailable = true;
-            Serial.printf("[ BROKER ] MQTT-Broker listening on port %u\n", 1883);
+            Serial.printf("[  INIT  ] MQTT-Broker listening on port %u\n", 1883);
         }
 
         if (ENABLE_MQTT && wifiClientMode)
         {
-            Serial.print("[  INIT  ] Connecting to MQTT-Server... ");
+            Serial.print("[  INIT  ] Connecting to remote MQTT-Broker... ");
             mqttClient.setServer(secrets.mqttBroker, 1883);
             // mqttClient.setServer(IPAddress(192, 168, 178, 82), 1883);
             mqttClient.setCallback(mqttCallback);
