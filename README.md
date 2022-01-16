@@ -66,6 +66,19 @@ Byte-order is little-endian. Least significiant bytes are stored first.
 see also [TelescopeTCP::telescopeGoto](https://github.com/Stellarium/stellarium/blob/29df37b6c590ed32266f8269fde94bcb95eb5aa1/plugins/TelescopeControl/src/TelescopeClient.cpp#L276)
 
 
+## LED Codes
+
+The blue LED on the ESP32-Devkit board is used to indicate the following internal states:
+
+LED State | internal State
+---|---
+off | Application is not running
+on | Initialization; Startup
+Blink 1Hz | Orientation Sensor not yet calibrated
+1x Flash every 5s | All modules running normally
+2x Flash every 5s | No GNSS position fix
+4x Flash every 5s | Orientation Sensor calibration loss
+
 ## References
 
 ### Similar Projects

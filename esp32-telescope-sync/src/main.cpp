@@ -1,12 +1,13 @@
+// Arduino base
 #include <Arduino.h>
 #include <WiFi.h>
 
+// external Libraries
 #include <PubSubClient.h>
 #include <Adafruit_Sensor.h>
 #include <Adafruit_BNO055.h>
 #include <SPIFFS.h>
 // #include <AsyncTCP.h>
-#include <sMQTTBroker.h>
 
 // own libraries
 #include <persistency.h>
@@ -14,7 +15,9 @@
 #include <telescope.h>
 #include <gnss.h>
 #include <nexstar.h>
+#include <mqttbroker.h>
 #include <helper.h>
+#include <ledmanager.h>
 
 /**
  * A file called 'secrets.h' must be placed in lib/secrets and contain the following content:
@@ -35,8 +38,9 @@
  **/
 #include <secrets.h>
 
-#define DEBUG (true)
+#define DEBUG (false)
 
+#define BNO055_I2C_CLOCK (100000U)
 #define BNO055_PIN_I2C_SCL (22)
 #define BNO055_PIN_I2C_SDA (21)
 #define BNO055_BUS_ID (0)
@@ -70,35 +74,18 @@ bool nexStarMode = false;
 #define TCP_SERVER_PORT (10001)
 #define SSID "ESP32"
 // AsyncServer server(TCP_SERVER_PORT);
+
 WiFiServer server(TCP_SERVER_PORT);
 WiFiClient remoteClient;
 WiFiClient wifiClient;
-PubSubClient mqttClient(wifiClient);
+PubSubClient mqttClient(wifiClient); // for connecting to a remote broker
+MQTTBroker broker(&Serial);          // set-up own broker, needs a HardwareSerial for logging
 
-Persistency persistency;
-GNSS gnss(48, 11); // set initial position to enable operation before GNSS fix
-Telescope telescope;
-NexStar nexstar(&telescope, &gnss);
-
-class MyBroker : public sMQTTBroker
-{
-public:
-    bool onConnect(sMQTTClient *client, const std::string &username, const std::string &password)
-    {
-        Serial.printf("[ BROKER ] Client '%s' connected\n", client->getClientId().c_str());
-        return true;
-    };
-    void onRemove(sMQTTClient *client)
-    {
-        Serial.printf("[ BROKER ] '%s' disconnected\n", client->getClientId().c_str());
-    };
-
-    void onPublish(sMQTTClient *client, const std::string &topic, const std::string &payload)
-    {
-        Serial.printf("[ BROKER ] Client '%s' published topic '%s': '%s'\n", client->getClientId().c_str(), topic.c_str(), payload.c_str());
-    }
-};
-MyBroker broker;
+Persistency persistency;            // load and save data in flash memory
+GNSS gnss(48, 11);                  // GNSS data provider; set initial position to enable operation before GNSS fix
+Telescope telescope;                // Telescope properties and related calculations
+NexStar nexstar(&telescope, &gnss); // Communication to Stellarium-App
+LEDManager ledmanager;
 
 // Flow control, basic task scheduler
 #define SCHEDULER_MAIN_LOOP_MS (10) // ms
@@ -130,11 +117,13 @@ void mqttCallback(char *topic, byte *payload, unsigned int length)
 void onWifiDisconnect(WiFiEvent_t event, WiFiEventInfo_t info)
 {
     Serial.printf("[  WIFI  ] Disconnected from `` (%i). Reconnecting...\n", info.disconnected.reason);
+    WiFi.disconnect();
     WiFi.begin(secrets.wifiSsid, secrets.wifiPassword);
 }
 
-void onWifiConnected(WiFiEvent_t event, WiFiEventInfo_t info){
-  Serial.println("[  WIFI  ] WiFi connected!");
+void onWifiConnected(WiFiEvent_t event, WiFiEventInfo_t info)
+{
+    Serial.println("[  WIFI  ] WiFi connected!");
 }
 
 void onWifiIPAddress(WiFiEvent_t event, WiFiEventInfo_t info)
@@ -146,7 +135,8 @@ void setup()
 {
     // LED output
     pinMode(LED_BUILTIN, OUTPUT);
-    digitalWrite(LED_BUILTIN, LOW);
+    ledmanager.setMode(LEDManager::LEDMode::ON);
+    ledmanager.update();
     initStage++;
 
     // Setup serial connection for debugging
@@ -157,12 +147,7 @@ void setup()
     initStage++;
 
     Serial.printf("[  INIT  ] ChipRevision: 0x%02X   CpuFreq: %uMHz   FlashChipSize: %uKiB   HeapSize: %uKiB   MAC: %s   SdkVersion: %s\n",
-                  ESP.getChipRevision(),
-                  ESP.getCpuFreqMHz(),
-                  ESP.getFlashChipSize() / 1024,
-                  ESP.getHeapSize() / 1024,
-                  WiFi.macAddress().c_str(),
-                  ESP.getSdkVersion());
+                  ESP.getChipRevision(), ESP.getCpuFreqMHz(), ESP.getFlashChipSize() / 1024, ESP.getHeapSize() / 1024, WiFi.macAddress().c_str(), ESP.getSdkVersion());
     initStage++;
 
     if (ENABLE_WIFI)
@@ -175,11 +160,10 @@ void setup()
 
             //check wi-fi is connected to wi-fi network
             int retries = 5;
-            while ((WiFi.status() != WL_CONNECTED) && (retries > 0))
+            while ((WiFi.status() != WL_CONNECTED) && ((retries--) > 0))
             {
                 delay(1000);
                 Serial.print(".");
-                retries--;
             }
 
             if (WiFi.status() == WL_CONNECTED)
@@ -193,6 +177,7 @@ void setup()
             else
             {
                 Serial.println(" failed!");
+                WiFi.disconnect();
             }
         }
 
@@ -239,7 +224,6 @@ void setup()
         }
         root.close();
         file.close();
-
         initStage++;
     }
 
@@ -252,7 +236,7 @@ void setup()
         initStage++;
 
         // Initialize Environment Sensor
-        if (I2CBus.begin(BNO055_PIN_I2C_SDA, BNO055_PIN_I2C_SCL, 100000U)) // set I2C-Clock to 100kHz
+        if (I2CBus.begin(BNO055_PIN_I2C_SDA, BNO055_PIN_I2C_SCL, BNO055_I2C_CLOCK)) // set I2C-Clock to 100kHz
         {
             initStage++;
             // in NDOF, too many errors are introduced by the magentometer. Especially when the sensor is attached to the metal tube of the telescope
@@ -312,9 +296,9 @@ void setup()
         bno.getSensor(&bnoData.properties);
         bno.getSystemStatus(&bnoData.status.statSystem, &bnoData.status.statSelfTest, &bnoData.status.errSystem);
 
-        Serial.printf("[  INIT  ] Sensor: %s (v%i)   ID: 0x%02X   Status: 0x%02X   Self Test: 0x%02X   Error: 0x%02X\n", 
-        bnoData.properties.name, bnoData.properties.version, bnoData.properties.sensor_id,
-        bnoData.status.statSystem, bnoData.status.statSelfTest, bnoData.status.errSystem);
+        Serial.printf("[  INIT  ] Sensor: %s (v%i)   ID: 0x%02X   Status: 0x%02X   Self Test: 0x%02X   Error: 0x%02X\n",
+                      bnoData.properties.name, bnoData.properties.version, bnoData.properties.sensor_id,
+                      bnoData.status.statSystem, bnoData.status.statSelfTest, bnoData.status.errSystem);
 
         Serial.println("[  INIT  ] Orientation sensor enabled");
     }
@@ -336,7 +320,6 @@ void setup()
         {
             Serial.print("[  INIT  ] Connecting to remote MQTT-Broker... ");
             mqttClient.setServer(secrets.mqttBroker, 1883);
-            // mqttClient.setServer(IPAddress(192, 168, 178, 82), 1883);
             mqttClient.setCallback(mqttCallback);
             Serial.println("ok");
             initStage++;
@@ -347,9 +330,11 @@ void setup()
     if (ENABLE_GNSS)
     {
         Serial2.begin(9600u);
+        Serial.print("[  INIT  ] GNSS-Module enabled");
     }
 
     Serial.printf("[  INIT  ] Completed at stage %u\n\n", initStage);
+    ledmanager.setMode(LEDManager::LEDMode::READY);
 }
 
 void checkForConnections()
@@ -383,13 +368,14 @@ void reconnectMQTTClient()
     }
     else
     {
-        Serial.print("failed, rc=");
-        Serial.print(mqttClient.state());
+        Serial.printf("failed! (0x%02X)\n", mqttClient.state());
     }
 }
 
 void loop()
 {
+    ledmanager.update(counterBase);
+
     // base tasks
     if (wifiClientMode || wifiAccessPointMode)
     {
@@ -404,8 +390,6 @@ void loop()
     // 100ms Tasks
     if (!(counterBase % (100L / SCHEDULER_MAIN_LOOP_MS)))
     {
-        digitalWrite(LED_BUILTIN, HIGH); // regularly turn on LED again
-
         if (remoteClient && remoteClient.connected())
         {
             uint32_t received = remoteClient.read(rxBuffer, sizeof(rxBuffer));
@@ -452,7 +436,7 @@ void loop()
         {
             bno.getCalibration(&bnoData.status.calSystem, &bnoData.status.calGyro, &bnoData.status.calAccel, &bnoData.status.calMag);
 
-            bnoData.status.fullyCalibrated = bno.isFullyCalibrated();
+            bnoData.status.fullyCalibrated = (bnoData.status.calSystem == 3) && (bnoData.status.calGyro == 3) && (bnoData.status.calAccel == 3) && (bnoData.status.calMag == 3);
             bnoData.status.partlyCalibrated = (bnoData.status.calSystem >= 1) && (bnoData.status.calGyro >= 1) && (bnoData.status.calAccel >= 1) && (bnoData.status.calMag >= 1);
 
             if (!bnoData.status.fullyCalibrated)
@@ -465,6 +449,23 @@ void loop()
         {
             mqttClient.loop();
         }
+
+        if (!bnoData.status.fullyCalibrated && !bnoData.status.calibrationDataSaved)
+        {
+            ledmanager.setMode(LEDManager::LEDMode::ON_500_OFF_500);
+        }
+        else if (!bnoData.status.fullyCalibrated && bnoData.status.calibrationDataSaved)
+        {
+            ledmanager.setMode(LEDManager::LEDMode::OFF_3800_ON_10_OFF_190_ON_10_OFF_190_ON_10_OFF_190_ON_10_OFF_190);
+        }
+        else if (!gnss.valid)
+        {
+            ledmanager.setMode(LEDManager::LEDMode::OFF_3800_ON_10_OFF_190_ON_10_OFF_190);
+        }
+        else
+        {
+            ledmanager.setMode(LEDManager::LEDMode::ON_4990_ON_10);
+        }
     }
 
     // 500ms Tasks
@@ -472,8 +473,8 @@ void loop()
     {
         if (orientationSensorAvailable)
         {
-            if (!bnoData.status.fullyCalibrated)
-                digitalWrite(LED_BUILTIN, LOW);
+            // if (!bnoData.status.fullyCalibrated)
+            // ledmanager.setMode(LEDManager::LEDMode::ON_500_OFF_500);
 
             // ZYX-Order. Sensor xy-plane is aligned with earth's surface => x=azimuth; y=altitude
             imu::Quaternion q = bno.getQuat();
@@ -601,7 +602,6 @@ void loop()
             if (bnoData.status.fullyCalibrated)
             {
                 calibrationStableCounter++;
-                digitalWrite(LED_BUILTIN, LOW);
             }
 
             // save calibration data once per lifecycle after the sensor is fully calibrated
@@ -631,18 +631,20 @@ void loop()
             }
 
             bno.getSystemStatus(&bnoData.status.statSystem, &bnoData.status.statSelfTest, &bnoData.status.errSystem);
-            bno.getCalibration(&bnoData.status.calSystem, &bnoData.status.calGyro, &bnoData.status.calAccel, &bnoData.status.calMag);
             bnoData.status.temp = bno.getTemp();
 
             if (!bnoData.status.fullyCalibrated && DEBUG)
             {
                 // show overall system state
-                Serial.printf("[ SENSOR ] Sys: %X ST: %X Err: %X  Cal: %u%u%u%u  Temp: %i°C\n",
-                              bnoData.status.statSystem,
-                              bnoData.status.statSelfTest,
-                              bnoData.status.errSystem,
-                              bnoData.status.calSystem, bnoData.status.calGyro, bnoData.status.calAccel, bnoData.status.calMag,
-                              bnoData.status.temp);
+                if (DEBUG)
+                {
+                    Serial.printf("[ SENSOR ] Sys: %X ST: %X Err: %X  Cal: %u%u%u%u  Temp: %i°C\n",
+                                  bnoData.status.statSystem,
+                                  bnoData.status.statSelfTest,
+                                  bnoData.status.errSystem,
+                                  bnoData.status.calSystem, bnoData.status.calGyro, bnoData.status.calAccel, bnoData.status.calMag,
+                                  bnoData.status.temp);
+                }
             }
             int32_t len = 0;
             len = snprintf((char *)txBuffer, sizeof(txBuffer), "{\"system\":\"0x%X\",\"selftest\":\"0x%X\",\"error\":\"0x%X\",\"cal\":\"0x%04X\",\"temp\":%i}",
@@ -658,27 +660,25 @@ void loop()
             if (localBrokerAvailable)
                 broker.publish("home/appliance/telescope/sensor", (char *)txBuffer);
         }
-        else
-        {
-            digitalWrite(LED_BUILTIN, LOW);
-        }
 
         if (gnssAvailable)
         {
-            Serial.printf("[  GNSS  ] %s Lat=%.2f, Lng=%.2f, Alt=%.0fm, Date=%04u-%02u-%02u Time=%02u:%02u:%02u (Sat %u of %u)\n",
-                          gnss.valid ? "Fix" : "No fix",
-                          gnss.latitude,
-                          gnss.longitude,
-                          gnss.altitude,
-                          gnss.utcTimestamp.tm_year,
-                          gnss.utcTimestamp.tm_mon,
-                          gnss.utcTimestamp.tm_mday,
-                          gnss.utcTimestamp.tm_hour,
-                          gnss.utcTimestamp.tm_min,
-                          gnss.utcTimestamp.tm_sec,
-                          gnss.satUsed,
-                          gnss.satView);
-
+            if (DEBUG)
+            {
+                Serial.printf("[  GNSS  ] %s Lat=%.2f, Lng=%.2f, Alt=%.0fm, Date=%04u-%02u-%02u Time=%02u:%02u:%02u (Sat %u of %u)\n",
+                              gnss.valid ? "Fix" : "No fix",
+                              gnss.latitude,
+                              gnss.longitude,
+                              gnss.altitude,
+                              gnss.utcTimestamp.tm_year,
+                              gnss.utcTimestamp.tm_mon,
+                              gnss.utcTimestamp.tm_mday,
+                              gnss.utcTimestamp.tm_hour,
+                              gnss.utcTimestamp.tm_min,
+                              gnss.utcTimestamp.tm_sec,
+                              gnss.satUsed,
+                              gnss.satView);
+            }
             int32_t len = 0;
             len = snprintf((char *)txBuffer, sizeof(txBuffer), "{\"valid\":%s,\"lat\":%.3f,\"lng\":%.3f,\"alt\":%.0f,\"date\":\"%04u-%02u-%02u\",\"time\":\"%02u:%02u:%02u\",\"satUse\":%u,\"satView\":%u}",
                            gnss.valid ? "true" : "false",
@@ -710,11 +710,8 @@ void loop()
     {
         if (orientationSensorAvailable)
         {
-            bno.getSystemStatus(&bnoData.status.statSystem, &bnoData.status.statSelfTest, &bnoData.status.errSystem);
-            bno.getCalibration(&bnoData.status.calSystem, &bnoData.status.calGyro, &bnoData.status.calAccel, &bnoData.status.calMag);
-
             // show overall system state
-            Serial.printf("[ STATUS ] Free: %u KiB (%u KiB)  RSSI: %i dBm  Uptime: %" PRIi64 "s  Sys: %u Err: %u  Cal: %u Temp: %i°C\n",
+            Serial.printf("[ STATUS ] Free: %u KiB (%u KiB)   RSSI: %i dBm   Uptime: %" PRIi64 "s   Sys: %u Err: %u   Cal: %u   Temp: %i°C   GNSS: %s\n",
                           ESP.getFreeHeap() / 1024,
                           ESP.getMaxAllocHeap() / 1024,
                           WiFi.RSSI(),
@@ -722,7 +719,8 @@ void loop()
                           bnoData.status.statSystem,
                           bnoData.status.errSystem,
                           bnoData.status.calSystem,
-                          bnoData.status.temp);
+                          bnoData.status.temp,
+                          gnss.valid ? "fix" : "no fix");
         }
     }
 
