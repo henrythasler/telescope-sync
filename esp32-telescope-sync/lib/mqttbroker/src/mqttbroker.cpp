@@ -1,5 +1,7 @@
 #include <mqttbroker.h>
 
+#ifdef ARDUINO
+
 MQTTBroker::MQTTBroker(HardwareSerial *serial)
 {
     this->serial = serial;
@@ -20,3 +22,4 @@ void MQTTBroker::onPublish(sMQTTClient *client, const std::string &topic, const 
 {
     this->serial->printf("[ BROKER ] Client '%s' published topic '%s': '%s'\n", client->getClientId().c_str(), topic.c_str(), payload.c_str());
 }
+#endif

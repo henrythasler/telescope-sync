@@ -86,14 +86,14 @@ uint32_t NexStar::handleRequest(uint8_t *request, size_t requestLength, uint8_t 
     // Sync precise RA/DEC (e.g. 's2DE3C3B7,0F20C28D')
     else if (requestLength >= 18 && request[0] == 's')
     {
-        char hexString[8];
+        char hexString[9] = {0};
         Telescope::Equatorial reference;
 
-        strncpy(hexString, (char *)request + 1, sizeof(hexString));
-        reference.ra = (double)strtol(hexString, NULL, 16) * 360L / 4294967296.0L;
+        strncpy(hexString, (char *)request + 1, sizeof(hexString) - 1);
+        reference.ra = (double)strtoul(hexString, NULL, 16) * 360L / 4294967296.0L;
 
-        strncpy(hexString, (char *)request + 10, sizeof(hexString));
-        reference.dec = (double)strtol(hexString, NULL, 16) * 360L / 4294967296.0L;
+        strncpy(hexString, (char *)request + 10, sizeof(hexString) - 1);
+        reference.dec = (double)strtoul(hexString, NULL, 16) * 360L / 4294967296.0L;
 
         double localSiderealTimeDegrees = MathHelper::getLocalSiderealTimeDegrees(this->gnss->utcTimestamp, this->gnss->longitude);
         telescope->calibrate(reference, this->gnss->latitude, localSiderealTimeDegrees);

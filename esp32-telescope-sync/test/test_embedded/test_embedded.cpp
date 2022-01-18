@@ -11,7 +11,7 @@
 
 void test_led_builtin_pin_number(void)
 {
-    TEST_ASSERT_EQUAL(LED_BUILTIN, 13);
+    TEST_ASSERT_EQUAL(LED_BUILTIN, 2);
 }
 
 void test_led_state_high(void)

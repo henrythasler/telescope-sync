@@ -3,9 +3,9 @@
 
 using namespace std;
 
+#ifdef ARDUINO
 #include <sMQTTBroker.h>
 #include <Arduino.h>
-
 class MQTTBroker : public sMQTTBroker
 {
 public:
@@ -16,5 +16,8 @@ public:
 private:
     HardwareSerial *serial;
 };
+#else
+class MQTTBroker{}; // make unit-tests work
+#endif
 
 #endif // MQTTBROKER_H

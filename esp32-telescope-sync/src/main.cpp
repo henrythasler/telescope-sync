@@ -330,7 +330,7 @@ void setup()
     if (ENABLE_GNSS)
     {
         Serial2.begin(9600u);
-        Serial.print("[  INIT  ] GNSS-Module enabled");
+        Serial.print("[  INIT  ] GNSS-Module enabled\n");
     }
 
     Serial.printf("[  INIT  ] Completed at stage %u\n\n", initStage);
@@ -396,12 +396,12 @@ void loop()
 
             if (received > 0)
             {
-                Serial.print("[ SOCKET ] Rx: ");
-                for (int i = 0; i < received; i++)
-                {
-                    Serial.printf("%02X ", rxBuffer[i]);
-                }
-                Serial.println();
+                // Serial.print("[ SOCKET ] Rx: ");
+                // for (int i = 0; i < received; i++)
+                // {
+                //     Serial.printf("%02X ", rxBuffer[i]);
+                // }
+                // Serial.println();
 
                 int32_t nexstarResponseLength = nexstar.handleRequest(rxBuffer, sizeof(rxBuffer), txBuffer, sizeof(txBuffer));
 
@@ -452,19 +452,19 @@ void loop()
 
         if (!bnoData.status.fullyCalibrated && !bnoData.status.calibrationDataSaved)
         {
-            ledmanager.setMode(LEDManager::LEDMode::ON_500_OFF_500);
+            ledmanager.setMode(LEDManager::LEDMode::BLINK_1HZ);
         }
         else if (!bnoData.status.fullyCalibrated && bnoData.status.calibrationDataSaved)
         {
-            ledmanager.setMode(LEDManager::LEDMode::OFF_3800_ON_10_OFF_190_ON_10_OFF_190_ON_10_OFF_190_ON_10_OFF_190);
+            ledmanager.setMode(LEDManager::LEDMode::FLASH_4X_EVERY_5S);
         }
         else if (!gnss.valid)
         {
-            ledmanager.setMode(LEDManager::LEDMode::OFF_3800_ON_10_OFF_190_ON_10_OFF_190);
+            ledmanager.setMode(LEDManager::LEDMode::FLASH_2X_EVERY_5S);
         }
         else
         {
-            ledmanager.setMode(LEDManager::LEDMode::ON_4990_ON_10);
+            ledmanager.setMode(LEDManager::LEDMode::FLASH_1X_EVERY_5S);
         }
     }
 
@@ -474,7 +474,7 @@ void loop()
         if (orientationSensorAvailable)
         {
             // if (!bnoData.status.fullyCalibrated)
-            // ledmanager.setMode(LEDManager::LEDMode::ON_500_OFF_500);
+            // ledmanager.setMode(LEDManager::LEDMode::BLINK_1HZ);
 
             // ZYX-Order. Sensor xy-plane is aligned with earth's surface => x=azimuth; y=altitude
             imu::Quaternion q = bno.getQuat();

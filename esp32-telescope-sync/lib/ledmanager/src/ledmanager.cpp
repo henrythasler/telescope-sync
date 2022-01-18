@@ -1,5 +1,6 @@
 #include <ledmanager.h>
 
+#ifdef ARDUINO
 LEDManager::LEDManager(uint8_t pin, LEDMode mode)
 {
     this->pin = pin;
@@ -23,7 +24,7 @@ void LEDManager::update(uint32_t counter)
             digitalWrite(this->pin, HIGH);
     }
 
-    else if(this->mode == LEDMode::ON_500_OFF_500) {
+    else if(this->mode == LEDMode::BLINK_1HZ) {
         if((this->step % 100) < 50) {
             digitalWrite(this->pin, HIGH);
         }
@@ -31,16 +32,16 @@ void LEDManager::update(uint32_t counter)
             digitalWrite(this->pin, LOW); 
         }
     }
-    else if(this->mode == LEDMode::ON_4990_ON_10) {
+    else if(this->mode == LEDMode::FLASH_1X_EVERY_5S) {
         uint32_t seq = this->step % 500;
-        if(seq < 4990) {
+        if(seq < 499) {
             digitalWrite(this->pin, LOW);
         }
         else {
             digitalWrite(this->pin, HIGH); 
         }
     }
-    else if(this->mode == LEDMode::OFF_3800_ON_10_OFF_190_ON_10_OFF_190_ON_10_OFF_190_ON_10_OFF_190) {
+    else if(this->mode == LEDMode::FLASH_4X_EVERY_5S) {
         uint32_t seq = this->step % 500;
         if(seq < 375) {
             digitalWrite(this->pin, LOW);
@@ -68,7 +69,7 @@ void LEDManager::update(uint32_t counter)
         }
     }
 
-    else if(this->mode == LEDMode::OFF_3800_ON_10_OFF_190_ON_10_OFF_190) {
+    else if(this->mode == LEDMode::FLASH_2X_EVERY_5S) {
         uint32_t seq = this->step % 500;
         if(seq < 455) {
             digitalWrite(this->pin, LOW);
@@ -85,4 +86,4 @@ void LEDManager::update(uint32_t counter)
     }
 
 };
-
+#endif

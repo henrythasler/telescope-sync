@@ -426,19 +426,19 @@ void test_function_siderealtime_julianday(void)
 {
     float res = 0;
 
-    tm timestamp{.tm_mday = 1, .tm_mon = 1, .tm_year = 2000};
+    tm timestamp = {.tm_sec = 0, .tm_min=0, .tm_hour=0, .tm_mday=1, .tm_mon=1, .tm_year=2000};
     res = MathHelper::julianDay(timestamp);
     TEST_ASSERT_FLOAT_WITHIN(0.0001, 2451544.5, res);
 
-    timestamp = {.tm_mday = 23, .tm_mon = 12, .tm_year = 2021};
+    timestamp = {.tm_sec = 0, .tm_min=0, .tm_hour=0, .tm_mday=23, .tm_mon=12, .tm_year=2021};
     res = MathHelper::julianDay(timestamp);
     TEST_ASSERT_FLOAT_WITHIN(0.0001, 2459571.5, res);
 
-    timestamp = {.tm_mday = 2, .tm_mon = 1, .tm_year = 2022};
+    timestamp = {.tm_sec = 0, .tm_min=0, .tm_hour=0, .tm_mday=2, .tm_mon=1, .tm_year=2022};
     res = MathHelper::julianDay(timestamp);
     TEST_ASSERT_FLOAT_WITHIN(0.0001, 2459581.5, res);
 
-    timestamp = {.tm_mday = 13, .tm_mon = 7, .tm_year = 2025};
+    timestamp = {.tm_sec = 0, .tm_min=0, .tm_hour=0, .tm_mday=13, .tm_mon=7, .tm_year=2025};
     res = MathHelper::julianDay(timestamp);
     TEST_ASSERT_FLOAT_WITHIN(0.0001, 2460869.5, res);
 }
@@ -514,7 +514,7 @@ void test_function_nexstar_get_radec(void)
     TEST_ASSERT_EQUAL_HEX8_ARRAY("B2148DFE,19EE8DF9#", response, bytes);
 }
 
-void test_function_nexstar_sync_precise(void)
+void test_function_nexstar_sync_precise_1(void)
 {
     uint8_t response[32];
     int32_t bytes = 0;
@@ -547,6 +547,47 @@ void test_function_nexstar_sync_precise(void)
     TEST_ASSERT_TRUE(telescope.isCalibrated);
     TEST_ASSERT_FLOAT_WITHIN(0.01, 39.34, telescope.offset.alt);
     TEST_ASSERT_FLOAT_WITHIN(0.01, 101.90, telescope.offset.az);
+
+    // should report aligned now
+    bytes = nexstar.handleRequest(isAlignmentComplete, sizeof(isAlignmentComplete), response, sizeof(response));
+    TEST_ASSERT_EQUAL(2, bytes);
+    TEST_ASSERT_EQUAL_HEX8_ARRAY("\x01#", response, bytes);
+}
+
+
+void test_function_nexstar_sync_precise_2(void)
+{
+    uint8_t response[32];
+    int32_t bytes = 0;
+
+    GNSS gnss(48, 11);
+    gnss.utcTimestamp.tm_year = 2022;
+    gnss.utcTimestamp.tm_mon = 1;
+    gnss.utcTimestamp.tm_mday = 18;
+    gnss.utcTimestamp.tm_hour = 16;
+    gnss.utcTimestamp.tm_min = 30;
+    gnss.utcTimestamp.tm_sec = 32;
+
+    Telescope telescope;
+    telescope.setOrientation(0, 0);
+    TEST_ASSERT_FLOAT_WITHIN(0.01, 0.0, telescope.offset.alt);
+    TEST_ASSERT_FLOAT_WITHIN(0.01, 0.0, telescope.offset.az);
+
+    NexStar nexstar(&telescope, &gnss);
+
+    // not yet aligned
+    uint8_t isAlignmentComplete[] = "J";
+    bytes = nexstar.handleRequest(isAlignmentComplete, sizeof(isAlignmentComplete), response, sizeof(response));
+    TEST_ASSERT_EQUAL(2, bytes);
+    TEST_ASSERT_EQUAL_HEX8_ARRAY("\x00#", response, bytes);
+
+    uint8_t sampleA[] = "sEF0EF519,F83084C1FFFFFF";   // Jupiter; add some garbage at the end to test limiter
+    bytes = nexstar.handleRequest(sampleA, sizeof(sampleA), response, sizeof(response));
+    TEST_ASSERT_EQUAL(1, bytes);
+    TEST_ASSERT_EQUAL_HEX8_ARRAY("#", response, bytes);
+    TEST_ASSERT_TRUE(telescope.isCalibrated);
+    TEST_ASSERT_FLOAT_WITHIN(0.01, 20.96, telescope.offset.alt);
+    TEST_ASSERT_FLOAT_WITHIN(0.01, 223.08, telescope.offset.az);
 
     // should report aligned now
     bytes = nexstar.handleRequest(isAlignmentComplete, sizeof(isAlignmentComplete), response, sizeof(response));
@@ -588,7 +629,8 @@ void process(void)
     // nexstar
     RUN_TEST(test_function_nexstar_echo);
     RUN_TEST(test_function_nexstar_get_radec);
-    RUN_TEST(test_function_nexstar_sync_precise);
+    RUN_TEST(test_function_nexstar_sync_precise_1);
+    RUN_TEST(test_function_nexstar_sync_precise_2);
 
     UNITY_END();
 }

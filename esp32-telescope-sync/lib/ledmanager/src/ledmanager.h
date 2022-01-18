@@ -3,6 +3,7 @@
 
 using namespace std;
 
+#ifdef ARDUINO
 #include <Arduino.h>
 
 class LEDManager
@@ -12,10 +13,10 @@ public:
     {
         OFF,
         ON,
-        ON_500_OFF_500,
-        OFF_3800_ON_10_OFF_190_ON_10_OFF_190_ON_10_OFF_190_ON_10_OFF_190,
-        OFF_3800_ON_10_OFF_190_ON_10_OFF_190,
-        ON_4990_ON_10,
+        BLINK_1HZ,
+        FLASH_4X_EVERY_5S,
+        FLASH_2X_EVERY_5S,
+        FLASH_1X_EVERY_5S,
         READY,
     } LEDMode;
 
@@ -44,4 +45,5 @@ private:
     Timing timing[32]; // support 32 states
 };
 
+#endif
 #endif // LEDMANAGER_H

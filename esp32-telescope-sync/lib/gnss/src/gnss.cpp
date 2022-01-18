@@ -75,7 +75,7 @@ bool GNSS::fromGGA(string sentence)
 {
     int32_t pos = 0;
     char *ptr;
-    float rawValue = 0.0, rawLatitude = 0.0, rawLongitude = 0.0;
+    float rawLatitude = 0.0, rawLongitude = 0.0;
     uint32_t rawLong = 0;
 
     if (!this->verifyChecksum(sentence))
