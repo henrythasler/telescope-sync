@@ -102,6 +102,7 @@ Blink 1Hz | Orientation Sensor not yet calibrated
 - [Sidereal time calculator](https://astro.subhashbose.com/siderealtime)
 - [Converting RA and DEC to ALT and AZ](http://www.stargazing.net/kepler/altaz.html)
 - [3D Rotation Converter](https://www.andre-gaschler.com/rotationconverter/)
+- [THE EQMOD PROJECT - DOCUMENTATION & FAQs ](http://eq-mod.sourceforge.net/tutindex.html)
 
 
 ### Orientation Sensor

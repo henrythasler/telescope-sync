@@ -421,7 +421,7 @@ void loop()
                         imu::Vector<3> euler = q.toEuler() * 180. / PI;
                         euler.x() *= -1; // convert to Azimuth where north=0° and a rotation towards east (right) increases the value
 
-                        telescope.setOrientation(euler.y(), euler.x() + headingOffset);
+                        telescope.setOrientation(euler.z(), euler.x() + headingOffset);
                         double localSiderealTimeDegrees = MathHelper::getLocalSiderealTimeDegrees(gnss.utcTimestamp, gnss.longitude);
 
                         Serial.printf("[ SENSOR ] Received Calibration Data  Ra: %.3f Dec: %.3f\n", reference.ra, reference.dec);
@@ -436,7 +436,7 @@ void loop()
         {
             bno.getCalibration(&bnoData.status.calSystem, &bnoData.status.calGyro, &bnoData.status.calAccel, &bnoData.status.calMag);
 
-            bnoData.status.fullyCalibrated = (bnoData.status.calSystem == 3) && (bnoData.status.calGyro == 3) && (bnoData.status.calAccel == 3) && (bnoData.status.calMag == 3);
+            bnoData.status.fullyCalibrated = bno.isFullyCalibrated(); //(bnoData.status.calSystem == 3) && (bnoData.status.calGyro == 3) && (bnoData.status.calAccel == 3) && (bnoData.status.calMag == 3);
             bnoData.status.partlyCalibrated = (bnoData.status.calSystem >= 1) && (bnoData.status.calGyro >= 1) && (bnoData.status.calAccel >= 1) && (bnoData.status.calMag >= 1);
 
             if (!bnoData.status.fullyCalibrated)
@@ -481,7 +481,7 @@ void loop()
             imu::Vector<3> euler = q.toEuler() * 180. / PI;
             euler.x() *= -1; // convert to Azimuth where north=0° and a rotation towards east (right) increases the value
 
-            telescope.setOrientation(euler.y(), euler.x() + headingOffset);
+            telescope.setOrientation(euler.z(), euler.x() + headingOffset);
 
             Telescope::Horizontal corrected = telescope.getCalibratedOrientation();
             double localSiderealTimeDegrees = MathHelper::getLocalSiderealTimeDegrees(gnss.utcTimestamp, gnss.longitude);
