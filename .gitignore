@@ -1,2 +1,4 @@
 node-server/node_modules
 .ipynb_checkpoints
+tools/
+docs/*.csv
