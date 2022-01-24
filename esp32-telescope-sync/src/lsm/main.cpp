@@ -31,6 +31,7 @@ Adafruit_Sensor_Calibration_SDFat cal;
 #define IMU_PIN_VCC (4)
 
 uint32_t timestamp;
+sensors_event_t accel, gyro, mag;
 
 void setup()
 {
@@ -42,6 +43,35 @@ void setup()
     {
         Serial.println("Failed to initialize calibration helper");
     }
+    // else if (!cal.loadCalibration())
+    // {
+    //     Serial.println("No calibration loaded/found");
+    // }
+
+    // µT
+    cal.mag_hardiron[0] = -64.86967343;
+    cal.mag_hardiron[1] = 17.48569469;
+    cal.mag_hardiron[2] = -0.59624021;
+
+    cal.mag_softiron[0] = 1;
+    cal.mag_softiron[1] = 0;
+    cal.mag_softiron[2] = 0;
+    cal.mag_softiron[3] = 0;
+    cal.mag_softiron[4] = 1;
+    cal.mag_softiron[5] = 0;
+    cal.mag_softiron[6] = 0;
+    cal.mag_softiron[7] = 0;
+    cal.mag_softiron[8] = 1;
+
+    // rad/s
+    cal.gyro_zerorate[0] = 0.0651;
+    cal.gyro_zerorate[1] = -0.1081;
+    cal.gyro_zerorate[2] = -0.08;
+  
+    // m/s^2
+    cal.accel_zerog[0] = 0.01452;
+    cal.accel_zerog[1] = -0.01221;
+    cal.accel_zerog[2] = -0.2102;
 
     pinMode(IMU_PIN_VCC, OUTPUT);
     digitalWrite(IMU_PIN_VCC, HIGH);
@@ -76,12 +106,14 @@ void loop()
         return;
     }
     timestamp = millis();
-    
     // Read the motion sensors
-    sensors_event_t accel, gyro, mag;
     accelerometer->getEvent(&accel);
     gyroscope->getEvent(&gyro);
     magnetometer->getEvent(&mag);
+
+    cal.calibrate(mag);
+    cal.calibrate(accel);
+    cal.calibrate(gyro);
 
     // Gyroscope needs to be converted from Rad/s to Degree/s
     // the rest are not unit-important
