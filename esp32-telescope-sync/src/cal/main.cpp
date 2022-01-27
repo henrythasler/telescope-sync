@@ -12,7 +12,7 @@
 
 Adafruit_Sensor *accelerometer, *gyroscope, *magnetometer;
 
-#include "LSM6DS_LIS3MDL.h"
+#include <LSM6DS_LIS3MDL.h>
 
 // pick your filter! slower == better quality output
 Adafruit_NXPSensorFusion filter; // slowest

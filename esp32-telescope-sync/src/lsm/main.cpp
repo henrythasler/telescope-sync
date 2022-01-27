@@ -7,31 +7,42 @@
 // Based on  https://github.com/PaulStoffregen/NXPMotionSense with adjustments
 // to Adafruit Unified Sensor interface
 
+#include <Arduino.h>
+
 #include <Adafruit_Sensor_Calibration.h>
 #include <Adafruit_AHRS.h>
 
-Adafruit_Sensor *accelerometer, *gyroscope, *magnetometer;
+#include <orientationsensor.h>
 
-#include "LSM6DS_LIS3MDL.h"
+#define IMU_PIN_VCC (4)
+#define IMU_PIN_I2C_SCL (22)
+#define IMU_PIN_I2C_SDA (21)
+#define IMU_I2C_CLOCK (100000U)
+
+#define IMU_BUS_ID (0)
+#define IMU_ACC_ID (1)
+#define IMU_MAG_ID (2)
+
+TwoWire I2CBus = TwoWire(IMU_BUS_ID); // set up a new Wire-Instance for BNO055 Intelligent Absolute Orientation Sensor
+OrientationSensor imu(IMU_ACC_ID, IMU_MAG_ID, LSM6DS_I2CADDR_DEFAULT, LIS3MDL_I2CADDR_DEFAULT, &I2CBus);
+
+Adafruit_Sensor *accelerometer, *gyroscope, *magnetometer;
 
 // pick your filter! slower == better quality output
 Adafruit_NXPSensorFusion filter; // slowest
 // Adafruit_Madgwick filter; // faster than NXP
 // Adafruit_Mahony filter;  // fastest/smalleset
 
-#if defined(ADAFRUIT_SENSOR_CALIBRATION_USE_EEPROM)
 Adafruit_Sensor_Calibration_EEPROM cal;
-#else
-Adafruit_Sensor_Calibration_SDFat cal;
-#endif
 
-#define FILTER_UPDATE_RATE_HZ 100
+#define FILTER_UPDATE_RATE_HZ 80
 #define PRINT_EVERY_N_UPDATES 10
-
-#define IMU_PIN_VCC (4)
 
 uint32_t timestamp;
 sensors_event_t accel, gyro, mag;
+
+float roll = 0, pitch = 0, heading = 0;
+float gx = 0, gy = 0, gz = 0;
 
 void setup()
 {
@@ -53,21 +64,31 @@ void setup()
     cal.mag_hardiron[1] = 17.48569469;
     cal.mag_hardiron[2] = -0.59624021;
 
-    cal.mag_softiron[0] = 1;
-    cal.mag_softiron[1] = 0;
-    cal.mag_softiron[2] = 0;
-    cal.mag_softiron[3] = 0;
-    cal.mag_softiron[4] = 1;
-    cal.mag_softiron[5] = 0;
-    cal.mag_softiron[6] = 0;
-    cal.mag_softiron[7] = 0;
-    cal.mag_softiron[8] = 1;
+    cal.mag_softiron[0] = 1.00377056e+00;
+    cal.mag_softiron[1] = 5.27418179e-02;
+    cal.mag_softiron[2] = -9.83060614e-03;
+    cal.mag_softiron[3] = 5.27418179e-02;
+    cal.mag_softiron[4] = 9.93287432e-01;
+    cal.mag_softiron[5] = 2.64077721e-05;
+    cal.mag_softiron[6] = -9.83060614e-03;
+    cal.mag_softiron[7] = 2.64077721e-05;
+    cal.mag_softiron[8] = 1.00003403e+00;
+
+    // cal.mag_softiron[0] = 1;
+    // cal.mag_softiron[1] = 0;
+    // cal.mag_softiron[2] = 0;
+    // cal.mag_softiron[3] = 0;
+    // cal.mag_softiron[4] = 1;
+    // cal.mag_softiron[5] = 0;
+    // cal.mag_softiron[6] = 0;
+    // cal.mag_softiron[7] = 0;
+    // cal.mag_softiron[8] = 1;
 
     // rad/s
     cal.gyro_zerorate[0] = 0.0651;
     cal.gyro_zerorate[1] = -0.1081;
     cal.gyro_zerorate[2] = -0.08;
-  
+
     // m/s^2
     cal.accel_zerog[0] = 0.01452;
     cal.accel_zerog[1] = -0.01221;
@@ -77,43 +98,54 @@ void setup()
     digitalWrite(IMU_PIN_VCC, HIGH);
     delay(500); // wait for power up. Takes around 400ms (T_Sup).
 
-    if (!init_sensors())
+    // Initialize Environment Sensor
+    if (I2CBus.begin(IMU_PIN_I2C_SDA, IMU_PIN_I2C_SCL, IMU_I2C_CLOCK))
     {
-        Serial.println("Failed to find sensors");
-        while (1)
-            delay(10);
+        if (imu.begin())
+        {
+            Serial.println("[  INIT  ] Found Orientation Sensor");
+        }
+        else
+        {
+            Serial.println("[! INIT  ] Could not find a sensor. Check wiring!");
+        }
+    }
+    else
+    {
+        Serial.println("[! INIT  ] Could not setup I2C Interface!");
     }
 
-    accelerometer->printSensorDetails();
-    gyroscope->printSensorDetails();
-    magnetometer->printSensorDetails();
+    imu.printSensorDetails();
 
-    setup_sensors();
     filter.begin(FILTER_UPDATE_RATE_HZ);
-    timestamp = millis();
 
-    Wire.setClock(400000); // 400KHz
+    timestamp = millis();
 }
+
+static uint8_t counter = 0;
 
 void loop()
 {
-    float roll, pitch, heading;
-    float gx, gy, gz;
-    static uint8_t counter = 0;
 
-    if ((millis() - timestamp) < (1000 / FILTER_UPDATE_RATE_HZ))
+    uint32_t dt = millis() - timestamp;
+
+    if (dt < (1000 / FILTER_UPDATE_RATE_HZ))
     {
         return;
     }
     timestamp = millis();
+
     // Read the motion sensors
-    accelerometer->getEvent(&accel);
-    gyroscope->getEvent(&gyro);
-    magnetometer->getEvent(&mag);
+    imu.getEvent(&accel, &gyro, &mag);
 
     cal.calibrate(mag);
     cal.calibrate(accel);
     cal.calibrate(gyro);
+
+    // clip noise
+    gyro.gyro.x = abs(gyro.gyro.x) > 0.005 ? gyro.gyro.x : 0.;
+    gyro.gyro.y = abs(gyro.gyro.y) > 0.005 ? gyro.gyro.y : 0.;
+    gyro.gyro.z = abs(gyro.gyro.z) > 0.005 ? gyro.gyro.z : 0.;
 
     // Gyroscope needs to be converted from Rad/s to Degree/s
     // the rest are not unit-important

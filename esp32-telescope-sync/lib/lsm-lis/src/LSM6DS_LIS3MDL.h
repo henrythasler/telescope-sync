@@ -5,6 +5,8 @@ Adafruit_LIS3MDL lis3mdl;
 #include <Adafruit_LSM6DS33.h>
 Adafruit_LSM6DS33 lsm6ds;
 
+Adafruit_Sensor *accelerometer, *gyroscope, *magnetometer;
+
 bool init_sensors(void) {
   if (!lsm6ds.begin_I2C() || !lis3mdl.begin_I2C()) {
     return false;
