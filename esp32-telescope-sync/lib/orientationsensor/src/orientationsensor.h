@@ -18,7 +18,10 @@ public:
                       uint8_t magAddress = LIS3MDL_I2CADDR_DEFAULT,
                       TwoWire *theWire = &Wire);
     bool begin(void);
+    void setCalibration(void);
     void getEvent(sensors_event_t *acc, sensors_event_t *gyr, sensors_event_t *mag);
+    void calibrate(sensors_event_t *acc, sensors_event_t *gyr, sensors_event_t *mag);
+    void clipGyroNoise(sensors_event_t *gyr);
     void printSensorDetails(void);
     void printSensorOffsets(void);
     bool validateSensorOffsets(void);
@@ -30,20 +33,11 @@ public:
     SensorStatus acc_gyr, mag;
     sensor_t acc_properties, mag_properties;
 
-    /**! XYZ vector of offsets for zero-g, in m/s^2 */
-    float acc_offset[3] = {0, 0, 0};
-
-    /**! XYZ vector of offsets for zero-rate, in rad/s */
-    float gyr_offset[3] = {0, 0, 0};
-
-    /**! XYZ vector of offsets for hard iron calibration (in uT) */
-    float mag_hardiron[3] = {0, 0, 0};
-
-    /**! The 3x3 matrix for soft-iron calibration (unitless) */
-    float mag_softiron[9] = {1, 0, 0, 0, 1, 0, 0, 0, 1};
-
-    /**! The magnetic field magnitude in uTesla */
-    float mag_field = 50;
+    float acc_offset[3] = {0, 0, 0};                     // XYZ vector offsets for Accelerometer, [m/s^2]
+    float gyr_offset[3] = {0, 0, 0};                     // XYZ vector offsets for Gyroscope [rad/s]
+    float mag_hardiron[3] = {0, 0, 0};                   // XYZ vector of offsets for magnetometer (hard iron) [µT]
+    float mag_softiron[9] = {1, 0, 0, 0, 1, 0, 0, 0, 1}; // 3x3 matrix for magnetometer soft-iron calibration [1]
+    float mag_field = 50;                                // magnetic field magnitude [µT]
 
     int32_t sensorID, sensorAddress;
 
@@ -55,10 +49,10 @@ private:
 
     TwoWire *wire = NULL;
 
-    Adafruit_LSM6DS33 lsm6ds;   // Acc+Gyr
-    Adafruit_LIS3MDL lis3mdl;   // Mag
+    Adafruit_LSM6DS33 lsm6ds; // Acc+Gyr
+    Adafruit_LIS3MDL lis3mdl; // Mag
 
-    Adafruit_Sensor *accelerometer, *gyroscope, *magnetometer;    
+    Adafruit_Sensor *accelerometer, *gyroscope, *magnetometer;
 
     int32_t accSensorID = 0;
     int32_t magSensorID = 0;

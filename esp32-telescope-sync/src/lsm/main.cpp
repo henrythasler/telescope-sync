@@ -8,10 +8,7 @@
 // to Adafruit Unified Sensor interface
 
 #include <Arduino.h>
-
-#include <Adafruit_Sensor_Calibration.h>
 #include <Adafruit_AHRS.h>
-
 #include <orientationsensor.h>
 
 #define IMU_PIN_VCC (4)
@@ -33,8 +30,6 @@ Adafruit_NXPSensorFusion filter; // slowest
 // Adafruit_Madgwick filter; // faster than NXP
 // Adafruit_Mahony filter;  // fastest/smalleset
 
-Adafruit_Sensor_Calibration_EEPROM cal;
-
 #define FILTER_UPDATE_RATE_HZ 80
 #define PRINT_EVERY_N_UPDATES 10
 
@@ -50,50 +45,6 @@ void setup()
     while (!Serial)
         yield();
 
-    if (!cal.begin())
-    {
-        Serial.println("Failed to initialize calibration helper");
-    }
-    // else if (!cal.loadCalibration())
-    // {
-    //     Serial.println("No calibration loaded/found");
-    // }
-
-    // µT
-    cal.mag_hardiron[0] = -64.86967343;
-    cal.mag_hardiron[1] = 17.48569469;
-    cal.mag_hardiron[2] = -0.59624021;
-
-    cal.mag_softiron[0] = 1.00377056e+00;
-    cal.mag_softiron[1] = 5.27418179e-02;
-    cal.mag_softiron[2] = -9.83060614e-03;
-    cal.mag_softiron[3] = 5.27418179e-02;
-    cal.mag_softiron[4] = 9.93287432e-01;
-    cal.mag_softiron[5] = 2.64077721e-05;
-    cal.mag_softiron[6] = -9.83060614e-03;
-    cal.mag_softiron[7] = 2.64077721e-05;
-    cal.mag_softiron[8] = 1.00003403e+00;
-
-    // cal.mag_softiron[0] = 1;
-    // cal.mag_softiron[1] = 0;
-    // cal.mag_softiron[2] = 0;
-    // cal.mag_softiron[3] = 0;
-    // cal.mag_softiron[4] = 1;
-    // cal.mag_softiron[5] = 0;
-    // cal.mag_softiron[6] = 0;
-    // cal.mag_softiron[7] = 0;
-    // cal.mag_softiron[8] = 1;
-
-    // rad/s
-    cal.gyro_zerorate[0] = 0.0651;
-    cal.gyro_zerorate[1] = -0.1081;
-    cal.gyro_zerorate[2] = -0.08;
-
-    // m/s^2
-    cal.accel_zerog[0] = 0.01452;
-    cal.accel_zerog[1] = -0.01221;
-    cal.accel_zerog[2] = -0.2102;
-
     pinMode(IMU_PIN_VCC, OUTPUT);
     digitalWrite(IMU_PIN_VCC, HIGH);
     delay(500); // wait for power up. Takes around 400ms (T_Sup).
@@ -103,6 +54,7 @@ void setup()
     {
         if (imu.begin())
         {
+            imu.setCalibration();
             Serial.println("[  INIT  ] Found Orientation Sensor");
         }
         else
@@ -137,18 +89,10 @@ void loop()
 
     // Read the motion sensors
     imu.getEvent(&accel, &gyro, &mag);
-
-    cal.calibrate(mag);
-    cal.calibrate(accel);
-    cal.calibrate(gyro);
-
-    // clip noise
-    gyro.gyro.x = abs(gyro.gyro.x) > 0.005 ? gyro.gyro.x : 0.;
-    gyro.gyro.y = abs(gyro.gyro.y) > 0.005 ? gyro.gyro.y : 0.;
-    gyro.gyro.z = abs(gyro.gyro.z) > 0.005 ? gyro.gyro.z : 0.;
+    imu.calibrate(&accel, &gyro, &mag);
+    imu.clipGyroNoise(&gyro);
 
     // Gyroscope needs to be converted from Rad/s to Degree/s
-    // the rest are not unit-important
     gx = gyro.gyro.x * SENSORS_RADS_TO_DPS;
     gy = gyro.gyro.y * SENSORS_RADS_TO_DPS;
     gz = gyro.gyro.z * SENSORS_RADS_TO_DPS;

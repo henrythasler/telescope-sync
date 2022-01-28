@@ -34,11 +34,67 @@ bool OrientationSensor::begin(void)
     magnetometer = &lis3mdl;
 }
 
+void OrientationSensor::setCalibration(void)
+{
+    // µT
+    mag_hardiron[0] = -64.86967343;
+    mag_hardiron[1] = 17.48569469;
+    mag_hardiron[2] = -0.59624021;
+
+    mag_softiron[0] = 1.00377056e+00;
+    mag_softiron[1] = 5.27418179e-02;
+    mag_softiron[2] = -9.83060614e-03;
+    mag_softiron[3] = 5.27418179e-02;
+    mag_softiron[4] = 9.93287432e-01;
+    mag_softiron[5] = 2.64077721e-05;
+    mag_softiron[6] = -9.83060614e-03;
+    mag_softiron[7] = 2.64077721e-05;
+    mag_softiron[8] = 1.00003403e+00;
+
+    // rad/s
+    gyr_offset[0] = 0.0651;
+    gyr_offset[1] = -0.1081;
+    gyr_offset[2] = -0.08;
+
+    // m/s^2
+    acc_offset[0] = 0.01452;
+    acc_offset[1] = -0.01221;
+    acc_offset[2] = -0.2102;
+}
+
 void OrientationSensor::getEvent(sensors_event_t *acc, sensors_event_t *gyr, sensors_event_t *mag)
 {
     accelerometer->getEvent(acc);
     gyroscope->getEvent(gyr);
-    magnetometer->getEvent(mag);    
+    magnetometer->getEvent(mag);
+}
+
+void OrientationSensor::calibrate(sensors_event_t *acc, sensors_event_t *gyr, sensors_event_t *mag)
+{
+    // hard iron cal
+    float mx = mag->magnetic.x - mag_hardiron[0];
+    float my = mag->magnetic.y - mag_hardiron[1];
+    float mz = mag->magnetic.z - mag_hardiron[2];
+    // soft iron cal
+    mag->magnetic.x = mx * mag_softiron[0] + my * mag_softiron[1] + mz * mag_softiron[2];
+    mag->magnetic.y = mx * mag_softiron[3] + my * mag_softiron[4] + mz * mag_softiron[5];
+    mag->magnetic.z = mx * mag_softiron[6] + my * mag_softiron[7] + mz * mag_softiron[8];
+
+    gyr->gyro.x -= gyr_offset[0];
+    gyr->gyro.y -= gyr_offset[1];
+    gyr->gyro.z -= gyr_offset[2];
+
+    acc->acceleration.x -= acc_offset[0];
+    acc->acceleration.y -= acc_offset[1];
+    acc->acceleration.z -= acc_offset[2];    
+}
+
+void OrientationSensor::clipGyroNoise(sensors_event_t *gyr)
+{
+    // clip noise
+    gyr->gyro.x = abs(gyr->gyro.x) > 0.005 ? gyr->gyro.x : 0.;
+    gyr->gyro.y = abs(gyr->gyro.y) > 0.005 ? gyr->gyro.y : 0.;
+    gyr->gyro.z = abs(gyr->gyro.z) > 0.005 ? gyr->gyro.z : 0.;
 }
 
 void OrientationSensor::printSensorDetails()
