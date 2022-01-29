@@ -13,6 +13,7 @@ public:
     {
         OFF,
         ON,
+        BLINK_10HZ,
         BLINK_1HZ,
         FLASH_4X_EVERY_5S,
         FLASH_2X_EVERY_5S,
@@ -29,7 +30,7 @@ public:
 
     LEDManager(uint8_t pin=LED_BUILTIN, LEDMode mode=LEDMode::OFF);
     void setMode(LEDMode mode);
-    void update(uint32_t counter=0);
+    void update();
 
 private:
     uint8_t pin = LED_BUILTIN;

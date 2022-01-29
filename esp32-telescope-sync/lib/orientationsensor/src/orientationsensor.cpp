@@ -32,29 +32,30 @@ bool OrientationSensor::begin(void)
     accelerometer = lsm6ds.getAccelerometerSensor();
     gyroscope = lsm6ds.getGyroSensor();
     magnetometer = &lis3mdl;
+    return true;
 }
 
 void OrientationSensor::setCalibration(void)
 {
     // µT
-    mag_hardiron[0] = -64.86967343;
-    mag_hardiron[1] = 17.48569469;
-    mag_hardiron[2] = -0.59624021;
+    mag_hardiron[0] = -63.46178633;
+    mag_hardiron[1] = 16.28017555;
+    mag_hardiron[2] = 0.38407088;
 
-    mag_softiron[0] = 1.00377056e+00;
-    mag_softiron[1] = 5.27418179e-02;
-    mag_softiron[2] = -9.83060614e-03;
-    mag_softiron[3] = 5.27418179e-02;
-    mag_softiron[4] = 9.93287432e-01;
-    mag_softiron[5] = 2.64077721e-05;
-    mag_softiron[6] = -9.83060614e-03;
-    mag_softiron[7] = 2.64077721e-05;
-    mag_softiron[8] = 1.00003403e+00;
+    mag_softiron[0] = 0.99927569;
+    mag_softiron[1] = 0.04824861;
+    mag_softiron[2] = -0.00821213;
+    mag_softiron[3] = 0.04824861;
+    mag_softiron[4] = 0.99511757;
+    mag_softiron[5] = -0.00567495;
+    mag_softiron[6] = -0.00821213;
+    mag_softiron[7] = -0.00567495;
+    mag_softiron[8] = 1.00316198;
 
     // rad/s
-    gyr_offset[0] = 0.0651;
-    gyr_offset[1] = -0.1081;
-    gyr_offset[2] = -0.08;
+    gyr_offset[0] = 0.064;
+    gyr_offset[1] = -0.1082;
+    gyr_offset[2] = -0.0734;
 
     // m/s^2
     acc_offset[0] = 0.01452;
@@ -113,11 +114,5 @@ void OrientationSensor::printSensorOffsets()
     //               calibrationData.accel_radius, calibrationData.mag_radius);
 }
 
-bool OrientationSensor::validateSensorOffsets()
-{
-    // return( (calibrationData.mag_radius >= 144) &&
-    // (calibrationData.mag_radius <= 1280)
-    // );
-}
 
 #endif

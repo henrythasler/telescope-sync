@@ -37,12 +37,12 @@
  **/
 #include <secrets.h>
 
-#define DEBUG (true)
+#define DEBUG (false)
 
 #define IMU_PIN_VCC (4)
 #define IMU_PIN_I2C_SCL (22)
 #define IMU_PIN_I2C_SDA (21)
-#define IMU_I2C_CLOCK (100000U)
+#define IMU_I2C_CLOCK (400000U)
 
 #define IMU_BUS_ID (0)
 #define IMU_ACC_ID (1)
@@ -61,8 +61,7 @@ Adafruit_NXPSensorFusion filter; // slowest
 // Adafruit_Madgwick filter; // faster than NXP
 // Adafruit_Mahony filter;  // fastest/smalleset
 
-#define FILTER_UPDATE_RATE_HZ 80
-#define PRINT_EVERY_N_UPDATES 10
+#define FILTER_UPDATE_RATE_HZ 100
 
 // global switches for connected devices
 #define ENABLE_WIFI (true)
@@ -104,7 +103,6 @@ LEDManager ledmanager;
 // Flow control, basic task scheduler
 #define SCHEDULER_MAIN_LOOP_MS (10) // ms
 uint32_t timestamp;
-uint32_t counterBase = 0;
 uint32_t counter2s = 0;
 uint32_t counter300s = 0;
 uint32_t counter1h = 0;
@@ -353,30 +351,32 @@ void loop()
 {
     timestamp = millis();
 
-    if ((timestamp - task10msTimer) > 10)
+    if ((timestamp - task10msTimer) > SCHEDULER_MAIN_LOOP_MS)
     {
         task10msTimer = timestamp;
 
-        // Read the motion sensors
-        imu.getEvent(&accel, &gyro, &mag);
-        imu.calibrate(&accel, &gyro, &mag);
-        imu.clipGyroNoise(&gyro);
+        if (orientationSensorAvailable)
+        {
+            // Read the motion sensors
+            imu.getEvent(&accel, &gyro, &mag);
+            imu.calibrate(&accel, &gyro, &mag);
 
-        // Gyroscope needs to be converted from Rad/s to Degree/s
-        gx = gyro.gyro.x * SENSORS_RADS_TO_DPS;
-        gy = gyro.gyro.y * SENSORS_RADS_TO_DPS;
-        gz = gyro.gyro.z * SENSORS_RADS_TO_DPS;
+            // Gyroscope needs to be converted from Rad/s to Degree/s
+            gx = gyro.gyro.x * SENSORS_RADS_TO_DPS;
+            gy = gyro.gyro.y * SENSORS_RADS_TO_DPS;
+            gz = gyro.gyro.z * SENSORS_RADS_TO_DPS;
 
-        // Update the SensorFusion filter
-        filter.update(gx, gy, gz,
-                      accel.acceleration.x, accel.acceleration.y, accel.acceleration.z,
-                      mag.magnetic.x, mag.magnetic.y, mag.magnetic.z);
+            // Update the SensorFusion filter
+            filter.update(gx, gy, gz,
+                          accel.acceleration.x, accel.acceleration.y, accel.acceleration.z,
+                          mag.magnetic.x, mag.magnetic.y, mag.magnetic.z);
 
-        roll = filter.getRoll();
-        pitch = filter.getPitch();
-        heading = filter.getYaw();
+            roll = filter.getRoll();
+            pitch = filter.getPitch();
+            heading = filter.getYaw();
+        }
 
-        ledmanager.update(counterBase);
+        ledmanager.update();
 
         // base tasks
         if (wifiClientMode || wifiAccessPointMode)
@@ -433,6 +433,10 @@ void loop()
         {
             ledmanager.setMode(LEDManager::LEDMode::BLINK_1HZ);
         }
+        else if (remoteClient && remoteClient.connected())
+        {
+            ledmanager.setMode(LEDManager::LEDMode::FLASH_4X_EVERY_5S);
+        }
         else
         {
             ledmanager.setMode(LEDManager::LEDMode::FLASH_1X_EVERY_5S);
@@ -440,6 +444,7 @@ void loop()
 
         if (DEBUG)
         {
+            // send data for SerialStudio
             Serial.printf("/*%f,%f,%f,%f,%f,%f,%f,%f,%f,%f,%f,%f,%f,%f,%f,%f*/\n",
                           heading, pitch, roll,
                           qw, qx, qy, qz,
