@@ -9,6 +9,8 @@ using namespace std;
 #include <Adafruit_LIS3MDL.h>
 #include <Adafruit_LSM6DS33.h>
 
+#define GYRO_AUTOCAL_SAMPLES (500)
+
 class OrientationSensor
 {
 public:
@@ -22,6 +24,8 @@ public:
     void getEvent(sensors_event_t *acc, sensors_event_t *gyr, sensors_event_t *mag);
     void calibrate(sensors_event_t *acc, sensors_event_t *gyr, sensors_event_t *mag);
     void clipGyroNoise(sensors_event_t *gyr);
+    void gyroSample(float *samples, uint32_t offset);
+    bool meanVec3(float *samples, uint32_t num_samples, float *mean);
     void printSensorDetails(void);
     void printSensorOffsets(void);
     bool validateSensorOffsets(void);
@@ -40,9 +44,12 @@ public:
     float mag_field = 50;                                // magnetic field magnitude [µT]
 
     int32_t sensorID, sensorAddress;
+    int32_t sample_counter = 0;
 
 private:
     Adafruit_I2CDevice *i2c_dev_acc = NULL, *i2c_dev_mag = NULL; ///< Pointer to I2C bus interface
+
+    sensors_event_t gyro_event;  
 
     int32_t accAddress = 0;
     int32_t magAddress = 0;

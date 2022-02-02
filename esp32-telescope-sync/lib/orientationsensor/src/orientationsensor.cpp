@@ -87,15 +87,15 @@ void OrientationSensor::calibrate(sensors_event_t *acc, sensors_event_t *gyr, se
 
     acc->acceleration.x -= acc_offset[0];
     acc->acceleration.y -= acc_offset[1];
-    acc->acceleration.z -= acc_offset[2];    
+    acc->acceleration.z -= acc_offset[2];
 }
 
 void OrientationSensor::clipGyroNoise(sensors_event_t *gyr)
 {
     // clip noise
-    gyr->gyro.x = abs(gyr->gyro.x) > 0.005 ? gyr->gyro.x : 0.;
-    gyr->gyro.y = abs(gyr->gyro.y) > 0.005 ? gyr->gyro.y : 0.;
-    gyr->gyro.z = abs(gyr->gyro.z) > 0.005 ? gyr->gyro.z : 0.;
+    gyr->gyro.x = abs(gyr->gyro.x) > 0.01 ? gyr->gyro.x : 0.;
+    gyr->gyro.y = abs(gyr->gyro.y) > 0.01 ? gyr->gyro.y : 0.;
+    gyr->gyro.z = abs(gyr->gyro.z) > 0.01 ? gyr->gyro.z : 0.;
 }
 
 void OrientationSensor::printSensorDetails()
@@ -103,6 +103,30 @@ void OrientationSensor::printSensorDetails()
     accelerometer->printSensorDetails();
     gyroscope->printSensorDetails();
     magnetometer->printSensorDetails();
+}
+
+void OrientationSensor::gyroSample(float *samples, uint32_t offset)
+{
+    gyroscope->getEvent(&gyro_event);
+    samples[offset * 3] = gyro_event.gyro.x;
+    samples[offset * 3 +1] = gyro_event.gyro.y;
+    samples[offset * 3 + 2] = gyro_event.gyro.z;
+}
+
+bool OrientationSensor::meanVec3(float *samples, uint32_t num_samples, float *mean)
+{
+    float sum_x = 0, sum_y = 0,sum_z = 0;
+    for (int32_t i = 0; i < num_samples; i++)
+    {
+        sum_x += samples[3 * i];
+        sum_y += samples[3 * i + 1];
+        sum_z += samples[3 * i + 2];
+    }
+
+    mean[0] = sum_x / num_samples;
+    mean[1] = sum_y / num_samples;
+    mean[2] = sum_z / num_samples;
+    return true;
 }
 
 void OrientationSensor::printSensorOffsets()
@@ -113,6 +137,5 @@ void OrientationSensor::printSensorOffsets()
     //               calibrationData.mag_offset_x, calibrationData.mag_offset_y, calibrationData.mag_offset_z,
     //               calibrationData.accel_radius, calibrationData.mag_radius);
 }
-
 
 #endif

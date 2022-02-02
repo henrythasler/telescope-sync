@@ -37,7 +37,7 @@
  **/
 #include <secrets.h>
 
-#define DEBUG (false)
+#define DEBUG (true)
 
 #define IMU_PIN_VCC (4)
 #define IMU_PIN_I2C_SCL (22)
@@ -57,9 +57,9 @@ float roll = 0, pitch = 0, heading = 0;
 float gx = 0, gy = 0, gz = 0;
 float qw = 0, qx = 0, qy = 0, qz = 0;
 
-Adafruit_NXPSensorFusion filter; // slowest
-// Adafruit_Madgwick filter; // faster than NXP
-// Adafruit_Mahony filter;  // fastest/smalleset
+// Adafruit_NXPSensorFusion filter; // slowest
+Adafruit_Madgwick filter; // faster than NXP
+// Adafruit_Mahony filter;  // fastest/smallest
 
 #define FILTER_UPDATE_RATE_HZ 100
 
@@ -115,11 +115,14 @@ uint32_t task1sTimer = 0;
 uint32_t task2sTimer = 0;
 uint32_t task30sTimer = 0;
 
-uint32_t calibrationStableCounter = 0;
+bool gyroCalibrationDone = false;
 uint32_t gnssTimeout = 0;
 
 uint8_t txBuffer[265];
 uint8_t rxBuffer[265];
+
+float gyroSamples[3 * GYRO_AUTOCAL_SAMPLES];
+int32_t gyroSampleCounter = 0;
 
 void mqttCallback(char *topic, byte *payload, unsigned int length)
 {
@@ -357,23 +360,44 @@ void loop()
 
         if (orientationSensorAvailable)
         {
-            // Read the motion sensors
-            imu.getEvent(&accel, &gyro, &mag);
-            imu.calibrate(&accel, &gyro, &mag);
+            if (gyroCalibrationDone)
+            {
+                // Read the motion sensors
+                imu.getEvent(&accel, &gyro, &mag);
+                imu.calibrate(&accel, &gyro, &mag);
+                imu.clipGyroNoise(&gyro);
 
-            // Gyroscope needs to be converted from Rad/s to Degree/s
-            gx = gyro.gyro.x * SENSORS_RADS_TO_DPS;
-            gy = gyro.gyro.y * SENSORS_RADS_TO_DPS;
-            gz = gyro.gyro.z * SENSORS_RADS_TO_DPS;
+                // Gyroscope needs to be converted from Rad/s to Degree/s
+                gx = gyro.gyro.x * SENSORS_RADS_TO_DPS;
+                gy = gyro.gyro.y * SENSORS_RADS_TO_DPS;
+                gz = gyro.gyro.z * SENSORS_RADS_TO_DPS;
 
-            // Update the SensorFusion filter
-            filter.update(gx, gy, gz,
-                          accel.acceleration.x, accel.acceleration.y, accel.acceleration.z,
-                          mag.magnetic.x, mag.magnetic.y, mag.magnetic.z);
+                // Update the SensorFusion filter
+                filter.update(gx, gy, gz,
+                              accel.acceleration.x, accel.acceleration.y, accel.acceleration.z,
+                              mag.magnetic.x, mag.magnetic.y, mag.magnetic.z);
+                            //   7, -10, -51);
 
-            roll = filter.getRoll();
-            pitch = filter.getPitch();
-            heading = filter.getYaw();
+                roll = filter.getRoll();
+                pitch = filter.getPitch();
+                heading = filter.getYaw();
+            }
+            else
+            {
+                imu.gyroSample(gyroSamples, gyroSampleCounter++);
+
+                if (gyroSampleCounter >= GYRO_AUTOCAL_SAMPLES)
+                {
+                    imu.meanVec3(gyroSamples, GYRO_AUTOCAL_SAMPLES, imu.gyr_offset);
+                    Serial.printf("[ SENSOR ] Gyro Auto-Calibration done: [%.5f, %.5f, %.5f]\n",
+                                  imu.gyr_offset[0], imu.gyr_offset[1], imu.gyr_offset[2]);
+                    gyroCalibrationDone = true;
+                }
+                else if (!(gyroSampleCounter % int32_t(GYRO_AUTOCAL_SAMPLES / 10)))
+                {
+                    Serial.printf("[ SENSOR ] Gyro Auto-Calibration in progress: %.0f%%\n", float(gyroSampleCounter) / GYRO_AUTOCAL_SAMPLES * 100);
+                }
+            }
         }
 
         ledmanager.update();
@@ -413,7 +437,7 @@ void loop()
                     // check if the packet could be decoded correctly before using it to calibrate the offset
                     if (telescope.unpackPosition(&reference, NULL, rxBuffer, received))
                     {
-                        telescope.setOrientation(roll, heading + headingOffset);
+                        telescope.setOrientation(pitch, heading + headingOffset);
                         double localSiderealTimeDegrees = MathHelper::getLocalSiderealTimeDegrees(gnss.utcTimestamp, gnss.longitude);
 
                         Serial.printf("[ SENSOR ] Received Calibration Data  Ra: %.3f Dec: %.3f\n", reference.ra, reference.dec);
@@ -429,7 +453,11 @@ void loop()
             mqttClient.loop();
         }
 
-        if (!gnss.valid)
+        if (!gyroCalibrationDone)
+        {
+            ledmanager.setMode(LEDManager::LEDMode::BLINK_10HZ);
+        }
+        else if (!gnss.valid)
         {
             ledmanager.setMode(LEDManager::LEDMode::BLINK_1HZ);
         }
@@ -481,17 +509,10 @@ void loop()
                 gnssAvailable = gnssTimeout > 0;
             }
         }
-        return;
-    }
-
-    // 1s Tasks
-    if ((timestamp - task1sTimer) > 1000L)
-    {
-        task1sTimer = timestamp;
 
         if (orientationSensorAvailable)
         {
-            telescope.setOrientation(roll, heading + headingOffset);
+            telescope.setOrientation(pitch, heading + headingOffset);
 
             Telescope::Horizontal corrected = telescope.getCalibratedOrientation();
             double localSiderealTimeDegrees = MathHelper::getLocalSiderealTimeDegrees(gnss.utcTimestamp, gnss.longitude);
@@ -552,9 +573,9 @@ void loop()
 
             len = snprintf((char *)txBuffer, sizeof(txBuffer), "%.3f", heading);
             if (mqttAvailable)
-                mqttClient.publish("home/appliance/telescope/orientation/yaw", txBuffer, len);
+                mqttClient.publish("home/appliance/telescope/orientation/heading", txBuffer, len);
             if (localBrokerAvailable)
-                broker.publish("home/appliance/telescope/orientation/yaw", (char *)txBuffer);
+                broker.publish("home/appliance/telescope/orientation/heading", (char *)txBuffer);
 
             filter.getQuaternion(&qw, &qx, &qy, &qz);
 
@@ -578,6 +599,14 @@ void loop()
         return;
     }
 
+    // 1s Tasks
+    if ((timestamp - task1sTimer) > 1000L)
+    {
+        task1sTimer = timestamp;
+
+        return;
+    }
+
     // 2s Tasks
     if ((timestamp - task2sTimer) > 2000L)
     {
@@ -587,7 +616,7 @@ void loop()
 
         if (gnssAvailable)
         {
-            if (DEBUG)
+            if (!DEBUG)
             {
                 Serial.printf("[  GNSS  ] %s Lat=%.2f, Lng=%.2f, Alt=%.0fm, Date=%04u-%02u-%02u Time=%02u:%02u:%02u (Sat %u of %u)\n",
                               gnss.valid ? "Fix" : "No fix",
@@ -636,11 +665,14 @@ void loop()
         task30sTimer = timestamp;
 
         // show overall system state
-        Serial.printf("[ STATUS ] Free: %u KiB (%u KiB)   RSSI: %i dBm   Uptime: %" PRIi64 "s   GNSS: %s\n",
-                      ESP.getFreeHeap() / 1024,
-                      ESP.getMaxAllocHeap() / 1024,
-                      WiFi.RSSI(),
-                      (esp_timer_get_time() / 1000000LL),
-                      gnss.valid ? "fix" : "no fix");
+        if (!DEBUG)
+        {
+            Serial.printf("[ STATUS ] Free: %u KiB (%u KiB)   RSSI: %i dBm   Uptime: %" PRIi64 "s   GNSS: %s\n",
+                          ESP.getFreeHeap() / 1024,
+                          ESP.getMaxAllocHeap() / 1024,
+                          WiFi.RSSI(),
+                          (esp_timer_get_time() / 1000000LL),
+                          gnss.valid ? "fix" : "no fix");
+        }
     }
 }
