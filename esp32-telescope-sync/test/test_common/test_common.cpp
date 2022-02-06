@@ -213,6 +213,151 @@ void test_function_calibrate(void)
     TEST_ASSERT_FLOAT_WITHIN(0.01, 27.13, telescope.offset.az);
 }
 
+void test_function_addReferencePoint(void)
+{
+    Telescope telescope;
+    Telescope::Horizontal reference;
+    reference.alt = 21.12;
+    reference.az = 207.13;
+    telescope.setOrientation(45, 180);
+
+    for (int i = 0; i < 400; i++)
+        telescope.addReferencePoint(reference);
+
+    TEST_ASSERT_EQUAL_INT32(16, telescope.alignmentWritePointer);
+    TEST_ASSERT_EQUAL_INT32(32, telescope.alignmentPoints);
+
+    TEST_ASSERT_FLOAT_WITHIN(0.01, 21.12, telescope.referencePoints[0].alt);
+    TEST_ASSERT_FLOAT_WITHIN(0.01, 207.13, telescope.referencePoints[0].az);
+
+    TEST_ASSERT_FLOAT_WITHIN(0.01, 45, telescope.mountPoints[0].alt);
+    TEST_ASSERT_FLOAT_WITHIN(0.01, 180, telescope.mountPoints[0].az);
+}
+
+void test_function_getTransformationMatrix1Point(void)
+{
+    Telescope telescope;
+    Telescope::Horizontal reference;
+
+    reference.az = 1;
+    reference.alt = 2;
+    telescope.setOrientation(4, 4);
+    telescope.addReferencePoint(reference);
+
+    TEST_ASSERT_EQUAL_INT32(1, telescope.alignmentWritePointer);
+    TEST_ASSERT_EQUAL_INT32(1, telescope.alignmentPoints);
+
+    TEST_ASSERT_FLOAT_WITHIN(0.01, 2, telescope.referencePoints[0].alt);
+    TEST_ASSERT_FLOAT_WITHIN(0.01, 1, telescope.referencePoints[0].az);
+
+    TEST_ASSERT_FLOAT_WITHIN(0.01, 4, telescope.mountPoints[0].alt);
+    TEST_ASSERT_FLOAT_WITHIN(0.01, 4, telescope.mountPoints[0].az);
+
+    auto res = telescope.getTransformationMatrix(0);
+    // 1st column
+    TEST_ASSERT_FLOAT_WITHIN(0.001, 1, res(0, 0));
+    TEST_ASSERT_FLOAT_WITHIN(0.001, 0, res(1, 0));
+    TEST_ASSERT_FLOAT_WITHIN(0.001, 0, res(2, 0));
+
+    // 2nd column
+    TEST_ASSERT_FLOAT_WITHIN(0.001, 0, res(0, 1));
+    TEST_ASSERT_FLOAT_WITHIN(0.001, 1, res(1, 1));
+    TEST_ASSERT_FLOAT_WITHIN(0.001, 0, res(2, 1));
+
+    // 3rd column
+    TEST_ASSERT_FLOAT_WITHIN(0.001, 3, res(0, 2));
+    TEST_ASSERT_FLOAT_WITHIN(0.001, 2, res(1, 2));
+    TEST_ASSERT_FLOAT_WITHIN(0.001, 1, res(2, 2));
+}
+
+void test_function_getTransformationMatrix2Point(void)
+{
+    Telescope telescope;
+    Telescope::Horizontal reference;
+
+    reference.az = 2;
+    reference.alt = 6;
+    telescope.setOrientation(6, 1);
+    telescope.addReferencePoint(reference);
+
+    reference.az = 5;
+    reference.alt = 4;
+    telescope.setOrientation(8, 6);
+    telescope.addReferencePoint(reference);
+
+    TEST_ASSERT_EQUAL_INT32(2, telescope.alignmentWritePointer);
+    TEST_ASSERT_EQUAL_INT32(2, telescope.alignmentPoints);
+
+    auto res = telescope.getTransformationMatrix(0);
+    // 1st column
+    TEST_ASSERT_FLOAT_WITHIN(0.000001, .3793103, res(0, 0));
+    TEST_ASSERT_FLOAT_WITHIN(0.000001, -.5517241, res(1, 0));
+    TEST_ASSERT_FLOAT_WITHIN(0.000001, 0, res(2, 0));
+
+    // 2nd column
+    TEST_ASSERT_FLOAT_WITHIN(0.000001, .5517241, res(0, 1));
+    TEST_ASSERT_FLOAT_WITHIN(0.000001, .3793103, res(1, 1));
+    TEST_ASSERT_FLOAT_WITHIN(0.000001, 0, res(2, 1));
+
+    // 3rd column
+    TEST_ASSERT_FLOAT_WITHIN(0.000001, -1.689655, res(0, 2));
+    TEST_ASSERT_FLOAT_WITHIN(0.000001, 4.275862, res(1, 2));
+    TEST_ASSERT_FLOAT_WITHIN(0.000001, 1, res(2, 2));
+}
+
+void test_function_getTransformationMatrix3Point(void)
+{
+    Telescope telescope;
+    Telescope::Horizontal reference;
+
+    reference.az = 2;
+    reference.alt = 1;
+    telescope.setOrientation(2, 1);
+    telescope.addReferencePoint(reference);
+
+    reference.az = 8;
+    reference.alt = 2;
+    telescope.setOrientation(3, 6);
+    telescope.addReferencePoint(reference);
+
+    reference.az = 3;
+    reference.alt = 4;
+    telescope.setOrientation(6, 3);
+    telescope.addReferencePoint(reference);
+
+    TEST_ASSERT_EQUAL_INT32(3, telescope.alignmentWritePointer);
+    TEST_ASSERT_EQUAL_INT32(3, telescope.alignmentPoints);
+
+    auto res = telescope.getTransformationMatrix(0);
+    // printf("%f, %f, %f\n%f, %f, %f\n%f, %f, %f\n", res(0,0), res(0,1), res(0,2), res(1,0), res(1,1), res(1,2), res(2,0), res(2,1), res(2,2));
+    // 1st column
+    TEST_ASSERT_FLOAT_WITHIN(0.000001, 1.27777778, res(0, 0));
+    TEST_ASSERT_FLOAT_WITHIN(0.000001, 0.05555556, res(1, 0));
+    TEST_ASSERT_FLOAT_WITHIN(0.000001, 0, res(2, 0));
+
+    // 2nd column
+    TEST_ASSERT_FLOAT_WITHIN(0.000001, -0.38888889, res(0, 1));
+    TEST_ASSERT_FLOAT_WITHIN(0.000001, 0.72222222, res(1, 1));
+    TEST_ASSERT_FLOAT_WITHIN(0.000001, 0, res(2, 1));
+
+    // 3rd column
+    TEST_ASSERT_FLOAT_WITHIN(0.000001, 1.5, res(0, 2));
+    TEST_ASSERT_FLOAT_WITHIN(0.000001, -0.5, res(1, 2));
+    TEST_ASSERT_FLOAT_WITHIN(0.000001, 1, res(2, 2));
+}
+
+void test_function_calibrateMatrix(void)
+{
+    Telescope telescope;
+    telescope.setOrientation(8, 4);
+
+    BLA::Matrix<3, 3, BLA::Array<3, 3, double>> mat = {1.27777778, -0.38888889, 1.5, 0.05555556, 0.72222222, -0.5, 0., 0., 1.};
+    auto res = telescope.getCalibratedOrientation(mat);
+
+    TEST_ASSERT_FLOAT_WITHIN(0.01, 5.5, res.alt);
+    TEST_ASSERT_FLOAT_WITHIN(0.01, 3.5, res.az);
+}
+
 void test_function_gnss_rmc(void)
 {
     GNSS gnss;
@@ -426,19 +571,19 @@ void test_function_siderealtime_julianday(void)
 {
     float res = 0;
 
-    tm timestamp = {.tm_sec = 0, .tm_min=0, .tm_hour=0, .tm_mday=1, .tm_mon=1, .tm_year=2000};
+    tm timestamp = {.tm_sec = 0, .tm_min = 0, .tm_hour = 0, .tm_mday = 1, .tm_mon = 1, .tm_year = 2000};
     res = MathHelper::julianDay(timestamp);
     TEST_ASSERT_FLOAT_WITHIN(0.0001, 2451544.5, res);
 
-    timestamp = {.tm_sec = 0, .tm_min=0, .tm_hour=0, .tm_mday=23, .tm_mon=12, .tm_year=2021};
+    timestamp = {.tm_sec = 0, .tm_min = 0, .tm_hour = 0, .tm_mday = 23, .tm_mon = 12, .tm_year = 2021};
     res = MathHelper::julianDay(timestamp);
     TEST_ASSERT_FLOAT_WITHIN(0.0001, 2459571.5, res);
 
-    timestamp = {.tm_sec = 0, .tm_min=0, .tm_hour=0, .tm_mday=2, .tm_mon=1, .tm_year=2022};
+    timestamp = {.tm_sec = 0, .tm_min = 0, .tm_hour = 0, .tm_mday = 2, .tm_mon = 1, .tm_year = 2022};
     res = MathHelper::julianDay(timestamp);
     TEST_ASSERT_FLOAT_WITHIN(0.0001, 2459581.5, res);
 
-    timestamp = {.tm_sec = 0, .tm_min=0, .tm_hour=0, .tm_mday=13, .tm_mon=7, .tm_year=2025};
+    timestamp = {.tm_sec = 0, .tm_min = 0, .tm_hour = 0, .tm_mday = 13, .tm_mon = 7, .tm_year = 2025};
     res = MathHelper::julianDay(timestamp);
     TEST_ASSERT_FLOAT_WITHIN(0.0001, 2460869.5, res);
 }
@@ -540,7 +685,7 @@ void test_function_nexstar_sync_precise_1(void)
     TEST_ASSERT_EQUAL(2, bytes);
     TEST_ASSERT_EQUAL_HEX8_ARRAY("\x00#", response, bytes);
 
-    uint8_t sampleA[] = "s2E0F3189,0F32CD10";   // Moon
+    uint8_t sampleA[] = "s2E0F3189,0F32CD10"; // Moon
     bytes = nexstar.handleRequest(sampleA, sizeof(sampleA), response, sizeof(response));
     TEST_ASSERT_EQUAL(1, bytes);
     TEST_ASSERT_EQUAL_HEX8_ARRAY("#", response, bytes);
@@ -553,7 +698,6 @@ void test_function_nexstar_sync_precise_1(void)
     TEST_ASSERT_EQUAL(2, bytes);
     TEST_ASSERT_EQUAL_HEX8_ARRAY("\x01#", response, bytes);
 }
-
 
 void test_function_nexstar_sync_precise_2(void)
 {
@@ -581,7 +725,7 @@ void test_function_nexstar_sync_precise_2(void)
     TEST_ASSERT_EQUAL(2, bytes);
     TEST_ASSERT_EQUAL_HEX8_ARRAY("\x00#", response, bytes);
 
-    uint8_t sampleA[] = "sEF0EF519,F83084C1FFFFFF";   // Jupiter; add some garbage at the end to test limiter
+    uint8_t sampleA[] = "sEF0EF519,F83084C1FFFFFF"; // Jupiter; add some garbage at the end to test limiter
     bytes = nexstar.handleRequest(sampleA, sizeof(sampleA), response, sizeof(response));
     TEST_ASSERT_EQUAL(1, bytes);
     TEST_ASSERT_EQUAL_HEX8_ARRAY("#", response, bytes);
@@ -610,6 +754,12 @@ void process(void)
     RUN_TEST(test_function_unpackPositionAnotherWrapper);
     RUN_TEST(test_function_unpackPositionNegative);
     RUN_TEST(test_function_calibrate);
+    // n-Point-Alignment
+    RUN_TEST(test_function_addReferencePoint);
+    RUN_TEST(test_function_getTransformationMatrix1Point);
+    RUN_TEST(test_function_getTransformationMatrix2Point);
+    RUN_TEST(test_function_getTransformationMatrix3Point);
+    RUN_TEST(test_function_calibrateMatrix);
 
     // GNSS Class
     RUN_TEST(test_function_gnss_checksum);

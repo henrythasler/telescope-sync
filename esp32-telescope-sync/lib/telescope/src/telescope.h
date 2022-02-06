@@ -6,7 +6,9 @@ using namespace std;
 #include <stdint.h>
 #include <stddef.h>
 #include <math.h>
+#include <algorithm>
 #include <helper.h>
+#include <linalg.h>
 
 #ifdef ARDUINO
 #include <Arduino.h>
@@ -16,6 +18,7 @@ using namespace std;
 
 #define MESSAGE_CURRENT_POSITION_LENGTH (24)
 #define MESSAGE_CURRENT_POSITION_TYPE (0)
+#define MAX_ALIGNMENT_POINTS (32)
 
 class Telescope
 {
@@ -38,6 +41,11 @@ public:
     Horizontal orientation;
     Horizontal offset;
 
+    Horizontal referencePoints[MAX_ALIGNMENT_POINTS];
+    Horizontal mountPoints[MAX_ALIGNMENT_POINTS];
+    int32_t alignmentWritePointer = 0;
+    int32_t alignmentPoints = 0;
+
     Telescope(void);
     Telescope(double ra, double dec);
 
@@ -45,7 +53,10 @@ public:
 
     bool isCalibrated = false;
     void calibrate(Equatorial reference, double latitude, double localSiderealTimeDegrees);
+    void addReferencePoint(Horizontal reference);
     Horizontal getCalibratedOrientation(void);
+    Horizontal getCalibratedOrientation(BLA::Matrix<3, 3, BLA::Array<3, 3, double>> M);
+    BLA::Matrix<3, 3, BLA::Array<3, 3, double>> getTransformationMatrix(uint32_t triangleOffset);
 
     double rad(double degrees);
     double deg(double radians);

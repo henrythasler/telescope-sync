@@ -30,12 +30,11 @@ public:
 
     LEDManager(uint8_t pin=LED_BUILTIN, LEDMode mode=LEDMode::OFF);
     void setMode(LEDMode mode);
-    void update();
+    void update(uint32_t micros=0);
 
 private:
     uint8_t pin = LED_BUILTIN;
     LEDMode mode = LEDMode::OFF;
-    uint32_t step = 0;
 
     typedef struct
     {

@@ -23,11 +23,77 @@ void Telescope::calibrate(Equatorial reference, double latitude, double localSid
     this->offset.az = hRef.az - this->orientation.az;
 }
 
+void Telescope::addReferencePoint(Horizontal reference)
+{
+    this->referencePoints[this->alignmentWritePointer].alt = reference.alt;
+    this->referencePoints[this->alignmentWritePointer].az = reference.az;
+
+    this->mountPoints[this->alignmentWritePointer].alt = this->orientation.alt;
+    this->mountPoints[this->alignmentWritePointer].az = this->orientation.az;
+
+    this->alignmentWritePointer = (this->alignmentWritePointer + 1) % MAX_ALIGNMENT_POINTS;
+    this->alignmentPoints = std::min(this->alignmentPoints + 1, MAX_ALIGNMENT_POINTS);
+}
+
+BLA::Matrix<3, 3, BLA::Array<3, 3, double>> Telescope::getTransformationMatrix(uint32_t triangleOffset)
+{
+    BLA::Matrix<3, 3, BLA::Array<3, 3, double>> transformMatrix = BLA::Identity<3, 3>();
+
+    if (this->alignmentPoints == 1)
+    {
+        transformMatrix(0, 2) = this->mountPoints[0].az - this->referencePoints[0].az;
+        transformMatrix(1, 2) = this->mountPoints[0].alt - this->referencePoints[0].alt;
+    }
+    else if (this->alignmentPoints == 2)
+    {
+        BLA::Matrix<3, 3, BLA::Array<3, 3, double>> ref = {
+            this->referencePoints[0].az, this->referencePoints[1].az, this->referencePoints[1].az + (this->referencePoints[1].alt - this->referencePoints[0].alt),
+            this->referencePoints[0].alt, this->referencePoints[1].alt, this->referencePoints[1].alt - (this->referencePoints[1].az - this->referencePoints[0].az),
+            1, 1, 1};
+
+        BLA::Matrix<3, 3, BLA::Array<3, 3, double>> mount = {
+            this->mountPoints[0].az, this->mountPoints[1].az, this->mountPoints[1].az + (this->mountPoints[1].alt - this->mountPoints[0].alt),
+            this->mountPoints[0].alt, this->mountPoints[1].alt, this->mountPoints[1].alt - (this->mountPoints[1].az - this->mountPoints[0].az),
+            1, 1, 1};
+
+        if (BLA::Invert(mount))
+            transformMatrix = ref * mount;
+    }
+
+    else if (this->alignmentPoints > 2 && (triangleOffset < this->alignmentPoints - 2))
+    {
+        BLA::Matrix<3, 3, BLA::Array<3, 3, double>> ref = {
+            this->referencePoints[triangleOffset + 0].az, this->referencePoints[triangleOffset + 1].az, this->referencePoints[triangleOffset + 2].az,
+            this->referencePoints[triangleOffset + 0].alt, this->referencePoints[triangleOffset + 1].alt, this->referencePoints[triangleOffset + 2].alt,
+            1, 1, 1};
+
+        BLA::Matrix<3, 3, BLA::Array<3, 3, double>> mount = {
+            this->mountPoints[triangleOffset + 0].az, this->mountPoints[triangleOffset + 1].az, this->mountPoints[triangleOffset + 2].az,
+            this->mountPoints[triangleOffset + 0].alt, this->mountPoints[triangleOffset + 1].alt, this->mountPoints[triangleOffset + 2].alt,
+            1, 1, 1};
+
+        if (BLA::Invert(mount))
+            transformMatrix = ref * mount;
+    }
+
+    return transformMatrix;
+}
+
 Telescope::Horizontal Telescope::getCalibratedOrientation(void)
 {
     Telescope::Horizontal result;
     result.alt = this->offset.alt + this->orientation.alt;
     result.az = this->offset.az + this->orientation.az;
+    return result;
+}
+
+Telescope::Horizontal Telescope::getCalibratedOrientation(BLA::Matrix<3, 3, BLA::Array<3, 3, double>> M)
+{
+    Telescope::Horizontal result;
+    BLA::Matrix<3, 1, BLA::Array<3, 1, double>> in = {this->orientation.az, this->orientation.alt, 1};
+    BLA::Matrix<3, 1, BLA::Array<3, 1, double>> out = M * in;
+    result.az = out(0);
+    result.alt = out(1);
     return result;
 }
 

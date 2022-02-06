@@ -12,10 +12,9 @@ void LEDManager::setMode(LEDMode mode)
     this->mode = mode;
 };
 
-void LEDManager::update()
+void LEDManager::update(uint32_t micros)
 {
-    this->step++;
-
+    uint32_t millis = micros / 1000;
     if (this->mode == LEDMode::OFF)
     {
         digitalWrite(this->pin, LOW);
@@ -27,7 +26,7 @@ void LEDManager::update()
     }
     else if (this->mode == LEDMode::BLINK_10HZ)
     {
-        if ((this->step % 10) < 5)
+        if ((millis % 100) < 50)
         {
             digitalWrite(this->pin, HIGH);
         }
@@ -38,7 +37,7 @@ void LEDManager::update()
     }
     else if (this->mode == LEDMode::BLINK_1HZ)
     {
-        if ((this->step % 100) < 50)
+        if ((millis % 1000) < 500)
         {
             digitalWrite(this->pin, HIGH);
         }
@@ -49,8 +48,8 @@ void LEDManager::update()
     }
     else if (this->mode == LEDMode::FLASH_1X_EVERY_5S)
     {
-        uint32_t seq = this->step % 500;
-        if (seq < 499)
+        uint32_t seq = millis % 5000;
+        if (seq < 4990)
         {
             digitalWrite(this->pin, LOW);
         }
@@ -61,32 +60,32 @@ void LEDManager::update()
     }
     else if (this->mode == LEDMode::FLASH_4X_EVERY_5S)
     {
-        uint32_t seq = this->step % 500;
-        if (seq < 375)
+        uint32_t seq = millis % 5000;
+        if (seq < 3750)
         {
             digitalWrite(this->pin, LOW);
         }
-        else if (seq < 380)
+        else if (seq < 3800)
         {
             digitalWrite(this->pin, HIGH);
         }
-        else if (seq < 415)
+        else if (seq < 4150)
         {
             digitalWrite(this->pin, LOW);
         }
-        else if (seq < 420)
+        else if (seq < 4200)
         {
             digitalWrite(this->pin, HIGH);
         }
-        else if (seq < 455)
+        else if (seq < 4550)
         {
             digitalWrite(this->pin, LOW);
         }
-        else if (seq < 460)
+        else if (seq < 4600)
         {
             digitalWrite(this->pin, HIGH);
         }
-        else if (seq < 495)
+        else if (seq < 4950)
         {
             digitalWrite(this->pin, LOW);
         }
@@ -98,16 +97,16 @@ void LEDManager::update()
 
     else if (this->mode == LEDMode::FLASH_2X_EVERY_5S)
     {
-        uint32_t seq = this->step % 500;
-        if (seq < 455)
+        uint32_t seq = millis % 5000;
+        if (seq < 4550)
         {
             digitalWrite(this->pin, LOW);
         }
-        else if (seq < 460)
+        else if (seq < 4600)
         {
             digitalWrite(this->pin, HIGH);
         }
-        else if (seq < 495)
+        else if (seq < 4950)
         {
             digitalWrite(this->pin, LOW);
         }

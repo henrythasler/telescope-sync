@@ -37,7 +37,7 @@
  **/
 #include <secrets.h>
 
-#define DEBUG (true)
+#define DEBUG (false)
 
 #define IMU_PIN_VCC (4)
 #define IMU_PIN_I2C_SCL (22)
@@ -57,11 +57,9 @@ float roll = 0, pitch = 0, heading = 0;
 float gx = 0, gy = 0, gz = 0;
 float qw = 0, qx = 0, qy = 0, qz = 0;
 
-// Adafruit_NXPSensorFusion filter; // slowest
-Adafruit_Madgwick filter; // faster than NXP
+Adafruit_NXPSensorFusion filter; // slowest
+// Adafruit_Madgwick filter; // faster than NXP
 // Adafruit_Mahony filter;  // fastest/smallest
-
-#define FILTER_UPDATE_RATE_HZ 100
 
 // global switches for connected devices
 #define ENABLE_WIFI (true)
@@ -101,7 +99,10 @@ NexStar nexstar(&telescope, &gnss); // Communication to Stellarium-App
 LEDManager ledmanager;
 
 // Flow control, basic task scheduler
-#define SCHEDULER_MAIN_LOOP_MS (10) // ms
+#define FILTER_UPDATE_RATE_HZ 200
+#define SCHEDULER_MAIN_LOOP_US (1000000 / FILTER_UPDATE_RATE_HZ) // ms
+float sensorUpdateRate = 0;
+
 uint32_t timestamp;
 uint32_t counter2s = 0;
 uint32_t counter300s = 0;
@@ -109,6 +110,7 @@ uint32_t counter1h = 0;
 uint32_t initStage = 0;
 
 uint32_t task10msTimer = 0;
+uint32_t task25msTimer = 0;
 uint32_t task100msTimer = 0;
 uint32_t task500msTimer = 0;
 uint32_t task1sTimer = 0;
@@ -352,10 +354,11 @@ void reconnectMQTTClient()
 
 void loop()
 {
-    timestamp = millis();
+    timestamp = micros();
 
-    if ((timestamp - task10msTimer) > SCHEDULER_MAIN_LOOP_MS)
+    if ((timestamp - task10msTimer) > SCHEDULER_MAIN_LOOP_US)
     {
+        sensorUpdateRate = 1000000. / float(timestamp - task10msTimer);
         task10msTimer = timestamp;
 
         if (orientationSensorAvailable)
@@ -365,7 +368,7 @@ void loop()
                 // Read the motion sensors
                 imu.getEvent(&accel, &gyro, &mag);
                 imu.calibrate(&accel, &gyro, &mag);
-                imu.clipGyroNoise(&gyro);
+                // imu.clipGyroNoise(&gyro);
 
                 // Gyroscope needs to be converted from Rad/s to Degree/s
                 gx = gyro.gyro.x * SENSORS_RADS_TO_DPS;
@@ -376,11 +379,7 @@ void loop()
                 filter.update(gx, gy, gz,
                               accel.acceleration.x, accel.acceleration.y, accel.acceleration.z,
                               mag.magnetic.x, mag.magnetic.y, mag.magnetic.z);
-                            //   7, -10, -51);
-
-                roll = filter.getRoll();
-                pitch = filter.getPitch();
-                heading = filter.getYaw();
+                //   21.109, 1.364, 43.687);
             }
             else
             {
@@ -399,23 +398,26 @@ void loop()
                 }
             }
         }
+        return;
+    }
 
-        ledmanager.update();
+    // 25ms Tasks
+    if ((timestamp - task25msTimer) > 25000L)
+    {
+        task25msTimer = timestamp;
 
-        // base tasks
-        if (wifiClientMode || wifiAccessPointMode)
-            checkForConnections();
-
-        if (localBrokerAvailable)
-            broker.update();
-
+        ledmanager.update(timestamp);
         return;
     }
 
     // 100ms Tasks
-    if ((timestamp - task100msTimer) > 100)
+    if ((timestamp - task100msTimer) > 100000L)
     {
         task100msTimer = timestamp;
+
+        roll = filter.getRoll();
+        pitch = filter.getPitch();
+        heading = filter.getYaw();
 
         if (remoteClient && remoteClient.connected())
         {
@@ -470,21 +472,29 @@ void loop()
             ledmanager.setMode(LEDManager::LEDMode::FLASH_1X_EVERY_5S);
         }
 
+        // base tasks
+        if (wifiClientMode || wifiAccessPointMode)
+            checkForConnections();
+
+        if (localBrokerAvailable)
+            broker.update();
+
         if (DEBUG)
         {
             // send data for SerialStudio
-            Serial.printf("/*%f,%f,%f,%f,%f,%f,%f,%f,%f,%f,%f,%f,%f,%f,%f,%f*/\n",
+            Serial.printf("/*%f,%f,%f,%f,%f,%f,%f,%f,%f,%f,%f,%f,%f,%f,%f,%f,%f*/\n",
                           heading, pitch, roll,
                           qw, qx, qy, qz,
                           accel.acceleration.x, accel.acceleration.y, accel.acceleration.z,
                           gyro.gyro.x, gyro.gyro.y, gyro.gyro.z,
-                          mag.magnetic.x, mag.magnetic.y, mag.magnetic.z);
+                          mag.magnetic.x, mag.magnetic.y, mag.magnetic.z,
+                          sensorUpdateRate);
         }
         return;
     }
 
     // 500ms Tasks
-    if ((timestamp - task500msTimer) > 500)
+    if ((timestamp - task500msTimer) > 500000L)
     {
         task500msTimer = timestamp;
 
@@ -600,7 +610,7 @@ void loop()
     }
 
     // 1s Tasks
-    if ((timestamp - task1sTimer) > 1000L)
+    if ((timestamp - task1sTimer) > 1000000L)
     {
         task1sTimer = timestamp;
 
@@ -608,7 +618,7 @@ void loop()
     }
 
     // 2s Tasks
-    if ((timestamp - task2sTimer) > 2000L)
+    if ((timestamp - task2sTimer) > 2000000L)
     {
         task2sTimer = timestamp;
 
@@ -660,7 +670,7 @@ void loop()
     }
 
     // 30s Tasks
-    if ((timestamp - task30sTimer) > 30000L)
+    if ((timestamp - task30sTimer) > 30000000L)
     {
         task30sTimer = timestamp;
 
