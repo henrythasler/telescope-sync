@@ -83,6 +83,7 @@ Blink 1Hz | Orientation Sensor not yet calibrated
 
 ### Similar Projects
 
+- [vlaate/DobsonianDSC](https://github.com/vlaate/DobsonianDSC)
 - [Control Your Telescope Using Stellarium & Arduino](https://www.instructables.com/Control-Your-Telescope-Using-Stellarium-Arduino/)
 - [Arduino Star-Finder for Telescopes](https://www.instructables.com/Arduino-Star-Finder-for-Telescopes/)
 - [SpotNik - StepTo / PushTo / Digital Setting Circles for EQ Mounted Telescopes Based on Arduino](https://www.instructables.com/SpotNik-StepTo-PushTo-Digital-Setting-Circles-for-/)
