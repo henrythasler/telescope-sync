@@ -1,86 +1,53 @@
 #include <orientationsensor.h>
 
 #ifdef ARDUINO
-OrientationSensor::OrientationSensor(int32_t accSensorID, int32_t magSensorID, uint8_t accAddress, uint8_t magAddress, TwoWire *theWire)
+OrientationSensor::OrientationSensor(int32_t accSensorID, uint8_t accAddress, TwoWire *theWire)
 {
     this->accSensorID = accSensorID;
-    this->magSensorID = magSensorID;
-
     this->accAddress = accAddress;
-    this->magAddress = magAddress;
 
     this->wire = theWire;
 }
 
 bool OrientationSensor::begin(void)
 {
-    if (!this->lsm6ds.begin_I2C(accAddress, wire, accSensorID) || !this->lis3mdl.begin_I2C(magAddress, wire))
+    if (!this->lsm6ds.begin_I2C(accAddress, wire, accSensorID))
     {
         return false;
     }
 
     lsm6ds.setAccelRange(LSM6DS_ACCEL_RANGE_2_G);
     lsm6ds.setGyroRange(LSM6DS_GYRO_RANGE_250_DPS);
-    lis3mdl.setRange(LIS3MDL_RANGE_4_GAUSS);
 
     lsm6ds.setAccelDataRate(LSM6DS_RATE_416_HZ);
     lsm6ds.setGyroDataRate(LSM6DS_RATE_416_HZ);
-    lis3mdl.setDataRate(LIS3MDL_DATARATE_560_HZ);
-    lis3mdl.setPerformanceMode(LIS3MDL_ULTRAHIGHMODE);
-    lis3mdl.setOperationMode(LIS3MDL_CONTINUOUSMODE);
 
     accelerometer = lsm6ds.getAccelerometerSensor();
     gyroscope = lsm6ds.getGyroSensor();
-    magnetometer = &lis3mdl;
     return true;
 }
 
 void OrientationSensor::setCalibration(void)
 {
-    // µT
-    mag_hardiron[0] = -63.46178633;
-    mag_hardiron[1] = 16.28017555;
-    mag_hardiron[2] = 0.38407088;
-
-    mag_softiron[0] = 0.99927569;
-    mag_softiron[1] = 0.04824861;
-    mag_softiron[2] = -0.00821213;
-    mag_softiron[3] = 0.04824861;
-    mag_softiron[4] = 0.99511757;
-    mag_softiron[5] = -0.00567495;
-    mag_softiron[6] = -0.00821213;
-    mag_softiron[7] = -0.00567495;
-    mag_softiron[8] = 1.00316198;
-
     // rad/s
-    gyr_offset[0] = 0.064;
-    gyr_offset[1] = -0.1082;
-    gyr_offset[2] = -0.0734;
+    gyr_offset[0] = 0;
+    gyr_offset[1] = 0;
+    gyr_offset[2] = 0;
 
     // m/s^2
-    acc_offset[0] = 0.01452;
-    acc_offset[1] = -0.01221;
-    acc_offset[2] = -0.2102;
+    acc_offset[0] = 0;
+    acc_offset[1] = 0;
+    acc_offset[2] = 0;
 }
 
-void OrientationSensor::getEvent(sensors_event_t *acc, sensors_event_t *gyr, sensors_event_t *mag)
+void OrientationSensor::getEvent(sensors_event_t *acc, sensors_event_t *gyr)
 {
     accelerometer->getEvent(acc);
     gyroscope->getEvent(gyr);
-    magnetometer->getEvent(mag);
 }
 
-void OrientationSensor::calibrate(sensors_event_t *acc, sensors_event_t *gyr, sensors_event_t *mag)
+void OrientationSensor::calibrate(sensors_event_t *acc, sensors_event_t *gyr)
 {
-    // hard iron cal
-    float mx = mag->magnetic.x - mag_hardiron[0];
-    float my = mag->magnetic.y - mag_hardiron[1];
-    float mz = mag->magnetic.z - mag_hardiron[2];
-    // soft iron cal
-    mag->magnetic.x = mx * mag_softiron[0] + my * mag_softiron[1] + mz * mag_softiron[2];
-    mag->magnetic.y = mx * mag_softiron[3] + my * mag_softiron[4] + mz * mag_softiron[5];
-    mag->magnetic.z = mx * mag_softiron[6] + my * mag_softiron[7] + mz * mag_softiron[8];
-
     gyr->gyro.x -= gyr_offset[0];
     gyr->gyro.y -= gyr_offset[1];
     gyr->gyro.z -= gyr_offset[2];
@@ -102,7 +69,6 @@ void OrientationSensor::printSensorDetails()
 {
     accelerometer->printSensorDetails();
     gyroscope->printSensorDetails();
-    magnetometer->printSensorDetails();
 }
 
 void OrientationSensor::gyroSample(float *samples, uint32_t offset)

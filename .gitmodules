@@ -1,6 +1,3 @@
 [submodule "esp32-telescope-sync/lib/sMQTTBroker"]
 	path = esp32-telescope-sync/lib/sMQTTBroker
 	url = https://github.com/terrorsl/sMQTTBroker.git
-[submodule "esp32-telescope-sync/lib/IMU_EKF"]
-	path = esp32-telescope-sync/lib/IMU_EKF
-	url = https://github.com/hobbeshunter/IMU_EKF.git

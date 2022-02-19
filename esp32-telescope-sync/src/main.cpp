@@ -3,25 +3,24 @@
 #include <WiFi.h>
 
 // external Libraries
+#include <Adafruit_AHRS.h>
 #include <PubSubClient.h>
-#include <Adafruit_Sensor.h>
-#include <Adafruit_BNO055.h>
 #include <SPIFFS.h>
 // #include <AsyncTCP.h>
 
 // own libraries
 #include <persistency.h>
-#include <bnodata.h>
 #include <telescope.h>
 #include <gnss.h>
 #include <nexstar.h>
 #include <mqttbroker.h>
 #include <helper.h>
 #include <ledmanager.h>
+#include <orientationsensor.h>
 
 /**
  * A file called 'secrets.h' must be placed in lib/secrets and contain the following content:
- * 
+ *
  * #ifndef SECRETS_H
  * #define SECRETS_H
  * struct Secrets
@@ -31,24 +30,37 @@
  *     IPAddress mqttBroker = IPAddress(192, 168, 1, 1);    // your MQTT-Broker
  *     const char *accessPointSsid = "ESP32";
  *     const char *accessPointPassword = "12345678";    // must be 8+ characters
- *     IPAddress accessPointIP = IPAddress(192, 168, 1, 1); 
+ *     IPAddress accessPointIP = IPAddress(192, 168, 1, 1);
  * } secrets;
  * #endif
- * 
+ *
  **/
 #include <secrets.h>
 
-#define DEBUG (false)
+#define DEBUG (true)
 
-#define BNO055_I2C_CLOCK (100000U)
-#define BNO055_PIN_I2C_SCL (22)
-#define BNO055_PIN_I2C_SDA (21)
-#define BNO055_BUS_ID (0)
-#define BNO055_PIN_VCC (4)
+#define IMU_PIN_VCC (4)
+#define IMU_PIN_I2C_SCL (22)
+#define IMU_PIN_I2C_SDA (21)
+#define IMU_I2C_CLOCK (400000U)
 
-TwoWire I2CBus = TwoWire(BNO055_BUS_ID);                                     // set up a new Wire-Instance for BNO055 Intelligent Absolute Orientation Sensor
-Adafruit_BNO055 bno = Adafruit_BNO055(BNO055_ID, BNO055_ADDRESS_A, &I2CBus); // use custom I2C-Instance
-BnoData bnoData(BNO055_ID, BNO055_ADDRESS_A);
+#define IMU_BUS_ID (0)
+
+TwoWire I2CBus = TwoWire(IMU_BUS_ID); // set up a new Wire-Instance
+OrientationSensor imu(0, 0x6A, &I2CBus);
+
+#define AMT_SS (15)
+SPIClass AMT22(HSPI);
+
+Adafruit_Sensor *accelerometer, *gyroscope, *magnetometer;
+sensors_event_t accel, gyro, mag;
+float roll = 0, pitch = 0, heading = 0;
+float gx = 0, gy = 0, gz = 0;
+float qw = 0, qx = 0, qy = 0, qz = 0;
+
+Adafruit_NXPSensorFusion filter; // slowest
+// Adafruit_Madgwick filter; // faster than NXP
+// Adafruit_Mahony filter;  // fastest/smallest
 
 // global switches for connected devices
 #define ENABLE_WIFI (true)
@@ -58,6 +70,7 @@ BnoData bnoData(BNO055_ID, BNO055_ADDRESS_A);
 #define ENABLE_MQTT (true)
 #define ENABLE_GNSS (true)
 #define ENABLE_ORIENTATION (true)
+#define ENABLE_ROTATION (true)
 #define ENABLE_BROKER (true)
 
 bool orientationSensorAvailable = false;
@@ -88,18 +101,32 @@ NexStar nexstar(&telescope, &gnss); // Communication to Stellarium-App
 LEDManager ledmanager;
 
 // Flow control, basic task scheduler
-#define SCHEDULER_MAIN_LOOP_MS (10) // ms
-uint32_t counterBase = 0;
+#define FILTER_UPDATE_RATE_HZ 200
+#define SCHEDULER_MAIN_LOOP_US (1000000 / FILTER_UPDATE_RATE_HZ) // ms
+float sensorUpdateRate = 0;
+
+uint32_t timestamp;
 uint32_t counter2s = 0;
 uint32_t counter300s = 0;
 uint32_t counter1h = 0;
 uint32_t initStage = 0;
 
-uint32_t calibrationStableCounter = 0;
+uint32_t task10msTimer = 0;
+uint32_t task25msTimer = 0;
+uint32_t task100msTimer = 0;
+uint32_t task500msTimer = 0;
+uint32_t task1sTimer = 0;
+uint32_t task2sTimer = 0;
+uint32_t task30sTimer = 0;
+
+bool gyroCalibrationDone = false;
 uint32_t gnssTimeout = 0;
 
 uint8_t txBuffer[265];
 uint8_t rxBuffer[265];
+
+float gyroSamples[3 * GYRO_AUTOCAL_SAMPLES];
+int32_t gyroSampleCounter = 0;
 
 void mqttCallback(char *topic, byte *payload, unsigned int length)
 {
@@ -154,11 +181,11 @@ void setup()
     {
         if (WIFIMODE_AUTO && !WIFIMODE_FORCE_AP)
         {
-            //connect to your local wi-fi network
+            // connect to your local wi-fi network
             Serial.printf("[  INIT  ] Connecting to Wifi '%s'", secrets.wifiSsid);
             WiFi.begin(secrets.wifiSsid, secrets.wifiPassword);
 
-            //check wi-fi is connected to wi-fi network
+            // check wi-fi is connected to wi-fi network
             int retries = 5;
             while ((WiFi.status() != WL_CONNECTED) && ((retries--) > 0))
             {
@@ -230,77 +257,32 @@ void setup()
     if (ENABLE_ORIENTATION)
     {
         // Power-On Motion Sensor
-        pinMode(BNO055_PIN_VCC, OUTPUT);
-        digitalWrite(BNO055_PIN_VCC, HIGH);
+        pinMode(IMU_PIN_VCC, OUTPUT);
+        digitalWrite(IMU_PIN_VCC, HIGH);
         delay(500); // wait for power up. Takes around 400ms (T_Sup).
         initStage++;
 
         // Initialize Environment Sensor
-        if (I2CBus.begin(BNO055_PIN_I2C_SDA, BNO055_PIN_I2C_SCL, BNO055_I2C_CLOCK)) // set I2C-Clock to 100kHz
+        if (I2CBus.begin(IMU_PIN_I2C_SDA, IMU_PIN_I2C_SCL, IMU_I2C_CLOCK))
         {
             initStage++;
-            // in NDOF, too many errors are introduced by the magentometer. Especially when the sensor is attached to the metal tube of the telescope
-            // IMU-Mode has no absolute azimuth-orientation but less variations and better repeatability.
-            if (bno.begin(bno.OPERATION_MODE_NDOF))
+            if (imu.begin())
             {
+                imu.setCalibration();
+                filter.begin(FILTER_UPDATE_RATE_HZ);
                 initStage++;
                 orientationSensorAvailable = true;
-                Serial.printf("[  INIT  ] Found BNO055 Intelligent Absolute Orientation Sensor (ID=%02X, Addr=%02X)\n", BNO055_ID, BNO055_ADDRESS_A);
+                Serial.println("[  INIT  ] Found LSM6DS33+LIS3MDL Absolute Orientation Sensor Board");
             }
             else
             {
-                Serial.println("[! INIT  ] Could not find a BNO055 sensor. Check wiring!");
+                Serial.println("[! INIT  ] Could not find orientation sensor. Check wiring!");
             }
         }
         else
         {
             Serial.println("[! INIT  ] Could not setup I2C Interface!");
         }
-    }
-
-    if (orientationSensorAvailable)
-    {
-        initStage++;
-        bno.setExtCrystalUse(true);
-        delay(1000);
-
-        if (filesystemAvailable)
-        {
-            Serial.println("[  INIT  ] restoring sensor calibration data... ");
-            if (persistency.readBinaryData((uint8_t *)&bnoData.calibrationData, sizeof(bnoData.calibrationData), "/calibration.dat"))
-            {
-                bnoData.status.calibrationDataAvailable = true;
-                if (DEBUG)
-                    bnoData.printSensorOffsets();
-
-                bno.setSensorOffsets((uint8_t *)&bnoData.calibrationData);
-                delay(100);
-
-                bool success = bno.getSensorOffsets((uint8_t *)&bnoData.calibrationData);
-                if (success && DEBUG)
-                    bnoData.printSensorOffsets();
-
-                // Calibration data: Accel=[8, -38, -32], Gyro=[-1, -2, 1], Mag=[235, -394, -355], Accel Radius=1000, Mag Radius=1282
-
-                Serial.println("[  INIT  ] ok");
-            }
-            else
-            {
-                Serial.println("[! INIT  ] restoring calibration data failed");
-            }
-
-            initStage++;
-        }
-
-        // read sensor properties and status
-        bno.getSensor(&bnoData.properties);
-        bno.getSystemStatus(&bnoData.status.statSystem, &bnoData.status.statSelfTest, &bnoData.status.errSystem);
-
-        Serial.printf("[  INIT  ] Sensor: %s (v%i)   ID: 0x%02X   Status: 0x%02X   Self Test: 0x%02X   Error: 0x%02X\n",
-                      bnoData.properties.name, bnoData.properties.version, bnoData.properties.sensor_id,
-                      bnoData.status.statSystem, bnoData.status.statSelfTest, bnoData.status.errSystem);
-
-        Serial.println("[  INIT  ] Orientation sensor enabled");
     }
 
     if (wifiClientMode || wifiAccessPointMode)
@@ -331,6 +313,14 @@ void setup()
     {
         Serial2.begin(9600u);
         Serial.print("[  INIT  ] GNSS-Module enabled\n");
+    }
+
+    if (ENABLE_ROTATION)
+    {
+        AMT22.begin();
+        // SPI3.setClockDivider(SPI_CLOCK_DIV128);
+        digitalWrite(AMT_SS, HIGH);
+        pinMode(AMT_SS, OUTPUT);        
     }
 
     Serial.printf("[  INIT  ] Completed at stage %u\n\n", initStage);
@@ -374,35 +364,87 @@ void reconnectMQTTClient()
 
 void loop()
 {
-    ledmanager.update(counterBase);
+    timestamp = micros();
 
-    // base tasks
-    if (wifiClientMode || wifiAccessPointMode)
+    if ((timestamp - task10msTimer) > SCHEDULER_MAIN_LOOP_US)
     {
-        checkForConnections();
+        sensorUpdateRate = 1000000. / float(timestamp - task10msTimer);
+        task10msTimer = timestamp;
+
+        if (orientationSensorAvailable)
+        {
+            if (gyroCalibrationDone)
+            {
+                // Read the motion sensors
+                imu.getEvent(&accel, &gyro);
+                imu.calibrate(&accel, &gyro);
+                // imu.clipGyroNoise(&gyro);
+
+                // Gyroscope needs to be converted from Rad/s to Degree/s
+                gx = gyro.gyro.x * SENSORS_RADS_TO_DPS;
+                gy = gyro.gyro.y * SENSORS_RADS_TO_DPS;
+                gz = gyro.gyro.z * SENSORS_RADS_TO_DPS;
+
+                // Update the SensorFusion filter
+                filter.update(gx, gy, gz,
+                              accel.acceleration.x, accel.acceleration.y, accel.acceleration.z,
+                              0, 0, 0);
+                //   21.109, 1.364, 43.687);
+            }
+            else
+            {
+                imu.gyroSample(gyroSamples, gyroSampleCounter++);
+
+                if (gyroSampleCounter >= GYRO_AUTOCAL_SAMPLES)
+                {
+                    imu.meanVec3(gyroSamples, GYRO_AUTOCAL_SAMPLES, imu.gyr_offset);
+                    Serial.printf("[ SENSOR ] Gyro Auto-Calibration done: [%.5f, %.5f, %.5f]\n",
+                                  imu.gyr_offset[0], imu.gyr_offset[1], imu.gyr_offset[2]);
+                    gyroCalibrationDone = true;
+                }
+                else if (!(gyroSampleCounter % int32_t(GYRO_AUTOCAL_SAMPLES / 10)))
+                {
+                    Serial.printf("[ SENSOR ] Gyro Auto-Calibration in progress: %.0f%%\n", float(gyroSampleCounter) / GYRO_AUTOCAL_SAMPLES * 100);
+                }
+            }
+        }
+        return;
     }
 
-    if (localBrokerAvailable)
+    // 25ms Tasks
+    if ((timestamp - task25msTimer) > 25000L)
     {
-        broker.update();
+        task25msTimer = timestamp;
+
+        ledmanager.update(timestamp);
+        return;
     }
 
     // 100ms Tasks
-    if (!(counterBase % (100L / SCHEDULER_MAIN_LOOP_MS)))
+    if ((timestamp - task100msTimer) > 100000L)
     {
+        task100msTimer = timestamp;
+
+        roll = filter.getRoll();
+        pitch = -filter.getPitch();
+        // heading = filter.getYaw();
+
+        // heading = 0;
+
+        digitalWrite(AMT_SS, LOW);
+        uint16_t heading_raw = (AMT22.transfer(0) << 8) | AMT22.transfer(0);
+        digitalWrite(AMT_SS, HIGH);
+        if(Checksum::verifyAmtCheckbits(heading_raw))
+        {
+            heading = float(heading_raw & 0x3fff) * 360. / 16385.;
+        }
+
         if (remoteClient && remoteClient.connected())
         {
             uint32_t received = remoteClient.read(rxBuffer, sizeof(rxBuffer));
 
             if (received > 0)
             {
-                // Serial.print("[ SOCKET ] Rx: ");
-                // for (int i = 0; i < received; i++)
-                // {
-                //     Serial.printf("%02X ", rxBuffer[i]);
-                // }
-                // Serial.println();
-
                 int32_t nexstarResponseLength = nexstar.handleRequest(rxBuffer, sizeof(rxBuffer), txBuffer, sizeof(txBuffer));
 
                 if (nexstarResponseLength > 0)
@@ -417,11 +459,7 @@ void loop()
                     // check if the packet could be decoded correctly before using it to calibrate the offset
                     if (telescope.unpackPosition(&reference, NULL, rxBuffer, received))
                     {
-                        imu::Quaternion q = bno.getQuat();
-                        imu::Vector<3> euler = q.toEuler() * 180. / PI;
-                        euler.x() *= -1; // convert to Azimuth where north=0° and a rotation towards east (right) increases the value
-
-                        telescope.setOrientation(euler.z(), euler.x() + headingOffset);
+                        telescope.setOrientation(pitch, heading + headingOffset);
                         double localSiderealTimeDegrees = MathHelper::getLocalSiderealTimeDegrees(gnss.utcTimestamp, gnss.longitude);
 
                         Serial.printf("[ SENSOR ] Received Calibration Data  Ra: %.3f Dec: %.3f\n", reference.ra, reference.dec);
@@ -432,62 +470,73 @@ void loop()
             }
         }
 
-        if (orientationSensorAvailable)
-        {
-            bno.getCalibration(&bnoData.status.calSystem, &bnoData.status.calGyro, &bnoData.status.calAccel, &bnoData.status.calMag);
-
-            bnoData.status.fullyCalibrated = bno.isFullyCalibrated(); //(bnoData.status.calSystem == 3) && (bnoData.status.calGyro == 3) && (bnoData.status.calAccel == 3) && (bnoData.status.calMag == 3);
-            bnoData.status.partlyCalibrated = (bnoData.status.calSystem >= 1) && (bnoData.status.calGyro >= 1) && (bnoData.status.calAccel >= 1) && (bnoData.status.calMag >= 1);
-
-            if (!bnoData.status.fullyCalibrated)
-            {
-                calibrationStableCounter = 0;
-            }
-        }
-
         if (mqttAvailable)
         {
             mqttClient.loop();
         }
 
-        if (!bnoData.status.fullyCalibrated && !bnoData.status.calibrationDataSaved)
+        if (!gyroCalibrationDone)
         {
-            ledmanager.setMode(LEDManager::LEDMode::BLINK_1HZ);
-        }
-        else if (!bnoData.status.fullyCalibrated && bnoData.status.calibrationDataSaved)
-        {
-            ledmanager.setMode(LEDManager::LEDMode::FLASH_4X_EVERY_5S);
+            ledmanager.setMode(LEDManager::LEDMode::BLINK_10HZ);
         }
         else if (!gnss.valid)
         {
-            ledmanager.setMode(LEDManager::LEDMode::FLASH_2X_EVERY_5S);
+            ledmanager.setMode(LEDManager::LEDMode::BLINK_1HZ);
+        }
+        else if (remoteClient && remoteClient.connected())
+        {
+            ledmanager.setMode(LEDManager::LEDMode::FLASH_4X_EVERY_5S);
         }
         else
         {
             ledmanager.setMode(LEDManager::LEDMode::FLASH_1X_EVERY_5S);
         }
+
+        // base tasks
+        if (wifiClientMode || wifiAccessPointMode)
+            checkForConnections();
+
+        if (localBrokerAvailable)
+            broker.update();
+
+        return;
     }
 
     // 500ms Tasks
-    if (!(counterBase % (500L / SCHEDULER_MAIN_LOOP_MS)))
+    if ((timestamp - task500msTimer) > 500000L)
     {
+        task500msTimer = timestamp;
+
+        if (ENABLE_GNSS)
+        {
+            int received = Serial2.read(rxBuffer, sizeof(rxBuffer) - 1);
+            if (received > 0)
+            {
+                rxBuffer[received] = 0;
+                if (gnss.fromBuffer(rxBuffer, received) > 0)
+                {
+                    // reset timeout counter if we received a valid NMEA sentence
+                    gnssTimeout = 4 * 5; // 5s
+                    gnssAvailable = true;
+                }
+                // Serial.printf("[  GNSS  ] %s\n", rxBuffer);
+            }
+            else
+            {
+                // check if there is no data from the gnss-unit for a while and set state accordingly
+                gnssTimeout -= (gnssTimeout > 0) ? 1 : 0;
+                gnssAvailable = gnssTimeout > 0;
+            }
+        }
+
         if (orientationSensorAvailable)
         {
-            // if (!bnoData.status.fullyCalibrated)
-            // ledmanager.setMode(LEDManager::LEDMode::BLINK_1HZ);
-
-            // ZYX-Order. Sensor xy-plane is aligned with earth's surface => x=azimuth; y=altitude
-            imu::Quaternion q = bno.getQuat();
-            imu::Vector<3> euler = q.toEuler() * 180. / PI;
-            euler.x() *= -1; // convert to Azimuth where north=0° and a rotation towards east (right) increases the value
-
-            telescope.setOrientation(euler.z(), euler.x() + headingOffset);
+            telescope.setOrientation(pitch, heading + headingOffset);
 
             Telescope::Horizontal corrected = telescope.getCalibratedOrientation();
             double localSiderealTimeDegrees = MathHelper::getLocalSiderealTimeDegrees(gnss.utcTimestamp, gnss.longitude);
             Telescope::Equatorial position = telescope.horizontalToEquatorial(corrected, gnss.latitude, localSiderealTimeDegrees);
 
-            // if (remoteClient && remoteClient.connected() && bnoData.status.partlyCalibrated && gnssAvailable && (abs(gnss.longitude) > 0.01))
             if (remoteClient && remoteClient.connected() && gnssAvailable && !nexStarMode)
             {
                 uint64_t timestamp = 0;
@@ -529,141 +578,82 @@ void loop()
             if (localBrokerAvailable)
                 broker.publish("home/appliance/telescope/orientation/lst", (char *)txBuffer);
 
-            len = snprintf((char *)txBuffer, sizeof(txBuffer), "%.3f", euler.x());
+            len = snprintf((char *)txBuffer, sizeof(txBuffer), "%.3f", roll);
             if (mqttAvailable)
                 mqttClient.publish("home/appliance/telescope/orientation/roll", txBuffer, len);
             if (localBrokerAvailable)
                 broker.publish("home/appliance/telescope/orientation/roll", (char *)txBuffer);
 
-            len = snprintf((char *)txBuffer, sizeof(txBuffer), "%.3f", euler.y());
+            len = snprintf((char *)txBuffer, sizeof(txBuffer), "%.3f", pitch);
             if (mqttAvailable)
                 mqttClient.publish("home/appliance/telescope/orientation/pitch", txBuffer, len);
             if (localBrokerAvailable)
                 broker.publish("home/appliance/telescope/orientation/pitch", (char *)txBuffer);
 
-            len = snprintf((char *)txBuffer, sizeof(txBuffer), "%.3f", euler.z());
+            len = snprintf((char *)txBuffer, sizeof(txBuffer), "%.3f", heading);
             if (mqttAvailable)
-                mqttClient.publish("home/appliance/telescope/orientation/yaw", txBuffer, len);
+                mqttClient.publish("home/appliance/telescope/orientation/heading", txBuffer, len);
             if (localBrokerAvailable)
-                broker.publish("home/appliance/telescope/orientation/yaw", (char *)txBuffer);
+                broker.publish("home/appliance/telescope/orientation/heading", (char *)txBuffer);
 
-            len = snprintf((char *)txBuffer, sizeof(txBuffer), "[%.4f, %.4f, %.4f, %.4f]", q.w(), q.x(), q.y(), q.z());
+            filter.getQuaternion(&qw, &qx, &qy, &qz);
+
+            len = snprintf((char *)txBuffer, sizeof(txBuffer), "[%.4f, %.4f, %.4f, %.4f]", qw, qx, qy, qz);
             if (mqttAvailable)
                 mqttClient.publish("home/appliance/telescope/orientation/quat", txBuffer, len);
             if (localBrokerAvailable)
                 broker.publish("home/appliance/telescope/orientation/quat", (char *)txBuffer);
 
-            imu::Vector<3> acc, gyr, mag;
-            acc = bno.getVector(Adafruit_BNO055::VECTOR_ACCELEROMETER);
-            gyr = bno.getVector(Adafruit_BNO055::VECTOR_GYROSCOPE);
-            mag = bno.getVector(Adafruit_BNO055::VECTOR_MAGNETOMETER);
-
             len = snprintf((char *)txBuffer, sizeof(txBuffer), "{\"ax\":%.3f,\"ay\":%.3f,\"az\":%.3f,\"gx\":%.3f,\"gy\":%.3f,\"gz\":%.3f,\"mx\":%.3f,\"my\":%.3f,\"mz\":%.3f}",
-                           acc.x(), acc.y(), acc.z(),
-                           gyr.x(), gyr.y(), gyr.z(),
-                           mag.x(), mag.y(), mag.z());
+                           accel.acceleration.x, accel.acceleration.y, accel.acceleration.z,
+                           gx, gy, gz,
+                           mag.magnetic.x, mag.magnetic.y, mag.magnetic.z);
 
             if (mqttAvailable)
                 mqttClient.publish("home/appliance/telescope/orientation/raw", txBuffer, len);
             if (localBrokerAvailable)
                 broker.publish("home/appliance/telescope/orientation/raw", (char *)txBuffer);
         }
-        if (ENABLE_GNSS)
+
+        return;
+    }
+
+    // 1s Tasks
+    if ((timestamp - task1sTimer) > 1000000L)
+    {
+        task1sTimer = timestamp;
+
+        if (DEBUG)
         {
-            int received = Serial2.read(rxBuffer, sizeof(rxBuffer) - 1);
-            if (received > 0)
-            {
-                rxBuffer[received] = 0;
-                if (gnss.fromBuffer(rxBuffer, received) > 0)
-                {
-                    // reset timeout counter if we received a valid NMEA sentence
-                    gnssTimeout = 4 * 5; // 5s
-                    gnssAvailable = true;
-                }
-                // Serial.printf("[  GNSS  ] %s\n", rxBuffer);
-            }
-            else
-            {
-                // check if there is no data from the gnss-unit for a while and set state accordingly
-                gnssTimeout -= (gnssTimeout > 0) ? 1 : 0;
-                gnssAvailable = gnssTimeout > 0;
-            }
+            // send data for SerialStudio
+            Serial.printf("/*%f,%f,%f,%f,%f,%f,%f,%f,%f,%f,%f,%f,%f,%f,%f,%f,%f*/\n",
+                          heading, pitch, roll,
+                          qw, qx, qy, qz,
+                          accel.acceleration.x, accel.acceleration.y, accel.acceleration.z,
+                          gyro.gyro.x, gyro.gyro.y, gyro.gyro.z,
+                          mag.magnetic.x, mag.magnetic.y, mag.magnetic.z,
+                          sensorUpdateRate);
         }
+
+        return;
     }
 
     // 2s Tasks
-    if (!(counterBase % (2000L / SCHEDULER_MAIN_LOOP_MS)))
+    if ((timestamp - task2sTimer) > 2000000L)
     {
+        task2sTimer = timestamp;
+
         counter2s++;
-        // indicate alive
 
-        if (orientationSensorAvailable)
-        {
-            if (bnoData.status.fullyCalibrated)
-            {
-                calibrationStableCounter++;
-            }
+        txBuffer[0] = 0;
+        txBuffer[1] = 0;
 
-            // save calibration data once per lifecycle after the sensor is fully calibrated
-            if (bnoData.status.fullyCalibrated && !bnoData.status.calibrationDataSaved && calibrationStableCounter > 15)
-            {
-                Serial.println("[ SENSOR ] Saving calibration data... ");
-                bool success = bno.getSensorOffsets(bnoData.calibrationData);
-                if (success && DEBUG)
-                    bnoData.printSensorOffsets();
-
-                if (bnoData.validateSensorOffsets())
-                {
-                    if (success && persistency.writeBinaryData((uint8_t *)&bnoData.calibrationData, sizeof(bnoData.calibrationData), "/calibration.dat"))
-                    {
-                        Serial.println("[ SENSOR ] ok");
-                        bnoData.status.calibrationDataSaved = true;
-                    }
-                    else
-                    {
-                        Serial.println("[ SENSOR ] Saving calibration data failed");
-                    }
-                }
-                else
-                {
-                    Serial.println("[ SENSOR ] Invalid calibration data!");
-                }
-            }
-
-            bno.getSystemStatus(&bnoData.status.statSystem, &bnoData.status.statSelfTest, &bnoData.status.errSystem);
-            bnoData.status.temp = bno.getTemp();
-
-            if (!bnoData.status.fullyCalibrated && DEBUG)
-            {
-                // show overall system state
-                if (DEBUG)
-                {
-                    Serial.printf("[ SENSOR ] Sys: %X ST: %X Err: %X  Cal: %u%u%u%u  Temp: %i°C\n",
-                                  bnoData.status.statSystem,
-                                  bnoData.status.statSelfTest,
-                                  bnoData.status.errSystem,
-                                  bnoData.status.calSystem, bnoData.status.calGyro, bnoData.status.calAccel, bnoData.status.calMag,
-                                  bnoData.status.temp);
-                }
-            }
-            int32_t len = 0;
-            len = snprintf((char *)txBuffer, sizeof(txBuffer), "{\"system\":\"0x%X\",\"selftest\":\"0x%X\",\"error\":\"0x%X\",\"cal\":\"0x%04X\",\"temp\":%i}",
-                           bnoData.status.statSystem,
-                           bnoData.status.statSelfTest,
-                           bnoData.status.errSystem,
-                           (uint32_t(bnoData.status.calSystem) << 12) + (uint32_t(bnoData.status.calGyro) << 8) + (uint32_t(bnoData.status.calAccel) << 4) + uint32_t(bnoData.status.calMag),
-                           bnoData.status.temp);
-
-            if (mqttAvailable)
-                mqttClient.publish("home/appliance/telescope/sensor", txBuffer, len);
-
-            if (localBrokerAvailable)
-                broker.publish("home/appliance/telescope/sensor", (char *)txBuffer);
-        }
+        rxBuffer[0] = 1;
+        rxBuffer[1] = 2;        
 
         if (gnssAvailable)
         {
-            if (DEBUG)
+            if (!DEBUG)
             {
                 Serial.printf("[  GNSS  ] %s Lat=%.2f, Lng=%.2f, Alt=%.0fm, Date=%04u-%02u-%02u Time=%02u:%02u:%02u (Sat %u of %u)\n",
                               gnss.valid ? "Fix" : "No fix",
@@ -703,39 +693,23 @@ void loop()
         {
             reconnectMQTTClient();
         }
+        return;
     }
 
     // 30s Tasks
-    if (!(counterBase % (30000L / SCHEDULER_MAIN_LOOP_MS)))
+    if ((timestamp - task30sTimer) > 30000000L)
     {
-        if (orientationSensorAvailable)
+        task30sTimer = timestamp;
+
+        // show overall system state
+        if (!DEBUG)
         {
-            // show overall system state
-            Serial.printf("[ STATUS ] Free: %u KiB (%u KiB)   RSSI: %i dBm   Uptime: %" PRIi64 "s   Sys: %u Err: %u   Cal: %u   Temp: %i°C   GNSS: %s\n",
+            Serial.printf("[ STATUS ] Free: %u KiB (%u KiB)   RSSI: %i dBm   Uptime: %" PRIi64 "s   GNSS: %s\n",
                           ESP.getFreeHeap() / 1024,
                           ESP.getMaxAllocHeap() / 1024,
                           WiFi.RSSI(),
                           (esp_timer_get_time() / 1000000LL),
-                          bnoData.status.statSystem,
-                          bnoData.status.errSystem,
-                          bnoData.status.calSystem,
-                          bnoData.status.temp,
                           gnss.valid ? "fix" : "no fix");
         }
     }
-
-    // 300s Tasks
-    if (!(counterBase % (300000L / SCHEDULER_MAIN_LOOP_MS)))
-    {
-        counter300s++;
-    }
-
-    // 1h Tasks
-    if (!(counterBase % (3600000L / SCHEDULER_MAIN_LOOP_MS)))
-    {
-        counter1h++;
-    }
-
-    delay(SCHEDULER_MAIN_LOOP_MS);
-    counterBase++;
 }
