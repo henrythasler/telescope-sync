@@ -20,7 +20,7 @@
 
 /**
  * A file called 'secrets.h' must be placed in lib/secrets and contain the following content:
- * 
+ *
  * #ifndef SECRETS_H
  * #define SECRETS_H
  * struct Secrets
@@ -30,14 +30,14 @@
  *     IPAddress mqttBroker = IPAddress(192, 168, 1, 1);    // your MQTT-Broker
  *     const char *accessPointSsid = "ESP32";
  *     const char *accessPointPassword = "12345678";    // must be 8+ characters
- *     IPAddress accessPointIP = IPAddress(192, 168, 1, 1); 
+ *     IPAddress accessPointIP = IPAddress(192, 168, 1, 1);
  * } secrets;
  * #endif
- * 
+ *
  **/
 #include <secrets.h>
 
-#define DEBUG (false)
+#define DEBUG (true)
 
 #define IMU_PIN_VCC (4)
 #define IMU_PIN_I2C_SCL (22)
@@ -50,6 +50,9 @@
 
 TwoWire I2CBus = TwoWire(IMU_BUS_ID); // set up a new Wire-Instance
 OrientationSensor imu(IMU_ACC_ID, IMU_MAG_ID, LSM6DS_I2CADDR_DEFAULT, LIS3MDL_I2CADDR_DEFAULT, &I2CBus);
+
+#define AMT_SS (15)
+SPIClass AMT22(HSPI);
 
 Adafruit_Sensor *accelerometer, *gyroscope, *magnetometer;
 sensors_event_t accel, gyro, mag;
@@ -69,6 +72,7 @@ Adafruit_NXPSensorFusion filter; // slowest
 #define ENABLE_MQTT (true)
 #define ENABLE_GNSS (true)
 #define ENABLE_ORIENTATION (true)
+#define ENABLE_ROTATION (true)
 #define ENABLE_BROKER (true)
 
 bool orientationSensorAvailable = false;
@@ -179,11 +183,11 @@ void setup()
     {
         if (WIFIMODE_AUTO && !WIFIMODE_FORCE_AP)
         {
-            //connect to your local wi-fi network
+            // connect to your local wi-fi network
             Serial.printf("[  INIT  ] Connecting to Wifi '%s'", secrets.wifiSsid);
             WiFi.begin(secrets.wifiSsid, secrets.wifiPassword);
 
-            //check wi-fi is connected to wi-fi network
+            // check wi-fi is connected to wi-fi network
             int retries = 5;
             while ((WiFi.status() != WL_CONNECTED) && ((retries--) > 0))
             {
@@ -313,6 +317,14 @@ void setup()
         Serial.print("[  INIT  ] GNSS-Module enabled\n");
     }
 
+    if (ENABLE_ROTATION)
+    {
+        AMT22.begin();
+        // SPI3.setClockDivider(SPI_CLOCK_DIV128);
+        digitalWrite(AMT_SS, HIGH);
+        pinMode(AMT_SS, OUTPUT);        
+    }
+
     Serial.printf("[  INIT  ] Completed at stage %u\n\n", initStage);
     ledmanager.setMode(LEDManager::LEDMode::READY);
 }
@@ -416,8 +428,18 @@ void loop()
         task100msTimer = timestamp;
 
         roll = filter.getRoll();
-        pitch = filter.getPitch();
-        heading = filter.getYaw();
+        pitch = -filter.getPitch();
+        // heading = filter.getYaw();
+
+        // heading = 0;
+
+        digitalWrite(AMT_SS, LOW);
+        uint16_t heading_raw = (AMT22.transfer(0) << 8) | AMT22.transfer(0);
+        digitalWrite(AMT_SS, HIGH);
+        if(Checksum::verifyAmtCheckbits(heading_raw))
+        {
+            heading = float(heading_raw & 0x3fff) * 360. / 16385.;
+        }
 
         if (remoteClient && remoteClient.connected())
         {
@@ -614,6 +636,7 @@ void loop()
     {
         task1sTimer = timestamp;
 
+
         return;
     }
 
@@ -623,6 +646,12 @@ void loop()
         task2sTimer = timestamp;
 
         counter2s++;
+
+        txBuffer[0] = 0;
+        txBuffer[1] = 0;
+
+        rxBuffer[0] = 1;
+        rxBuffer[1] = 2;        
 
         if (gnssAvailable)
         {

@@ -13,4 +13,9 @@ namespace MathHelper
     double getLocalSiderealTimeDegrees(tm utcTimestamp, double longitude);
     float julianDay(tm timestamp);
 }
+
+namespace Checksum
+{
+    bool verifyAmtCheckbits(uint32_t data);
+}
 #endif

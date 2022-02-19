@@ -28,3 +28,19 @@ namespace MathHelper
         return (a - n * floor(a / n));
     }
 }
+
+namespace Checksum
+{
+    bool verifyAmtCheckbits(uint32_t data)
+    {
+        uint32_t even = data & 0x5555;
+        uint32_t odd = data & 0xAAAA;
+
+        uint32_t even_parity = !(((even >> 12) & 0x01) ^ ((even >> 10) & 0x01) ^ ((even >> 8) & 0x01) ^ ((even >> 6) & 0x01) ^ ((even >> 4) & 0x01) ^ ((even >> 2) & 0x01) ^ (even & 0x01));
+        uint32_t odd_parity = !(((odd >> 13) & 0x01) ^ ((odd >> 11) & 0x01) ^ ((odd >> 9) & 0x01) ^ ((odd >> 7) & 0x01) ^ ((odd >> 5) & 0x01) ^ ((odd >> 3) & 0x01) ^ ((odd >> 1) & 0x01));
+
+        uint32_t K1 = (data >> 15) & 0x01;
+        uint32_t K0 = (data >> 14) & 0x01;
+        return ((even_parity == K0) && (odd_parity == K1));
+    }
+}

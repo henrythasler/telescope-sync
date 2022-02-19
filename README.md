@@ -103,7 +103,10 @@ Blink 1Hz | Orientation Sensor not yet calibrated
 - [Converting RA and DEC to ALT and AZ](http://www.stargazing.net/kepler/altaz.html)
 - [3D Rotation Converter](https://www.andre-gaschler.com/rotationconverter/)
 - [THE EQMOD PROJECT - DOCUMENTATION & FAQs ](http://eq-mod.sourceforge.net/tutindex.html)
-
+- [How to find a transformation matrix, given coordinates of two triangles in R2](https://math.stackexchange.com/questions/557507/how-to-find-a-transformation-matrix-given-coordinates-of-two-triangles-in-r2)
+- [Computing 2D affine transformations using only matrix multiplication](https://medium.com/hipster-color-science/computing-2d-affine-transformations-using-only-matrix-multiplication-2ccb31b52181)
+- [Learn How to Write Markdown & LaTeX in The Jupyter Notebook](https://towardsdatascience.com/write-markdown-latex-in-the-jupyter-notebook-10985edb91fd)
+- [tomstewart89/BasicLinearAlgebra](https://github.com/tomstewart89/BasicLinearAlgebra)
 
 ### Orientation Sensor
 
