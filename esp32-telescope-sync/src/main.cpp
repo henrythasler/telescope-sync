@@ -3,7 +3,6 @@
 #include <WiFi.h>
 
 // external Libraries
-#include <Adafruit_AHRS.h>
 #include <PubSubClient.h>
 #include <SPIFFS.h>
 // #include <AsyncTCP.h>
@@ -37,7 +36,7 @@
  **/
 #include <secrets.h>
 
-#define DEBUG (true)
+#define DEBUG (false)
 
 #define IMU_PIN_VCC (4)
 #define IMU_PIN_I2C_SCL (22)
@@ -47,20 +46,16 @@
 #define IMU_BUS_ID (0)
 
 TwoWire I2CBus = TwoWire(IMU_BUS_ID); // set up a new Wire-Instance
-OrientationSensor imu(0, 0x6A, &I2CBus);
+LSM6Wrapper imu(0, 0x6A, &I2CBus);
 
 #define AMT_SS (15)
 SPIClass AMT22(HSPI);
 
-Adafruit_Sensor *accelerometer, *gyroscope, *magnetometer;
+Adafruit_Sensor *accelerometer, *gyroscope;
 sensors_event_t accel, gyro, mag;
 float roll = 0, pitch = 0, heading = 0;
 float gx = 0, gy = 0, gz = 0;
 float qw = 0, qx = 0, qy = 0, qz = 0;
-
-Adafruit_NXPSensorFusion filter; // slowest
-// Adafruit_Madgwick filter; // faster than NXP
-// Adafruit_Mahony filter;  // fastest/smallest
 
 // global switches for connected devices
 #define ENABLE_WIFI (true)
@@ -101,7 +96,7 @@ NexStar nexstar(&telescope, &gnss); // Communication to Stellarium-App
 LEDManager ledmanager;
 
 // Flow control, basic task scheduler
-#define FILTER_UPDATE_RATE_HZ 200
+#define FILTER_UPDATE_RATE_HZ 50
 #define SCHEDULER_MAIN_LOOP_US (1000000 / FILTER_UPDATE_RATE_HZ) // ms
 float sensorUpdateRate = 0;
 
@@ -111,7 +106,7 @@ uint32_t counter300s = 0;
 uint32_t counter1h = 0;
 uint32_t initStage = 0;
 
-uint32_t task10msTimer = 0;
+uint32_t taskFilterTimer = 0;
 uint32_t task25msTimer = 0;
 uint32_t task100msTimer = 0;
 uint32_t task500msTimer = 0;
@@ -119,14 +114,11 @@ uint32_t task1sTimer = 0;
 uint32_t task2sTimer = 0;
 uint32_t task30sTimer = 0;
 
-bool gyroCalibrationDone = false;
 uint32_t gnssTimeout = 0;
 
 uint8_t txBuffer[265];
 uint8_t rxBuffer[265];
 
-float gyroSamples[3 * GYRO_AUTOCAL_SAMPLES];
-int32_t gyroSampleCounter = 0;
 
 void mqttCallback(char *topic, byte *payload, unsigned int length)
 {
@@ -269,7 +261,6 @@ void setup()
             if (imu.begin())
             {
                 imu.setCalibration();
-                filter.begin(FILTER_UPDATE_RATE_HZ);
                 initStage++;
                 orientationSensorAvailable = true;
                 Serial.println("[  INIT  ] Found LSM6DS33+LIS3MDL Absolute Orientation Sensor Board");
@@ -320,7 +311,7 @@ void setup()
         AMT22.begin();
         // SPI3.setClockDivider(SPI_CLOCK_DIV128);
         digitalWrite(AMT_SS, HIGH);
-        pinMode(AMT_SS, OUTPUT);        
+        pinMode(AMT_SS, OUTPUT);
     }
 
     Serial.printf("[  INIT  ] Completed at stage %u\n\n", initStage);
@@ -366,47 +357,14 @@ void loop()
 {
     timestamp = micros();
 
-    if ((timestamp - task10msTimer) > SCHEDULER_MAIN_LOOP_US)
+    if ((timestamp - taskFilterTimer) > SCHEDULER_MAIN_LOOP_US)
     {
-        sensorUpdateRate = 1000000. / float(timestamp - task10msTimer);
-        task10msTimer = timestamp;
+        sensorUpdateRate = 1000000. / float(timestamp - taskFilterTimer);
+        taskFilterTimer = timestamp;
 
         if (orientationSensorAvailable)
         {
-            if (gyroCalibrationDone)
-            {
-                // Read the motion sensors
-                imu.getEvent(&accel, &gyro);
-                imu.calibrate(&accel, &gyro);
-                // imu.clipGyroNoise(&gyro);
-
-                // Gyroscope needs to be converted from Rad/s to Degree/s
-                gx = gyro.gyro.x * SENSORS_RADS_TO_DPS;
-                gy = gyro.gyro.y * SENSORS_RADS_TO_DPS;
-                gz = gyro.gyro.z * SENSORS_RADS_TO_DPS;
-
-                // Update the SensorFusion filter
-                filter.update(gx, gy, gz,
-                              accel.acceleration.x, accel.acceleration.y, accel.acceleration.z,
-                              0, 0, 0);
-                //   21.109, 1.364, 43.687);
-            }
-            else
-            {
-                imu.gyroSample(gyroSamples, gyroSampleCounter++);
-
-                if (gyroSampleCounter >= GYRO_AUTOCAL_SAMPLES)
-                {
-                    imu.meanVec3(gyroSamples, GYRO_AUTOCAL_SAMPLES, imu.gyr_offset);
-                    Serial.printf("[ SENSOR ] Gyro Auto-Calibration done: [%.5f, %.5f, %.5f]\n",
-                                  imu.gyr_offset[0], imu.gyr_offset[1], imu.gyr_offset[2]);
-                    gyroCalibrationDone = true;
-                }
-                else if (!(gyroSampleCounter % int32_t(GYRO_AUTOCAL_SAMPLES / 10)))
-                {
-                    Serial.printf("[ SENSOR ] Gyro Auto-Calibration in progress: %.0f%%\n", float(gyroSampleCounter) / GYRO_AUTOCAL_SAMPLES * 100);
-                }
-            }
+            imu.accSample();
         }
         return;
     }
@@ -425,19 +383,18 @@ void loop()
     {
         task100msTimer = timestamp;
 
-        roll = filter.getRoll();
-        pitch = -filter.getPitch();
-        // heading = filter.getYaw();
-
-        // heading = 0;
+        imu.getMeanAcc(&accel);
+        imu.calibrate(&accel, &gyro);
+        pitch = atan2(accel.acceleration.x, accel.acceleration.y) * 180 / PI;
 
         digitalWrite(AMT_SS, LOW);
         uint16_t heading_raw = (AMT22.transfer(0) << 8) | AMT22.transfer(0);
         digitalWrite(AMT_SS, HIGH);
-        if(Checksum::verifyAmtCheckbits(heading_raw))
+        if (Checksum::verifyAmtCheckbits(heading_raw))
         {
             heading = float(heading_raw & 0x3fff) * 360. / 16385.;
         }
+
 
         if (remoteClient && remoteClient.connected())
         {
@@ -475,11 +432,11 @@ void loop()
             mqttClient.loop();
         }
 
-        if (!gyroCalibrationDone)
-        {
-            ledmanager.setMode(LEDManager::LEDMode::BLINK_10HZ);
-        }
-        else if (!gnss.valid)
+        // if (!gyroCalibrationDone)
+        // {
+        //     ledmanager.setMode(LEDManager::LEDMode::BLINK_10HZ);
+        // }
+        if (!gnss.valid)
         {
             ledmanager.setMode(LEDManager::LEDMode::BLINK_1HZ);
         }
@@ -499,6 +456,18 @@ void loop()
         if (localBrokerAvailable)
             broker.update();
 
+
+        if (DEBUG)
+        {
+            // send data for SerialStudio
+            Serial.printf("/*%f,%f,%f,%f,%f,%f,%f,%f,%f,%f,%f,%f,%f,%f,%f,%f,%f*/\n",
+                          heading, pitch, roll,
+                          qw, qx, qy, qz,
+                          accel.acceleration.x, accel.acceleration.y, accel.acceleration.z,
+                          gyro.gyro.x, gyro.gyro.y, gyro.gyro.z,
+                          mag.magnetic.x, mag.magnetic.y, mag.magnetic.z,
+                          sensorUpdateRate);
+        }
         return;
     }
 
@@ -596,7 +565,7 @@ void loop()
             if (localBrokerAvailable)
                 broker.publish("home/appliance/telescope/orientation/heading", (char *)txBuffer);
 
-            filter.getQuaternion(&qw, &qx, &qy, &qz);
+            // filter.getQuaternion(&qw, &qx, &qy, &qz);
 
             len = snprintf((char *)txBuffer, sizeof(txBuffer), "[%.4f, %.4f, %.4f, %.4f]", qw, qx, qy, qz);
             if (mqttAvailable)
@@ -623,18 +592,6 @@ void loop()
     {
         task1sTimer = timestamp;
 
-        if (DEBUG)
-        {
-            // send data for SerialStudio
-            Serial.printf("/*%f,%f,%f,%f,%f,%f,%f,%f,%f,%f,%f,%f,%f,%f,%f,%f,%f*/\n",
-                          heading, pitch, roll,
-                          qw, qx, qy, qz,
-                          accel.acceleration.x, accel.acceleration.y, accel.acceleration.z,
-                          gyro.gyro.x, gyro.gyro.y, gyro.gyro.z,
-                          mag.magnetic.x, mag.magnetic.y, mag.magnetic.z,
-                          sensorUpdateRate);
-        }
-
         return;
     }
 
@@ -649,7 +606,7 @@ void loop()
         txBuffer[1] = 0;
 
         rxBuffer[0] = 1;
-        rxBuffer[1] = 2;        
+        rxBuffer[1] = 2;
 
         if (gnssAvailable)
         {

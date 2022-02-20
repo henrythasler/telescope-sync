@@ -1,7 +1,7 @@
 #include <orientationsensor.h>
 
 #ifdef ARDUINO
-OrientationSensor::OrientationSensor(int32_t accSensorID, uint8_t accAddress, TwoWire *theWire)
+LSM6Wrapper::LSM6Wrapper(int32_t accSensorID, uint8_t accAddress, TwoWire *theWire)
 {
     this->accSensorID = accSensorID;
     this->accAddress = accAddress;
@@ -9,25 +9,25 @@ OrientationSensor::OrientationSensor(int32_t accSensorID, uint8_t accAddress, Tw
     this->wire = theWire;
 }
 
-bool OrientationSensor::begin(void)
+bool LSM6Wrapper::begin(void)
 {
-    if (!this->lsm6ds.begin_I2C(accAddress, wire, accSensorID))
+    if (!this->lsm6.begin_I2C(accAddress, wire, accSensorID))
     {
         return false;
     }
 
-    lsm6ds.setAccelRange(LSM6DS_ACCEL_RANGE_2_G);
-    lsm6ds.setGyroRange(LSM6DS_GYRO_RANGE_250_DPS);
+    lsm6.setAccelRange(LSM6DS_ACCEL_RANGE_2_G);
+    lsm6.setGyroRange(LSM6DS_GYRO_RANGE_250_DPS);
 
-    lsm6ds.setAccelDataRate(LSM6DS_RATE_416_HZ);
-    lsm6ds.setGyroDataRate(LSM6DS_RATE_416_HZ);
+    lsm6.setAccelDataRate(LSM6DS_RATE_416_HZ);
+    lsm6.setGyroDataRate(LSM6DS_RATE_416_HZ);
 
-    accelerometer = lsm6ds.getAccelerometerSensor();
-    gyroscope = lsm6ds.getGyroSensor();
+    accelerometer = lsm6.getAccelerometerSensor();
+    gyroscope = lsm6.getGyroSensor();
     return true;
 }
 
-void OrientationSensor::setCalibration(void)
+void LSM6Wrapper::setCalibration(void)
 {
     // rad/s
     gyr_offset[0] = 0;
@@ -35,18 +35,18 @@ void OrientationSensor::setCalibration(void)
     gyr_offset[2] = 0;
 
     // m/s^2
-    acc_offset[0] = 0;
-    acc_offset[1] = 0;
-    acc_offset[2] = 0;
+    acc_offset[0] = 0.;
+    acc_offset[1] = 0.19;
+    acc_offset[2] = -0.18;
 }
 
-void OrientationSensor::getEvent(sensors_event_t *acc, sensors_event_t *gyr)
+void LSM6Wrapper::getEvent(sensors_event_t *acc, sensors_event_t *gyr)
 {
     accelerometer->getEvent(acc);
     gyroscope->getEvent(gyr);
 }
 
-void OrientationSensor::calibrate(sensors_event_t *acc, sensors_event_t *gyr)
+void LSM6Wrapper::calibrate(sensors_event_t *acc, sensors_event_t *gyr)
 {
     gyr->gyro.x -= gyr_offset[0];
     gyr->gyro.y -= gyr_offset[1];
@@ -57,7 +57,7 @@ void OrientationSensor::calibrate(sensors_event_t *acc, sensors_event_t *gyr)
     acc->acceleration.z -= acc_offset[2];
 }
 
-void OrientationSensor::clipGyroNoise(sensors_event_t *gyr)
+void LSM6Wrapper::clipGyroNoise(sensors_event_t *gyr)
 {
     // clip noise
     gyr->gyro.x = abs(gyr->gyro.x) > 0.01 ? gyr->gyro.x : 0.;
@@ -65,13 +65,13 @@ void OrientationSensor::clipGyroNoise(sensors_event_t *gyr)
     gyr->gyro.z = abs(gyr->gyro.z) > 0.01 ? gyr->gyro.z : 0.;
 }
 
-void OrientationSensor::printSensorDetails()
+void LSM6Wrapper::printSensorDetails()
 {
     accelerometer->printSensorDetails();
     gyroscope->printSensorDetails();
 }
 
-void OrientationSensor::gyroSample(float *samples, uint32_t offset)
+void LSM6Wrapper::gyroSample(float *samples, uint32_t offset)
 {
     gyroscope->getEvent(&gyro_event);
     samples[offset * 3] = gyro_event.gyro.x;
@@ -79,7 +79,29 @@ void OrientationSensor::gyroSample(float *samples, uint32_t offset)
     samples[offset * 3 + 2] = gyro_event.gyro.z;
 }
 
-bool OrientationSensor::meanVec3(float *samples, uint32_t num_samples, float *mean)
+
+void LSM6Wrapper::accSample()
+{
+    accelerometer->getEvent(&acc_event);
+    this->accSamples[accSampleCounter * 3] = acc_event.acceleration.x;
+    this->accSamples[accSampleCounter * 3 +1] = acc_event.acceleration.y;
+    this->accSamples[accSampleCounter * 3 + 2] = acc_event.acceleration.z;
+    accSampleCounter = (accSampleCounter + 1) % ACC_FILTER_SAMPLES;
+}
+
+
+bool LSM6Wrapper::getMeanAcc(sensors_event_t *accMean)
+{
+    float mean[3] = {0, 0, 0};
+    this->meanVec3(this->accSamples, ACC_FILTER_SAMPLES, mean);
+    accMean->acceleration.x = mean[0];
+    accMean->acceleration.y = mean[1];
+    accMean->acceleration.z = mean[2];
+    return true;
+}
+
+
+bool LSM6Wrapper::meanVec3(float *samples, uint32_t num_samples, float *mean)
 {
     float sum_x = 0, sum_y = 0,sum_z = 0;
     for (int32_t i = 0; i < num_samples; i++)
@@ -95,7 +117,7 @@ bool OrientationSensor::meanVec3(float *samples, uint32_t num_samples, float *me
     return true;
 }
 
-void OrientationSensor::printSensorOffsets()
+void LSM6Wrapper::printSensorOffsets()
 {
     // Serial.printf("[ SENSOR ] Calibration data: Accel=[%i, %i, %i], Gyro=[%i, %i, %i], Mag=[%i, %i, %i], Accel Radius=%u, Mag Radius=%i\n",
     //               calibrationData.accel_offset_x, calibrationData.accel_offset_y, calibrationData.accel_offset_z,

@@ -113,6 +113,7 @@ Blink 1Hz | Orientation Sensor not yet calibrated
 
 - [Bosch Sensortec MEMS BNO055 sensor driver](https://github.com/BoschSensortec/BNO055_driver)
 - [AltIMU-AHRS](https://github.com/jremington/AltIMU-AHRS)
+- [Using an Accelerometer for Inclination Sensing](https://www.analog.com/en/app-notes/an-1057.html)
 
 ### GPS, GNSS, NMEA
 
