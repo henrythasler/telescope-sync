@@ -18,4 +18,15 @@ namespace Checksum
 {
     bool verifyAmtCheckbits(uint32_t data);
 }
+
+namespace LinAlg
+{
+    struct Point
+    {
+        float x, y;
+    };
+
+    float triangleArea(Point p1, Point p2, Point p3);
+    float isInTriangle(Point p, Point p1, Point p2, Point p3);
+}
 #endif

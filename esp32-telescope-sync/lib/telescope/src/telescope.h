@@ -56,6 +56,8 @@ public:
     void addReferencePoint(Horizontal reference);
     Horizontal getCalibratedOrientation(void);
     Horizontal getCalibratedOrientation(BLA::Matrix<3, 3, BLA::Array<3, 3, double>> M);
+
+    BLA::Matrix<3, 3, BLA::Array<3, 3, double>> transormationMatrices[MAX_ALIGNMENT_POINTS - 2];
     BLA::Matrix<3, 3, BLA::Array<3, 3, double>> getTransformationMatrix(uint32_t triangleOffset);
 
     double rad(double degrees);
