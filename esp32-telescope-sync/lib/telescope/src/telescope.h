@@ -41,8 +41,8 @@ public:
     Horizontal orientation;
     Horizontal offset;
 
-    Horizontal referencePoints[MAX_ALIGNMENT_POINTS];
-    Horizontal mountPoints[MAX_ALIGNMENT_POINTS];
+    Equatorial referencePoints[MAX_ALIGNMENT_POINTS];
+    Equatorial actualPoints[MAX_ALIGNMENT_POINTS];
     int32_t alignmentWritePointer = 0;
     int32_t alignmentPoints = 0;
 
@@ -53,7 +53,7 @@ public:
 
     bool isCalibrated = false;
     void calibrate(Equatorial reference, double latitude, double localSiderealTimeDegrees);
-    void addReferencePoint(Horizontal reference);
+    void addReferencePoint(Equatorial *reference, double latitude, double localSiderealTimeDegrees);
     Horizontal getCalibratedOrientation(void);
     Horizontal getCalibratedOrientation(BLA::Matrix<3, 3, BLA::Array<3, 3, double>> M);
 
@@ -64,10 +64,10 @@ public:
     double deg(double radians);
     double degToHours(double degrees);
 
-    void horizontalToEquatorial(double azimuth, double altitude, double latitude, double localSiderealTimeDegrees, Equatorial *result);
+    void horizontalToEquatorial(double altitude, double azimuth, double latitude, double localSiderealTimeDegrees, Equatorial *result);
     void horizontalToEquatorial(Horizontal horizontal, double latitude, double localSiderealTimeDegrees, Equatorial *result);
     Equatorial horizontalToEquatorial(Horizontal horizontal, double latitude, double localSiderealTimeDegrees);
-    Equatorial horizontalToEquatorial(double azimuth, double altitude, double latitude, double localSiderealTimeDegrees);
+    Equatorial horizontalToEquatorial(double altitude, double azimuth, double latitude, double localSiderealTimeDegrees);
 
     void equatorialToHorizontal(double ra, double dec, double latitude, double localSiderealTimeDegrees, Horizontal *result);
     void equatorialToHorizontal(Equatorial equatorial, double latitude, double localSiderealTimeDegrees, Horizontal *result);

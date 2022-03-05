@@ -394,7 +394,8 @@ void loop()
         {
             heading = float(heading_raw & 0x3fff) * 360. / 16385.;
         }
-
+        telescope.setOrientation(pitch, heading + headingOffset);
+        
 
         if (remoteClient && remoteClient.connected())
         {
@@ -416,7 +417,6 @@ void loop()
                     // check if the packet could be decoded correctly before using it to calibrate the offset
                     if (telescope.unpackPosition(&reference, NULL, rxBuffer, received))
                     {
-                        telescope.setOrientation(pitch, heading + headingOffset);
                         double localSiderealTimeDegrees = MathHelper::getLocalSiderealTimeDegrees(gnss.utcTimestamp, gnss.longitude);
 
                         Serial.printf("[ SENSOR ] Received Calibration Data  Ra: %.3f Dec: %.3f\n", reference.ra, reference.dec);
@@ -500,8 +500,6 @@ void loop()
 
         if (orientationSensorAvailable)
         {
-            telescope.setOrientation(pitch, heading + headingOffset);
-
             Telescope::Horizontal corrected = telescope.getCalibratedOrientation();
             double localSiderealTimeDegrees = MathHelper::getLocalSiderealTimeDegrees(gnss.utcTimestamp, gnss.longitude);
             Telescope::Equatorial position = telescope.horizontalToEquatorial(corrected, gnss.latitude, localSiderealTimeDegrees);
