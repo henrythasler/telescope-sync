@@ -3,6 +3,20 @@
 
 namespace Test_Nexstar
 {
+    void test_function_nexstar_unknown(void)
+    {
+        uint8_t response[32];
+        int32_t bytes = 0;
+
+        GNSS gnss; // set initial position to enable operation before GNSS fix
+        Telescope telescope;
+        NexStar nexstar(&telescope, &gnss);
+
+        uint8_t sampleA[] = "";
+        bytes = nexstar.handleRequest(sampleA, sizeof(sampleA), response, sizeof(response));
+        TEST_ASSERT_EQUAL(0, bytes);
+    }
+
     void test_function_nexstar_echo(void)
     {
         uint8_t response[32];
@@ -17,6 +31,67 @@ namespace Test_Nexstar
         TEST_ASSERT_EQUAL(2, bytes);
         TEST_ASSERT_EQUAL_HEX8_ARRAY("a#", response, bytes);
     }
+
+    void test_function_nexstar_get_version(void)
+    {
+        uint8_t response[32];
+        int32_t bytes = 0;
+
+        GNSS gnss; // set initial position to enable operation before GNSS fix
+        Telescope telescope;
+        NexStar nexstar(&telescope, &gnss);
+
+        uint8_t sampleA[] = "V";
+        bytes = nexstar.handleRequest(sampleA, sizeof(sampleA), response, sizeof(response));
+        TEST_ASSERT_EQUAL(3, bytes);
+        TEST_ASSERT_EQUAL_HEX8_ARRAY("\x04\x0A#", response, bytes);
+    }
+
+    void test_function_nexstar_get_location(void)
+    {
+        uint8_t response[32];
+        int32_t bytes = 0;
+
+        GNSS gnss(48, 11); // set initial position to enable operation before GNSS fix
+        Telescope telescope;
+        NexStar nexstar(&telescope, &gnss);
+
+        uint8_t sampleA[] = "w";
+        bytes = nexstar.handleRequest(sampleA, sizeof(sampleA), response, sizeof(response));
+        TEST_ASSERT_EQUAL(9, bytes);
+        TEST_ASSERT_EQUAL_HEX8_ARRAY("\x30\x00\x00\x00\x0b\x00\x00\x00#", response, bytes);
+    }
+
+    void test_function_nexstar_get_deviceversion(void)
+    {
+        uint8_t response[32];
+        int32_t bytes = 0;
+
+        GNSS gnss; // set initial position to enable operation before GNSS fix
+        Telescope telescope;
+        NexStar nexstar(&telescope, &gnss);
+
+        uint8_t sampleA[] = "P\x01\x10\xfe\x00\x00\x00\x02";
+        bytes = nexstar.handleRequest(sampleA, sizeof(sampleA), response, sizeof(response));
+        TEST_ASSERT_EQUAL(3, bytes);
+        TEST_ASSERT_EQUAL_HEX8_ARRAY("\x01\x00#", response, bytes);
+    }
+
+    void test_function_nexstar_get_time(void)
+    {
+        uint8_t response[32];
+        int32_t bytes = 0;
+
+        GNSS gnss; // set initial position to enable operation before GNSS fix
+        gnss.utcTimestamp.tm_year = 2000;
+        Telescope telescope;
+        NexStar nexstar(&telescope, &gnss);
+
+        uint8_t sampleA[] = "h";
+        bytes = nexstar.handleRequest(sampleA, sizeof(sampleA), response, sizeof(response));
+        TEST_ASSERT_EQUAL(9, bytes);
+        TEST_ASSERT_EQUAL_HEX8_ARRAY("\x00\x00\x00\x00\x00\x00\x00\x00#", response, bytes);
+    }        
 
     void test_function_nexstar_get_radec(void)
     {
@@ -41,7 +116,7 @@ namespace Test_Nexstar
 
         // make sure the input is correct
         double localSiderealTimeDegrees = MathHelper::getLocalSiderealTimeDegrees(gnss.utcTimestamp, gnss.longitude);
-        auto res = telescope.horizontalToEquatorial(49.169122, 269.14634, gnss.latitude, localSiderealTimeDegrees);
+        auto res = telescope.horizontalToEquatorial(269.14634, 49.169122, gnss.latitude, localSiderealTimeDegrees);
         TEST_ASSERT_FLOAT_WITHIN(0.01, 250.43, res.ra);
         TEST_ASSERT_FLOAT_WITHIN(0.01, 36.47, res.dec);
 
@@ -138,6 +213,11 @@ namespace Test_Nexstar
     {
         UNITY_BEGIN();
 
+        RUN_TEST(test_function_nexstar_unknown);
+        RUN_TEST(test_function_nexstar_get_version);
+        RUN_TEST(test_function_nexstar_get_location);
+        RUN_TEST(test_function_nexstar_get_deviceversion);
+        RUN_TEST(test_function_nexstar_get_time);
         RUN_TEST(test_function_nexstar_echo);
         RUN_TEST(test_function_nexstar_get_radec);
         RUN_TEST(test_function_nexstar_sync_precise_1);

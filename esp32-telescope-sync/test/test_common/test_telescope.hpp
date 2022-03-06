@@ -49,11 +49,11 @@ namespace Test_Telescope
     void test_function_fromHorizontalPosition(void)
     {
         Telescope telescope;
-        auto res = telescope.horizontalToEquatorial(60.34, 180, 38.59, 297.93);
+        auto res = telescope.horizontalToEquatorial(180, 60.34, 38.59, 297.93);
         TEST_ASSERT_FLOAT_WITHIN(0.01, 297.92, res.ra);
         TEST_ASSERT_FLOAT_WITHIN(0.01, 8.93, res.dec);
 
-        res = telescope.horizontalToEquatorial(49.169122, 269.14634, 52.5, 304.80762);
+        res = telescope.horizontalToEquatorial(269.14634, 49.169122, 52.5, 304.80762);
         TEST_ASSERT_FLOAT_WITHIN(0.01, 250.43, res.ra);
         TEST_ASSERT_FLOAT_WITHIN(0.01, 36.47, res.dec);
     }
@@ -203,7 +203,7 @@ namespace Test_Telescope
         Telescope::Equatorial reference;
         reference.ra = 101.29;
         reference.dec = -16.72;
-        telescope.setOrientation(45, 180);
+        telescope.setOrientation(180, 45);
         double localSiderealTimeDegrees = MathHelper::getLocalSiderealTimeDegrees({.tm_sec = 0, .tm_min = 0, .tm_hour = 1, .tm_mday = 2, .tm_mon = 1, .tm_year = 2022}, 11);
         TEST_ASSERT_FLOAT_WITHIN(0.0001, 127.6567, localSiderealTimeDegrees);
 
@@ -219,13 +219,13 @@ namespace Test_Telescope
         reference.ra = 101.29;
         reference.dec = -16.72;
 
-        telescope.setOrientation(60.34, 180);
+        telescope.setOrientation(180, 60.34);
 
         for (int i = 0; i < 400; i++)
             telescope.addReferencePoint(&reference, 38.59, 297.93);
 
-        TEST_ASSERT_EQUAL_INT32(16, telescope.alignmentWritePointer);
-        TEST_ASSERT_EQUAL_INT32(32, telescope.alignmentPoints);
+        TEST_ASSERT_EQUAL_INT32(1, telescope.alignmentWritePointer);
+        TEST_ASSERT_EQUAL_INT32(3, telescope.alignmentPoints);
 
         TEST_ASSERT_FLOAT_WITHIN(0.01, 101.29, telescope.referencePoints[0].ra);
         TEST_ASSERT_FLOAT_WITHIN(0.01, -16.72, telescope.referencePoints[0].dec);
@@ -241,7 +241,9 @@ namespace Test_Telescope
 
         reference.ra = 1;
         reference.dec = 2;
-        telescope.setOrientation(4, 4);
+
+        auto orientation = telescope.equatorialToHorizontal(4, 4, 0, 0);
+        telescope.setOrientation(orientation);
         telescope.addReferencePoint(&reference, 0, 0);
 
         TEST_ASSERT_EQUAL_INT32(1, telescope.alignmentWritePointer);
@@ -250,8 +252,8 @@ namespace Test_Telescope
         TEST_ASSERT_FLOAT_WITHIN(0.01, 1, telescope.referencePoints[0].ra);
         TEST_ASSERT_FLOAT_WITHIN(0.01, 2, telescope.referencePoints[0].dec);
 
-        TEST_ASSERT_FLOAT_WITHIN(0.01, 4, telescope.actualPoints[0].ra);
-        TEST_ASSERT_FLOAT_WITHIN(0.01, 4, telescope.actualPoints[0].dec);
+        TEST_ASSERT_FLOAT_WITHIN_MESSAGE(0.01, 4, telescope.actualPoints[0].ra, "telescope.actualPoints[0].ra");
+        TEST_ASSERT_FLOAT_WITHIN_MESSAGE(0.01, 4, telescope.actualPoints[0].dec, "telescope.actualPoints[0].dec");
 
         auto res = telescope.getTransformationMatrix(0);
         // 1st column
@@ -277,12 +279,14 @@ namespace Test_Telescope
 
         reference.ra = 2;
         reference.dec = 6;
-        telescope.setOrientation(6, 1);
+        auto orientation = telescope.equatorialToHorizontal(1, 6, 0, 0);
+        telescope.setOrientation(orientation);
         telescope.addReferencePoint(&reference, 0, 0);
 
         reference.ra = 5;
         reference.dec = 4;
-        telescope.setOrientation(8, 6);
+        orientation = telescope.equatorialToHorizontal(6, 8, 0, 0);
+        telescope.setOrientation(orientation);
         telescope.addReferencePoint(&reference, 0, 0);
 
         TEST_ASSERT_EQUAL_INT32(2, telescope.alignmentWritePointer);
@@ -312,20 +316,23 @@ namespace Test_Telescope
 
         reference.ra = 2;
         reference.dec = 1;
-        telescope.setOrientation(2, 1);
+        auto orientation = telescope.equatorialToHorizontal(1, 2, 0, 0);
+        telescope.setOrientation(orientation);
         telescope.addReferencePoint(&reference, 0, 0);
 
         reference.ra = 8;
         reference.dec = 2;
-        telescope.setOrientation(3, 6);
+        orientation = telescope.equatorialToHorizontal(6, 3, 0, 0);
+        telescope.setOrientation(orientation);
         telescope.addReferencePoint(&reference, 0, 0);
 
         reference.ra = 3;
         reference.dec = 4;
-        telescope.setOrientation(6, 3);
+        orientation = telescope.equatorialToHorizontal(3, 6, 0, 0);
+        telescope.setOrientation(orientation);
         telescope.addReferencePoint(&reference, 0, 0);
 
-        TEST_ASSERT_EQUAL_INT32(3, telescope.alignmentWritePointer);
+        TEST_ASSERT_EQUAL_INT32(0, telescope.alignmentWritePointer);
         TEST_ASSERT_EQUAL_INT32(3, telescope.alignmentPoints);
 
         auto res = telescope.getTransformationMatrix(0);
@@ -349,13 +356,15 @@ namespace Test_Telescope
     void test_function_calibrateMatrix(void)
     {
         Telescope telescope;
-        telescope.setOrientation(8, 4);
+
+        auto orientation = telescope.equatorialToHorizontal(4, 8, 0, 0);
+        telescope.setOrientation(orientation);
 
         BLA::Matrix<3, 3, BLA::Array<3, 3, double>> mat = {1.27777778, -0.38888889, 1.5, 0.05555556, 0.72222222, -0.5, 0., 0., 1.};
-        auto res = telescope.getCalibratedOrientation(mat);
+        auto res = telescope.getCalibratedOrientation(mat, 0, 0);
 
-        TEST_ASSERT_FLOAT_WITHIN(0.01, 5.5, res.alt);
-        TEST_ASSERT_FLOAT_WITHIN(0.01, 3.5, res.az);
+        TEST_ASSERT_FLOAT_WITHIN(0.01, 3.5, res.ra);
+        TEST_ASSERT_FLOAT_WITHIN(0.01, 5.5, res.dec);
     }
 
     void process(void)
@@ -376,9 +385,9 @@ namespace Test_Telescope
 
         // n-Point-Alignment
         RUN_TEST(test_function_addReferencePoint);
-        // RUN_TEST(test_function_getTransformationMatrix1Point);
-        // RUN_TEST(test_function_getTransformationMatrix2Point);
-        // RUN_TEST(test_function_getTransformationMatrix3Point);
+        RUN_TEST(test_function_getTransformationMatrix1Point);
+        RUN_TEST(test_function_getTransformationMatrix2Point);
+        RUN_TEST(test_function_getTransformationMatrix3Point);
         RUN_TEST(test_function_calibrateMatrix);
 
         UNITY_END();

@@ -18,7 +18,7 @@ using namespace std;
 
 #define MESSAGE_CURRENT_POSITION_LENGTH (24)
 #define MESSAGE_CURRENT_POSITION_TYPE (0)
-#define MAX_ALIGNMENT_POINTS (32)
+#define MAX_ALIGNMENT_POINTS (3)
 
 class Telescope
 {
@@ -32,8 +32,8 @@ public:
 
     typedef struct
     {
-        double alt = 0; // in degrees
         double az = 0;  // in degrees
+        double alt = 0; // in degrees
     } Horizontal;
 
     // Equatorial eqPosition;
@@ -47,15 +47,16 @@ public:
     int32_t alignmentPoints = 0;
 
     Telescope(void);
-    Telescope(double ra, double dec);
+    Telescope(double az, double alt);
 
-    void setOrientation(double alt, double az);
+    void setOrientation(double az, double alt);
+    void setOrientation(Telescope::Horizontal orientation);
 
     bool isCalibrated = false;
     void calibrate(Equatorial reference, double latitude, double localSiderealTimeDegrees);
     void addReferencePoint(Equatorial *reference, double latitude, double localSiderealTimeDegrees);
-    Horizontal getCalibratedOrientation(void);
-    Horizontal getCalibratedOrientation(BLA::Matrix<3, 3, BLA::Array<3, 3, double>> M);
+    Equatorial getCalibratedOrientation(double latitude, double localSiderealTimeDegrees);
+    Equatorial getCalibratedOrientation(BLA::Matrix<3, 3, BLA::Array<3, 3, double>> M, double latitude, double localSiderealTimeDegrees);
 
     BLA::Matrix<3, 3, BLA::Array<3, 3, double>> transormationMatrices[MAX_ALIGNMENT_POINTS - 2];
     BLA::Matrix<3, 3, BLA::Array<3, 3, double>> getTransformationMatrix(uint32_t triangleOffset);
@@ -64,10 +65,10 @@ public:
     double deg(double radians);
     double degToHours(double degrees);
 
-    void horizontalToEquatorial(double altitude, double azimuth, double latitude, double localSiderealTimeDegrees, Equatorial *result);
+    void horizontalToEquatorial(double azimuth, double altitude, double latitude, double localSiderealTimeDegrees, Equatorial *result);
     void horizontalToEquatorial(Horizontal horizontal, double latitude, double localSiderealTimeDegrees, Equatorial *result);
     Equatorial horizontalToEquatorial(Horizontal horizontal, double latitude, double localSiderealTimeDegrees);
-    Equatorial horizontalToEquatorial(double altitude, double azimuth, double latitude, double localSiderealTimeDegrees);
+    Equatorial horizontalToEquatorial(double azimuth, double altitude, double latitude, double localSiderealTimeDegrees);
 
     void equatorialToHorizontal(double ra, double dec, double latitude, double localSiderealTimeDegrees, Horizontal *result);
     void equatorialToHorizontal(Equatorial equatorial, double latitude, double localSiderealTimeDegrees, Horizontal *result);

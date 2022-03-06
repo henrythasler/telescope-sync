@@ -29,7 +29,7 @@ public:
 
     uint32_t fromBuffer(uint8_t *buffer, size_t length);
 
-    tm utcTimestamp;
+    tm utcTimestamp = {0};
 
     bool valid = false;
     uint32_t satUsed = 0;

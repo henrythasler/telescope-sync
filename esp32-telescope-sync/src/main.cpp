@@ -500,9 +500,9 @@ void loop()
 
         if (orientationSensorAvailable)
         {
-            Telescope::Horizontal corrected = telescope.getCalibratedOrientation();
             double localSiderealTimeDegrees = MathHelper::getLocalSiderealTimeDegrees(gnss.utcTimestamp, gnss.longitude);
-            Telescope::Equatorial position = telescope.horizontalToEquatorial(corrected, gnss.latitude, localSiderealTimeDegrees);
+            Telescope::Equatorial position = telescope.getCalibratedOrientation(gnss.latitude, localSiderealTimeDegrees);
+            Telescope::Horizontal corrected = telescope.equatorialToHorizontal(position, gnss.latitude, localSiderealTimeDegrees);
 
             if (remoteClient && remoteClient.connected() && gnssAvailable && !nexStarMode)
             {

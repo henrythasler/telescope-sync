@@ -48,9 +48,9 @@ uint32_t NexStar::handleRequest(uint8_t *request, size_t requestLength, uint8_t 
     // Get precise RA/DEC
     else if (requestLength >= 1 && request[0] == 'e')
     {
-        Telescope::Horizontal corrected = this->telescope->getCalibratedOrientation();
         double localSiderealTimeDegrees = MathHelper::getLocalSiderealTimeDegrees(this->gnss->utcTimestamp, this->gnss->longitude);
-        Telescope::Equatorial position = this->telescope->horizontalToEquatorial(corrected, this->gnss->latitude, localSiderealTimeDegrees);
+        Telescope::Equatorial position = this->telescope->getCalibratedOrientation(this->gnss->latitude, localSiderealTimeDegrees);
+        // Telescope::Equatorial position = this->telescope->horizontalToEquatorial(corrected, this->gnss->latitude, localSiderealTimeDegrees);
         return snprintf((char *)response, responseMaxLength, "%08X,%08X#",
                         uint32_t(position.ra / 360.0L * 4294967296.0L),
                         uint32_t(position.dec / 360.0L * 4294967296.0L));

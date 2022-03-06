@@ -29,6 +29,10 @@ void test_function_siderealtime_julianday(void)
     timestamp = {.tm_sec = 0, .tm_min = 0, .tm_hour = 0, .tm_mday = 13, .tm_mon = 7, .tm_year = 2025};
     res = MathHelper::julianDay(timestamp);
     TEST_ASSERT_FLOAT_WITHIN(0.0001, 2460869.5, res);
+
+    timestamp = {.tm_sec = 0, .tm_min = 0, .tm_hour = 22, .tm_mday = 1, .tm_mon = 12, .tm_year = 2006};
+    res = MathHelper::julianDay(timestamp);
+    TEST_ASSERT_FLOAT_WITHIN(0.0001, 2451544.5 + 2526, res);
 }
 
 void test_function_siderealtime_LST(void)
@@ -49,6 +53,15 @@ void test_function_siderealtime_LST(void)
 
     res = MathHelper::getLocalSiderealTimeDegrees({.tm_sec = 0, .tm_min = 0, .tm_hour = 1, .tm_mday = 2, .tm_mon = 1, .tm_year = 2022}, 11);
     TEST_ASSERT_FLOAT_WITHIN(0.0001, 127.6567, res);
+
+    res = MathHelper::getLocalSiderealTimeDegrees({.tm_sec = 0, .tm_min = 0, .tm_hour = 22, .tm_mday = 1, .tm_mon = 12, .tm_year = 2006}, 5);
+    TEST_ASSERT_FLOAT_WITHIN(0.0001, 45.61655, res);
+}
+
+void test_function_amt_checksum(void)
+{
+    TEST_ASSERT_TRUE(Checksum::verifyAmtCheckbits(0x61AB));
+    TEST_ASSERT_FALSE(Checksum::verifyAmtCheckbits(0));
 }
 
 void test_function_triangleArea(void)
@@ -94,6 +107,11 @@ void process(void)
     RUN_TEST(test_function_siderealtime_fmod);
     RUN_TEST(test_function_siderealtime_julianday);
     RUN_TEST(test_function_siderealtime_LST);
+
+    // checksums
+    RUN_TEST(test_function_amt_checksum);
+
+    // linear algebra
     RUN_TEST(test_function_triangleArea);
     RUN_TEST(test_function_isInTriangle);
 
