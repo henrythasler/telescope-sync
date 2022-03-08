@@ -197,20 +197,20 @@ namespace Test_Telescope
         TEST_ASSERT_FLOAT_WITHIN(0.001, 7.4070, position.dec);
     }
 
-    void test_function_calibrate(void)
-    {
-        Telescope telescope;
-        Telescope::Equatorial reference;
-        reference.ra = 101.29;
-        reference.dec = -16.72;
-        telescope.setOrientation(180, 45);
-        double localSiderealTimeDegrees = MathHelper::getLocalSiderealTimeDegrees({.tm_sec = 0, .tm_min = 0, .tm_hour = 1, .tm_mday = 2, .tm_mon = 1, .tm_year = 2022}, 11);
-        TEST_ASSERT_FLOAT_WITHIN(0.0001, 127.6567, localSiderealTimeDegrees);
+    // void test_function_calibrate(void)
+    // {
+    //     Telescope telescope;
+    //     Telescope::Equatorial reference;
+    //     reference.ra = 101.29;
+    //     reference.dec = -16.72;
+    //     telescope.setOrientation(180, 45);
+    //     double localSiderealTimeDegrees = MathHelper::getLocalSiderealTimeDegrees({.tm_sec = 0, .tm_min = 0, .tm_hour = 1, .tm_mday = 2, .tm_mon = 1, .tm_year = 2022}, 11);
+    //     TEST_ASSERT_FLOAT_WITHIN(0.0001, 127.6567, localSiderealTimeDegrees);
 
-        telescope.calibrate(reference, 48, localSiderealTimeDegrees);
-        TEST_ASSERT_FLOAT_WITHIN(0.01, -23.88, telescope.offset.alt);
-        TEST_ASSERT_FLOAT_WITHIN(0.01, 27.13, telescope.offset.az);
-    }
+    //     telescope.calibrate(reference, 48, localSiderealTimeDegrees);
+    //     TEST_ASSERT_FLOAT_WITHIN(0.01, -23.88, telescope.offset.alt);
+    //     TEST_ASSERT_FLOAT_WITHIN(0.01, 27.13, telescope.offset.az);
+    // }
 
     void test_function_addReferencePoint(void)
     {
@@ -224,8 +224,8 @@ namespace Test_Telescope
         for (int i = 0; i < 400; i++)
             telescope.addReferencePoint(&reference, 38.59, 297.93);
 
-        TEST_ASSERT_EQUAL_INT32(1, telescope.alignmentWritePointer);
-        TEST_ASSERT_EQUAL_INT32(3, telescope.alignmentPoints);
+        TEST_ASSERT_EQUAL_INT32(16, telescope.alignmentWritePointer);
+        TEST_ASSERT_EQUAL_INT32(64, telescope.alignmentPoints);
 
         TEST_ASSERT_FLOAT_WITHIN(0.01, 101.29, telescope.referencePoints[0].ra);
         TEST_ASSERT_FLOAT_WITHIN(0.01, -16.72, telescope.referencePoints[0].dec);
@@ -239,21 +239,21 @@ namespace Test_Telescope
         Telescope telescope;
         Telescope::Equatorial reference;
 
-        reference.ra = 1;
-        reference.dec = 2;
+        reference.ra = 4;
+        reference.dec = 3;
 
-        auto orientation = telescope.equatorialToHorizontal(4, 4, 0, 0);
+        auto orientation = telescope.equatorialToHorizontal(1, 2, 0, 0);
         telescope.setOrientation(orientation);
         telescope.addReferencePoint(&reference, 0, 0);
 
         TEST_ASSERT_EQUAL_INT32(1, telescope.alignmentWritePointer);
         TEST_ASSERT_EQUAL_INT32(1, telescope.alignmentPoints);
 
-        TEST_ASSERT_FLOAT_WITHIN(0.01, 1, telescope.referencePoints[0].ra);
-        TEST_ASSERT_FLOAT_WITHIN(0.01, 2, telescope.referencePoints[0].dec);
+        TEST_ASSERT_FLOAT_WITHIN(0.01, 4, telescope.referencePoints[0].ra);
+        TEST_ASSERT_FLOAT_WITHIN(0.01, 3, telescope.referencePoints[0].dec);
 
-        TEST_ASSERT_FLOAT_WITHIN_MESSAGE(0.01, 4, telescope.actualPoints[0].ra, "telescope.actualPoints[0].ra");
-        TEST_ASSERT_FLOAT_WITHIN_MESSAGE(0.01, 4, telescope.actualPoints[0].dec, "telescope.actualPoints[0].dec");
+        TEST_ASSERT_FLOAT_WITHIN_MESSAGE(0.01, 1, telescope.actualPoints[0].ra, "telescope.actualPoints[0].ra");
+        TEST_ASSERT_FLOAT_WITHIN_MESSAGE(0.01, 2, telescope.actualPoints[0].dec, "telescope.actualPoints[0].dec");
 
         auto res = telescope.getTransformationMatrix(0);
         // 1st column
@@ -268,7 +268,7 @@ namespace Test_Telescope
 
         // 3rd column
         TEST_ASSERT_FLOAT_WITHIN(0.001, 3, res(0, 2));
-        TEST_ASSERT_FLOAT_WITHIN(0.001, 2, res(1, 2));
+        TEST_ASSERT_FLOAT_WITHIN(0.001, 1, res(1, 2));
         TEST_ASSERT_FLOAT_WITHIN(0.001, 1, res(2, 2));
     }
 
@@ -332,7 +332,7 @@ namespace Test_Telescope
         telescope.setOrientation(orientation);
         telescope.addReferencePoint(&reference, 0, 0);
 
-        TEST_ASSERT_EQUAL_INT32(0, telescope.alignmentWritePointer);
+        TEST_ASSERT_EQUAL_INT32(3, telescope.alignmentWritePointer);
         TEST_ASSERT_EQUAL_INT32(3, telescope.alignmentPoints);
 
         auto res = telescope.getTransformationMatrix(0);
@@ -381,7 +381,7 @@ namespace Test_Telescope
         RUN_TEST(test_function_unpackPositionWrapper);
         RUN_TEST(test_function_unpackPositionAnotherWrapper);
         RUN_TEST(test_function_unpackPositionNegative);
-        RUN_TEST(test_function_calibrate);
+        // RUN_TEST(test_function_calibrate);
 
         // n-Point-Alignment
         RUN_TEST(test_function_addReferencePoint);

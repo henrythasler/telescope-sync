@@ -4,6 +4,11 @@ Telescope::Telescope(void)
 {
 }
 
+Telescope::Telescope(int32_t maxAlignmentPoints)
+{
+    this->maxAlignmentPoints = maxAlignmentPoints;
+}
+
 /**
  * az = x
  * alt = y
@@ -26,20 +31,14 @@ void Telescope::setOrientation(Telescope::Horizontal orientation)
     this->orientation.alt = orientation.alt;
 }
 
-void Telescope::calibrate(Equatorial reference, double latitude, double localSiderealTimeDegrees)
-{
-    Horizontal hRef = this->equatorialToHorizontal(reference, latitude, localSiderealTimeDegrees);
-    this->offset.alt = hRef.alt - this->orientation.alt;
-    this->offset.az = hRef.az - this->orientation.az;
-}
-
 void Telescope::addReferencePoint(Equatorial *reference, double latitude, double localSiderealTimeDegrees)
 {
     memcpy(&this->referencePoints[this->alignmentWritePointer], reference, sizeof *reference);
     this->horizontalToEquatorial(this->orientation, latitude, localSiderealTimeDegrees, &this->actualPoints[this->alignmentWritePointer]);
+    // Serial.printf("added actualPoints: ra=%.2f dec=%.2f\n", this->actualPoints[this->alignmentWritePointer].ra, this->actualPoints[this->alignmentWritePointer].dec);
 
-    this->alignmentWritePointer = (this->alignmentWritePointer + 1) % MAX_ALIGNMENT_POINTS;
-    this->alignmentPoints = std::min(this->alignmentPoints + 1, MAX_ALIGNMENT_POINTS);
+    this->alignmentWritePointer = (this->alignmentWritePointer + 1) % this->maxAlignmentPoints;
+    this->alignmentPoints = std::min(this->alignmentPoints + 1, this->maxAlignmentPoints);
 }
 
 /**
@@ -52,41 +51,51 @@ BLA::Matrix<3, 3, BLA::Array<3, 3, double>> Telescope::getTransformationMatrix(u
 
     if (this->alignmentPoints == 1)
     {
-        transformMatrix(0, 2) = this->actualPoints[0].ra - this->referencePoints[0].ra;
-        transformMatrix(1, 2) = this->actualPoints[0].dec - this->referencePoints[0].dec;
+        transformMatrix(0, 2) = this->referencePoints[0].ra - this->actualPoints[0].ra;
+        transformMatrix(1, 2) = this->referencePoints[0].dec - this->actualPoints[0].dec;
     }
-    else if (this->alignmentPoints == 2)
+    else if (this->maxAlignmentPoints >= 2 && this->alignmentPoints == 2)
     {
         BLA::Matrix<3, 3, BLA::Array<3, 3, double>> ref = {
             this->referencePoints[0].ra, this->referencePoints[1].ra, this->referencePoints[1].ra + (this->referencePoints[1].dec - this->referencePoints[0].dec),
             this->referencePoints[0].dec, this->referencePoints[1].dec, this->referencePoints[1].dec - (this->referencePoints[1].ra - this->referencePoints[0].ra),
             1, 1, 1};
 
-        BLA::Matrix<3, 3, BLA::Array<3, 3, double>> mount = {
+        BLA::Matrix<3, 3, BLA::Array<3, 3, double>> actual = {
             this->actualPoints[0].ra, this->actualPoints[1].ra, this->actualPoints[1].ra + (this->actualPoints[1].dec - this->actualPoints[0].dec),
             this->actualPoints[0].dec, this->actualPoints[1].dec, this->actualPoints[1].dec - (this->actualPoints[1].ra - this->actualPoints[0].ra),
             1, 1, 1};
 
-        if (BLA::Invert(mount))
-            transformMatrix = ref * mount;
+        if (BLA::Invert(actual))
+            transformMatrix = ref * actual;
     }
 
-    else if (this->alignmentPoints > 2 && (triangleOffset < this->alignmentPoints - 2))
+    else if (this->maxAlignmentPoints >= 3 && this->alignmentPoints > 2 && (triangleOffset < this->alignmentPoints - 2))
     {
         BLA::Matrix<3, 3, BLA::Array<3, 3, double>> ref = {
             this->referencePoints[triangleOffset + 0].ra, this->referencePoints[triangleOffset + 1].ra, this->referencePoints[triangleOffset + 2].ra,
             this->referencePoints[triangleOffset + 0].dec, this->referencePoints[triangleOffset + 1].dec, this->referencePoints[triangleOffset + 2].dec,
             1, 1, 1};
 
-        BLA::Matrix<3, 3, BLA::Array<3, 3, double>> mount = {
+        BLA::Matrix<3, 3, BLA::Array<3, 3, double>> actual = {
             this->actualPoints[triangleOffset + 0].ra, this->actualPoints[triangleOffset + 1].ra, this->actualPoints[triangleOffset + 2].ra,
             this->actualPoints[triangleOffset + 0].dec, this->actualPoints[triangleOffset + 1].dec, this->actualPoints[triangleOffset + 2].dec,
             1, 1, 1};
 
-        if (BLA::Invert(mount))
-            transformMatrix = ref * mount;
+        if (BLA::Invert(actual))
+            transformMatrix = ref * actual;
     }
 
+    // Serial.printf("transformMatrix = [%.2f %.2f %.2f %.2f %.2f %.2f %.2f %.2f %.2f]\n", 
+    //     transformMatrix(0, 0),
+    //     transformMatrix(0, 1),
+    //     transformMatrix(0, 2),
+    //     transformMatrix(1, 0),
+    //     transformMatrix(1, 1),
+    //     transformMatrix(1, 2),
+    //     transformMatrix(2, 0),
+    //     transformMatrix(2, 1),
+    //     transformMatrix(2, 2));
     return transformMatrix;
 }
 

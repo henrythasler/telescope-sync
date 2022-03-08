@@ -18,7 +18,7 @@ using namespace std;
 
 #define MESSAGE_CURRENT_POSITION_LENGTH (24)
 #define MESSAGE_CURRENT_POSITION_TYPE (0)
-#define MAX_ALIGNMENT_POINTS (3)
+#define MAX_ALIGNMENT_POINTS (64)
 
 class Telescope
 {
@@ -41,24 +41,26 @@ public:
     Horizontal orientation;
     Horizontal offset;
 
+    int32_t maxAlignmentPoints = MAX_ALIGNMENT_POINTS;
     Equatorial referencePoints[MAX_ALIGNMENT_POINTS];
     Equatorial actualPoints[MAX_ALIGNMENT_POINTS];
     int32_t alignmentWritePointer = 0;
     int32_t alignmentPoints = 0;
 
     Telescope(void);
+    Telescope(int32_t maxAlignmentPoints);
     Telescope(double az, double alt);
 
     void setOrientation(double az, double alt);
     void setOrientation(Telescope::Horizontal orientation);
 
     bool isCalibrated = false;
-    void calibrate(Equatorial reference, double latitude, double localSiderealTimeDegrees);
+    // void calibrate(Equatorial reference, double latitude, double localSiderealTimeDegrees);
     void addReferencePoint(Equatorial *reference, double latitude, double localSiderealTimeDegrees);
     Equatorial getCalibratedOrientation(double latitude, double localSiderealTimeDegrees);
     Equatorial getCalibratedOrientation(BLA::Matrix<3, 3, BLA::Array<3, 3, double>> M, double latitude, double localSiderealTimeDegrees);
 
-    BLA::Matrix<3, 3, BLA::Array<3, 3, double>> transormationMatrices[MAX_ALIGNMENT_POINTS - 2];
+    // BLA::Matrix<3, 3, BLA::Array<3, 3, double>> transormationMatrices[MAX_ALIGNMENT_POINTS - 2];
     BLA::Matrix<3, 3, BLA::Array<3, 3, double>> getTransformationMatrix(uint32_t triangleOffset);
 
     double rad(double degrees);

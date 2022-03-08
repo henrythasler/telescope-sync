@@ -91,7 +91,7 @@ MQTTBroker broker(&Serial);          // set-up own broker, needs a HardwareSeria
 
 Persistency persistency;            // load and save data in flash memory
 GNSS gnss(48, 11);                  // GNSS data provider; set initial position to enable operation before GNSS fix
-Telescope telescope;                // Telescope properties and related calculations
+Telescope telescope(1);             // Telescope properties and related calculations
 NexStar nexstar(&telescope, &gnss); // Communication to Stellarium-App
 LEDManager ledmanager;
 
@@ -294,6 +294,7 @@ void setup()
             Serial.print("[  INIT  ] Connecting to remote MQTT-Broker... ");
             mqttClient.setServer(secrets.mqttBroker, 1883);
             mqttClient.setCallback(mqttCallback);
+            mqttClient.subscribe("home/appliance/telescope/control");
             Serial.println("ok");
             initStage++;
             mqttAvailable = true;
@@ -394,7 +395,7 @@ void loop()
         {
             heading = float(heading_raw & 0x3fff) * 360. / 16385.;
         }
-        telescope.setOrientation(pitch, heading + headingOffset);
+        telescope.setOrientation(heading + headingOffset, pitch);
         
 
         if (remoteClient && remoteClient.connected())
@@ -421,7 +422,7 @@ void loop()
 
                         Serial.printf("[ SENSOR ] Received Calibration Data  Ra: %.3f Dec: %.3f\n", reference.ra, reference.dec);
 
-                        telescope.calibrate(reference, gnss.latitude, localSiderealTimeDegrees);
+                        telescope.addReferencePoint(&reference, gnss.latitude, localSiderealTimeDegrees);
                     }
                 }
             }

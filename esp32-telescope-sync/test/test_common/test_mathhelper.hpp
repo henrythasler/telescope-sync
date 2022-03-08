@@ -62,6 +62,7 @@ void test_function_amt_checksum(void)
 {
     TEST_ASSERT_TRUE(Checksum::verifyAmtCheckbits(0x61AB));
     TEST_ASSERT_FALSE(Checksum::verifyAmtCheckbits(0));
+    TEST_ASSERT_FALSE(Checksum::verifyAmtCheckbits(0xffff));
 }
 
 void test_function_triangleArea(void)
