@@ -5,8 +5,6 @@
 #include <SPIFFS.h>
 #endif
 
-using namespace std;
-
 #include <stdint.h>
 #include <stddef.h>
 

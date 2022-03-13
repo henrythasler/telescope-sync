@@ -1,8 +1,6 @@
 #ifndef MQTTBROKER_H
 #define MQTTBROKER_H
 
-using namespace std;
-
 #ifdef ARDUINO
 #include <sMQTTBroker.h>
 #include <Arduino.h>

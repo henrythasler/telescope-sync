@@ -1,15 +1,14 @@
 #ifndef TELESCOPE_H
 #define TELESCOPE_H
 
-// using namespace std;
-
 #include <stdint.h>
 #include <stddef.h>
 #include <math.h>
 #include <algorithm>
 #include <helper.h>
 #include <linalg.h>
-// #include <alignment.h>
+#include <mytypes.h>
+#include <alignment.h>
 
 #ifdef ARDUINO
 #include <Arduino.h>
@@ -21,27 +20,11 @@
 #define MESSAGE_CURRENT_POSITION_TYPE (0)
 #define MAX_ALIGNMENT_POINTS (64)
 
-struct Equatorial
-{
-    double ra = 0;  // in degrees
-    double dec = 0; // in degrees
-    Equatorial(double raIn, double decIn);
-    Equatorial();
-};
-
-struct Horizontal
-{
-    double az = 0;  // in degrees
-    double alt = 0; // in degrees
-    Horizontal(double azIn, double altIn);
-    Horizontal();
-};
-
 class Telescope
 {
 private:
 public:
-    // Alignment alignment;
+    Alignment alignment;
 
     Horizontal orientation;
     Horizontal offset;

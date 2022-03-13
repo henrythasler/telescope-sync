@@ -1,7 +1,5 @@
-#ifndef SIDEREALTIME_H
-#define SIDEREALTIME_H
-
-using namespace std;
+#ifndef HELPER_H
+#define HELPER_H
 
 #include <stdint.h>
 #include <ctime>

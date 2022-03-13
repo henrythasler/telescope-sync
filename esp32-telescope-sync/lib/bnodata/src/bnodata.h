@@ -1,8 +1,6 @@
 #ifndef BNODATA_H
 #define BNODATA_H
 
-using namespace std;
-
 #include <stdint.h>
 
 #ifdef ARDUINO

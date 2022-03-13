@@ -10,7 +10,7 @@ GNSS::GNSS(float initialLatitude, float initialLongitude)
     this->longitude = initialLongitude;
 }
 
-bool GNSS::fromRMC(string sentence)
+bool GNSS::fromRMC(std::string sentence)
 {
     int32_t pos = 0;
     char *ptr;
@@ -20,7 +20,7 @@ bool GNSS::fromRMC(string sentence)
         return false;
 
     pos = sentence.find(RMC_HEADER);
-    if (pos == string::npos)
+    if (pos == std::string::npos)
         return false;
 
     float rawTimestamp = strtof(sentence.c_str() + pos + RMC_HEADER.length() + 1, &ptr);
@@ -71,7 +71,7 @@ bool GNSS::fromRMC(string sentence)
  * Example: "GPGGA,083055.00,4815.69961,N,01059.02625,E,1,04,7.80,485.8,M,46.8,M,,*50"
  **/
 
-bool GNSS::fromGGA(string sentence)
+bool GNSS::fromGGA(std::string sentence)
 {
     int32_t pos = 0;
     char *ptr;
@@ -82,7 +82,7 @@ bool GNSS::fromGGA(string sentence)
         return false;
 
     pos = sentence.find(GGA_HEADER);
-    if (pos == string::npos)
+    if (pos == std::string::npos)
         return false;
 
     float rawTimestamp = strtof(sentence.c_str() + pos + RMC_HEADER.length() + 1, &ptr);
@@ -124,7 +124,7 @@ bool GNSS::fromGGA(string sentence)
     return true;
 }
 
-bool GNSS::fromGSV(string sentence)
+bool GNSS::fromGSV(std::string sentence)
 {
     int32_t pos = 0;
     char *ptr;
@@ -133,7 +133,7 @@ bool GNSS::fromGSV(string sentence)
         return false;
 
     pos = sentence.find(GSV_HEADER);
-    if (pos == string::npos)
+    if (pos == std::string::npos)
         return false;
 
     // skip "Number of Messages"
@@ -149,12 +149,12 @@ bool GNSS::fromGSV(string sentence)
     return true;
 }
 
-bool GNSS::verifyChecksum(string sentence)
+bool GNSS::verifyChecksum(std::string sentence)
 {
     // verify checksum first
     uint32_t startPos = sentence.find('$');
     uint32_t endPos = sentence.find('*');
-    if ((startPos == string::npos) || (endPos == string::npos))
+    if ((startPos == std::string::npos) || (endPos == std::string::npos))
         return false;
 
     uint32_t expectedChecksum = strtol(sentence.c_str() + endPos + 1, NULL, 16);
@@ -170,15 +170,15 @@ bool GNSS::verifyChecksum(string sentence)
     return true;
 }
 
-bool GNSS::fromNMEA(string sentence)
+bool GNSS::fromNMEA(std::string sentence)
 {
-    if (sentence.find(RMC_HEADER) != string::npos)
+    if (sentence.find(RMC_HEADER) != std::string::npos)
         return this->fromRMC(sentence);
 
-    else if (sentence.find(GGA_HEADER) != string::npos)
+    else if (sentence.find(GGA_HEADER) != std::string::npos)
         return this->fromGGA(sentence);
 
-    else if (sentence.find(GSV_HEADER) != string::npos)
+    else if (sentence.find(GSV_HEADER) != std::string::npos)
         return this->fromGSV(sentence);
 
     return false;
@@ -186,7 +186,7 @@ bool GNSS::fromNMEA(string sentence)
 
 uint32_t GNSS::fromBuffer(uint8_t *buffer, size_t length)
 {
-    string rawInput = string(buffer, buffer + length);
+    std::string rawInput = std::string(buffer, buffer + length);
     int32_t startPos = 0;
     int32_t endPos = 0;
     int32_t sentences = 0;
@@ -195,14 +195,14 @@ uint32_t GNSS::fromBuffer(uint8_t *buffer, size_t length)
         startPos = rawInput.find('$', endPos);
         endPos = rawInput.find('\n', endPos + 1);
 
-        if ((startPos != string::npos) && (endPos != string::npos))
+        if ((startPos != std::string::npos) && (endPos != std::string::npos))
         {
             // printf("'%s' %u..%u\n", rawInput.substr(startPos, endPos - startPos - 1).c_str(), startPos, endPos);
             if (this->fromNMEA(rawInput.substr(startPos, endPos - startPos + 1)))
                 sentences++;
         }
 
-    } while ((startPos != string::npos) && (endPos != string::npos));
+    } while ((startPos != std::string::npos) && (endPos != std::string::npos));
 
     return sentences;
 }

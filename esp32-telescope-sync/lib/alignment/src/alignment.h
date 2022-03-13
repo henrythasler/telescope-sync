@@ -6,26 +6,9 @@
 #include <stdlib.h>
 #include <stddef.h>
 #include <math.h>
-#include <telescope.h>
+#include <mytypes.h>
 
 #define MAX_ALIGNMENT_POINTS (64)
-
-const double EPSILON = 0.000001;
-struct Triangle
-{
-    int p1, p2, p3;
-};
-
-struct Edge
-{
-    int p1, p2;
-};
-
-struct VertexPair
-{
-    Equatorial actual;
-    Equatorial reference;
-};
 
 class Alignment
 {

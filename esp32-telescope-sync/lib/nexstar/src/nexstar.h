@@ -1,8 +1,6 @@
 #ifndef NEXSTAR_H
 #define NEXSTAR_H
 
-using namespace std;
-
 #include <stdint.h>
 #include <stddef.h>
 #include <stdio.h>

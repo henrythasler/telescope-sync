@@ -8,7 +8,7 @@ namespace Test_GNSS
         GNSS gnss;
         bool res = false;
 
-        string sentenceA = "$GPRMC,083055.00,A,4815.69961,N,01059.02625,E,2.158,,291221,,,A*79";
+        std::string sentenceA = "$GPRMC,083055.00,A,4815.69961,N,01059.02625,E,2.158,,291221,,,A*79";
         res = gnss.fromRMC(sentenceA);
         TEST_ASSERT_TRUE_MESSAGE(res, "return value");
 
@@ -29,7 +29,7 @@ namespace Test_GNSS
         TEST_ASSERT_FLOAT_WITHIN(0.0001, 1.1101, gnss.speed);
         TEST_ASSERT_FLOAT_WITHIN(0.0001, 0, gnss.course);
 
-        string sentenceB = "$GPRMC,081836,A,3751.65,S,14507.36,E,000.0,360.0,130998,011.3,E*62";
+        std::string sentenceB = "$GPRMC,081836,A,3751.65,S,14507.36,E,000.0,360.0,130998,011.3,E*62";
         res = gnss.fromRMC(sentenceB);
         TEST_ASSERT_TRUE_MESSAGE(res, "return value");
 
@@ -51,7 +51,7 @@ namespace Test_GNSS
         TEST_ASSERT_FLOAT_WITHIN(0.0001, 360, gnss.course);
 
         GNSS gnss2;
-        string sentenceC = "$GPRMC,165011.00,V,,,,,,,291221,,,N*74";
+        std::string sentenceC = "$GPRMC,165011.00,V,,,,,,,291221,,,N*74";
         res = gnss2.fromRMC(sentenceC);
         TEST_ASSERT_TRUE_MESSAGE(res, "return value");
 
@@ -78,7 +78,7 @@ namespace Test_GNSS
         GNSS gnss;
         bool res = false;
 
-        string sentenceA = "$GPGGA,083055.00,4815.69961,N,01059.02625,E,1,04,7.80,485.8,M,46.8,M,,*50";
+        std::string sentenceA = "$GPGGA,083055.00,4815.69961,N,01059.02625,E,1,04,7.80,485.8,M,46.8,M,,*50";
         res = gnss.fromGGA(sentenceA);
         TEST_ASSERT_TRUE_MESSAGE(res, "return value");
 
@@ -98,7 +98,7 @@ namespace Test_GNSS
 
         TEST_ASSERT_EQUAL_UINT32(4, gnss.satUsed);
 
-        string sentenceB = "$GPGGA,092204.999,4250.5589,S,14718.5084,E,1,04,24.4,19.7,M,,,,0000*1F";
+        std::string sentenceB = "$GPGGA,092204.999,4250.5589,S,14718.5084,E,1,04,24.4,19.7,M,,,,0000*1F";
         res = gnss.fromGGA(sentenceB);
         TEST_ASSERT_TRUE_MESSAGE(res, "return value");
 
@@ -119,7 +119,7 @@ namespace Test_GNSS
         TEST_ASSERT_EQUAL_UINT32(4, gnss.satUsed);
 
         GNSS gnss2;
-        string sentenceC = "$GPGGA,165011.00,,,,,0,00,99.99,,,,,,*64";
+        std::string sentenceC = "$GPGGA,165011.00,,,,,0,00,99.99,,,,,,*64";
         res = gnss2.fromGGA(sentenceC);
         TEST_ASSERT_TRUE_MESSAGE(res, "return value");
 
@@ -145,12 +145,12 @@ namespace Test_GNSS
         GNSS gnss;
         bool res = false;
 
-        string sentenceA = "$GPGSV,3,1,12,02,11,234,15,07,54,060,14,08,03,065,,09,20,099,23*7C";
+        std::string sentenceA = "$GPGSV,3,1,12,02,11,234,15,07,54,060,14,08,03,065,,09,20,099,23*7C";
         res = gnss.fromGSV(sentenceA);
         TEST_ASSERT_TRUE_MESSAGE(res, "sentenceA");
         TEST_ASSERT_EQUAL_UINT32(12, gnss.satView);
 
-        string sentenceB = "$GPGSV,1,1,01,21,00,000,*4B";
+        std::string sentenceB = "$GPGSV,1,1,01,21,00,000,*4B";
         res = gnss.fromGSV(sentenceB);
         TEST_ASSERT_TRUE_MESSAGE(res, "sentenceB");
         TEST_ASSERT_EQUAL_UINT32(1, gnss.satView);
@@ -161,11 +161,11 @@ namespace Test_GNSS
         GNSS gnss;
         bool res = false;
 
-        string sentenceA = "$GPGSV,3,1,12,02,11,234,15,07,54,060,14,08,03,065,,09,20,099,23*7C";
+        std::string sentenceA = "$GPGSV,3,1,12,02,11,234,15,07,54,060,14,08,03,065,,09,20,099,23*7C";
         res = gnss.verifyChecksum(sentenceA);
         TEST_ASSERT_TRUE_MESSAGE(res, "sentenceA");
 
-        string sentenceB = "$GPGGA,165011.00,,,,,0,00,99.99,,,,,,*64";
+        std::string sentenceB = "$GPGGA,165011.00,,,,,0,00,99.99,,,,,,*64";
         res = gnss.verifyChecksum(sentenceB);
         TEST_ASSERT_TRUE_MESSAGE(res, "sentenceB");
     }
@@ -175,15 +175,15 @@ namespace Test_GNSS
         GNSS gnss;
         bool res = false;
 
-        string sentenceA = "$GPRMC,083055.00,A,4815.69961,N,01059.02625,E,2.158,,291221,,,A*79";
+        std::string sentenceA = "$GPRMC,083055.00,A,4815.69961,N,01059.02625,E,2.158,,291221,,,A*79";
         res = gnss.fromNMEA(sentenceA);
         TEST_ASSERT_TRUE_MESSAGE(res, "sentenceA");
 
-        string sentenceB = "$GPRMC,082804.683,A,5205.9421,N,00506.4368,E,0.02,146.61,190408,,*0C";
+        std::string sentenceB = "$GPRMC,082804.683,A,5205.9421,N,00506.4368,E,0.02,146.61,190408,,*0C";
         res = gnss.fromNMEA(sentenceB);
         TEST_ASSERT_TRUE_MESSAGE(res, "sentenceB");
 
-        string sentenceC = "$NOTFOUND,082804.683,A,5205.9421,N,00506.4368,E,0.02,146.61,190408,,*0C";
+        std::string sentenceC = "$NOTFOUND,082804.683,A,5205.9421,N,00506.4368,E,0.02,146.61,190408,,*0C";
         res = gnss.fromNMEA(sentenceC);
         TEST_ASSERT_FALSE_MESSAGE(res, "sentenceC");
     }

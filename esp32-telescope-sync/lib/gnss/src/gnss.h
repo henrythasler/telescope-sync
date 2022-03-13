@@ -1,8 +1,6 @@
 #ifndef GNSS_H
 #define GNSS_H
 
-using namespace std;
-
 #include <stdint.h>
 #include <ctime>
 #include <math.h>
@@ -19,13 +17,13 @@ public:
     GNSS();
     GNSS(float initialLatitude, float initialLongitude);
 
-    bool verifyChecksum(string sentence);
+    bool verifyChecksum(std::string sentence);
 
-    bool fromRMC(string sentence);
-    bool fromGGA(string sentence);
-    bool fromGSV(string sentence);
+    bool fromRMC(std::string sentence);
+    bool fromGGA(std::string sentence);
+    bool fromGSV(std::string sentence);
 
-    bool fromNMEA(string sentence);
+    bool fromNMEA(std::string sentence);
 
     uint32_t fromBuffer(uint8_t *buffer, size_t length);
 

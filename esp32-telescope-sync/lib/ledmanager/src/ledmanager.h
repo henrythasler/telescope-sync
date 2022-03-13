@@ -1,8 +1,6 @@
 #ifndef LEDMANAGER_H
 #define LEDMANAGER_H
 
-using namespace std;
-
 #ifdef ARDUINO
 #include <Arduino.h>
 

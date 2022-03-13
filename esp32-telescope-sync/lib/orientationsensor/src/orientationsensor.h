@@ -1,8 +1,6 @@
 #ifndef ORIENTATIONSENSOR_H
 #define ORIENTATIONSENSOR_H
 
-using namespace std;
-
 #include <stdint.h>
 
 #ifdef ARDUINO
