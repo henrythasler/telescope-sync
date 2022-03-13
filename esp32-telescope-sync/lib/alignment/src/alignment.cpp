@@ -6,9 +6,9 @@ int XYZCompare(const void *v1, const void *v2)
 
     p1 = (Alignment::VertexPair *)v1;
     p2 = (Alignment::VertexPair *)v2;
-    if (p1->x < p2->x)
+    if (p1->actual.ra < p2->actual.ra)
         return (-1);
-    else if (p1->x > p2->x)
+    else if (p1->actual.ra > p2->actual.ra)
         return (1);
     else
         return (0);
@@ -23,12 +23,12 @@ Alignment::Alignment()
 
 bool Alignment::addVertex(double x, double y)
 {
-    this->vertices[this->numVertices].x = x;
-    this->vertices[this->numVertices].y = y;
+    this->vertices[this->numVertices].actual.ra = x;
+    this->vertices[this->numVertices].actual.dec = y;
 
     for (int i = 0; i < this->numVertices; i++)
     {
-        if ((this->vertices[i].x == x) && (this->vertices[i].y == y))
+        if ((this->vertices[i].actual.ra == x) && (this->vertices[i].actual.dec == y))
             return false;
     }
     this->numVertices = (this->numVertices + 1) % this->maxVertices;
@@ -56,9 +56,9 @@ Alignment::VertexPair* Alignment::getVerticesPtr()
     return this->vertices;
 }
 
-void Alignment::Triangulate()
+void Alignment::TriangulateActual()
 {
-    this->Triangulate(this->numVertices, this->vertices, this->triangles, this->numTriangles);
+    this->TriangulateActual(this->numVertices, this->vertices, this->triangles, this->numTriangles);
 }
 
 
@@ -117,19 +117,19 @@ int Alignment::CircumCircle(double xp, double yp, double x1, double y1, double x
     return ((drsqr <= rsqr) ? true : false);
 }
 ///////////////////////////////////////////////////////////////////////////////
-// Triangulate() :
+// TriangulateActual() :
 //   Triangulation subroutine
-//   Takes as input NV vertices in array pxyz
+//   Takes as input NV vertices in array vertex
 //   Returned is a list of ntri triangular faces in the array v
 //   These triangles are arranged in a consistent clockwise order.
 //   The triangle array 'v' should be malloced to 3 * nv
-//   The vertex array pxyz must be big enough to hold 3 more points
+//   The vertex array vertex must be big enough to hold 3 more points
 //   The vertex array must be sorted in increasing x values say
 //
 //   qsort(p,nv,sizeof(XYZ),XYZCompare);
 ///////////////////////////////////////////////////////////////////////////////
 
-void Alignment::Triangulate(int nv, VertexPair pxyz[], Triangle v[], int &ntri)
+void Alignment::TriangulateActual(int nv, VertexPair vertex[], Triangle v[], int &ntri)
 {
     int *complete = NULL;
     Edge *edges = NULL;
@@ -153,20 +153,20 @@ void Alignment::Triangulate(int nv, VertexPair pxyz[], Triangle v[], int &ntri)
           Find the maximum and minimum vertex bounds.
           This is to allow calculation of the bounding triangle
     */
-    xmin = pxyz[0].x;
-    ymin = pxyz[0].y;
+    xmin = vertex[0].actual.ra;
+    ymin = vertex[0].actual.dec;
     xmax = xmin;
     ymax = ymin;
     for (i = 1; i < nv; i++)
     {
-        if (pxyz[i].x < xmin)
-            xmin = pxyz[i].x;
-        if (pxyz[i].x > xmax)
-            xmax = pxyz[i].x;
-        if (pxyz[i].y < ymin)
-            ymin = pxyz[i].y;
-        if (pxyz[i].y > ymax)
-            ymax = pxyz[i].y;
+        if (vertex[i].actual.ra < xmin)
+            xmin = vertex[i].actual.ra;
+        if (vertex[i].actual.ra > xmax)
+            xmax = vertex[i].actual.ra;
+        if (vertex[i].actual.dec < ymin)
+            ymin = vertex[i].actual.dec;
+        if (vertex[i].actual.dec > ymax)
+            ymax = vertex[i].actual.dec;
     }
     dx = xmax - xmin;
     dy = ymax - ymin;
@@ -180,12 +180,12 @@ void Alignment::Triangulate(int nv, VertexPair pxyz[], Triangle v[], int &ntri)
        vertex list. The supertriangle is the first triangle in
        the triangle list.
     */
-    pxyz[nv + 0].x = xmid - 20 * dmax;
-    pxyz[nv + 0].y = ymid - dmax;
-    pxyz[nv + 1].x = xmid;
-    pxyz[nv + 1].y = ymid + 20 * dmax;
-    pxyz[nv + 2].x = xmid + 20 * dmax;
-    pxyz[nv + 2].y = ymid - dmax;
+    vertex[nv + 0].actual.ra = xmid - 20 * dmax;
+    vertex[nv + 0].actual.dec = ymid - dmax;
+    vertex[nv + 1].actual.ra = xmid;
+    vertex[nv + 1].actual.dec = ymid + 20 * dmax;
+    vertex[nv + 2].actual.ra = xmid + 20 * dmax;
+    vertex[nv + 2].actual.dec = ymid - dmax;
     v[0].p1 = nv;
     v[0].p2 = nv + 1;
     v[0].p3 = nv + 2;
@@ -196,8 +196,8 @@ void Alignment::Triangulate(int nv, VertexPair pxyz[], Triangle v[], int &ntri)
     */
     for (i = 0; i < nv; i++)
     {
-        xp = pxyz[i].x;
-        yp = pxyz[i].y;
+        xp = vertex[i].actual.ra;
+        yp = vertex[i].actual.dec;
         nedge = 0;
         /*
              Set up the edge buffer.
@@ -209,12 +209,12 @@ void Alignment::Triangulate(int nv, VertexPair pxyz[], Triangle v[], int &ntri)
         {
             if (complete[j])
                 continue;
-            x1 = pxyz[v[j].p1].x;
-            y1 = pxyz[v[j].p1].y;
-            x2 = pxyz[v[j].p2].x;
-            y2 = pxyz[v[j].p2].y;
-            x3 = pxyz[v[j].p3].x;
-            y3 = pxyz[v[j].p3].y;
+            x1 = vertex[v[j].p1].actual.ra;
+            y1 = vertex[v[j].p1].actual.dec;
+            x2 = vertex[v[j].p2].actual.ra;
+            y2 = vertex[v[j].p2].actual.dec;
+            x3 = vertex[v[j].p3].actual.ra;
+            y3 = vertex[v[j].p3].actual.dec;
             inside = CircumCircle(xp, yp, x1, y1, x2, y2, x3, y3, xc, yc, r);
             if (xc + r < xp)
                 // Suggested

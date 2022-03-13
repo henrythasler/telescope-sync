@@ -1,5 +1,6 @@
 #include <unity.h>
 #include <alignment.h>
+#include <telescope.h>
 
 namespace Test_Alignment
 {
@@ -34,27 +35,27 @@ namespace Test_Alignment
 
         TEST_ASSERT_EQUAL(5, alignment.getNumVertices());
 
-        alignment.Triangulate();
+        alignment.TriangulateActual();
 
         TEST_ASSERT_EQUAL(4, alignment.getNumTriangles());
 
         Alignment::VertexPair *vertices = alignment.getVerticesPtr();
 
         // test sorting
-        TEST_ASSERT_FLOAT_WITHIN(0.0001, 1, vertices[0].x);
-        TEST_ASSERT_FLOAT_WITHIN(0.0001, 8, vertices[0].y);
+        TEST_ASSERT_FLOAT_WITHIN(0.0001, 1, vertices[0].actual.ra);
+        TEST_ASSERT_FLOAT_WITHIN(0.0001, 8, vertices[0].actual.dec);
 
-        TEST_ASSERT_FLOAT_WITHIN(0.0001, 3, vertices[1].x);
-        TEST_ASSERT_FLOAT_WITHIN(0.0001, 5, vertices[1].y);
+        TEST_ASSERT_FLOAT_WITHIN(0.0001, 3, vertices[1].actual.ra);
+        TEST_ASSERT_FLOAT_WITHIN(0.0001, 5, vertices[1].actual.dec);
 
-        TEST_ASSERT_FLOAT_WITHIN(0.0001, 4, vertices[2].x);
-        TEST_ASSERT_FLOAT_WITHIN(0.0001, 7, vertices[2].y);
+        TEST_ASSERT_FLOAT_WITHIN(0.0001, 4, vertices[2].actual.ra);
+        TEST_ASSERT_FLOAT_WITHIN(0.0001, 7, vertices[2].actual.dec);
 
-        TEST_ASSERT_FLOAT_WITHIN(0.0001, 5, vertices[3].x);
-        TEST_ASSERT_FLOAT_WITHIN(0.0001, 1, vertices[3].y);
+        TEST_ASSERT_FLOAT_WITHIN(0.0001, 5, vertices[3].actual.ra);
+        TEST_ASSERT_FLOAT_WITHIN(0.0001, 1, vertices[3].actual.dec);
 
-        TEST_ASSERT_FLOAT_WITHIN(0.0001, 10, vertices[4].x);
-        TEST_ASSERT_FLOAT_WITHIN(0.0001, 5, vertices[4].y);
+        TEST_ASSERT_FLOAT_WITHIN(0.0001, 10, vertices[4].actual.ra);
+        TEST_ASSERT_FLOAT_WITHIN(0.0001, 5, vertices[4].actual.dec);
     }
 
     void test_function_Triangulate1(void)
@@ -69,7 +70,7 @@ namespace Test_Alignment
 
         TEST_ASSERT_EQUAL(5, alignment.getNumVertices());
 
-        alignment.Triangulate();
+        alignment.TriangulateActual();
 
         TEST_ASSERT_EQUAL(4, alignment.getNumTriangles());
 
@@ -116,7 +117,7 @@ namespace Test_Alignment
         alignment.addVertex(7, 8);
         alignment.addVertex(10, 6);
 
-        alignment.Triangulate();
+        alignment.TriangulateActual();
 
         TEST_ASSERT_EQUAL(3, alignment.getNumTriangles());
 
@@ -147,7 +148,7 @@ namespace Test_Alignment
         alignment.addVertex(3, 5);
         alignment.addVertex(7, 2);
 
-        alignment.Triangulate();
+        alignment.TriangulateActual();
 
         TEST_ASSERT_EQUAL(2, alignment.getNumTriangles());
 

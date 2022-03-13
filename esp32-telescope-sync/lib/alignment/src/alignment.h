@@ -9,6 +9,8 @@ using namespace std;
 #include <stddef.h>
 #include <math.h>
 
+#include "telescope.h"
+
 #define MAX_ALIGNMENT_POINTS (64)
 
 class Alignment
@@ -29,10 +31,12 @@ public:
 
     struct VertexPair
     {
-        double x, y, z;
+        Telescope::Equatorial actual;
+        Telescope::Equatorial reference;
+        // double x, y, z;
     };
 
-    void Triangulate();
+    void TriangulateActual();
 
     bool addVertex(double x, double y);
     int getNumVertices();
@@ -42,7 +46,7 @@ public:
 
 private:    
     int CircumCircle(double, double, double, double, double, double, double, double, double &, double &, double &);
-    void Triangulate(int nv, VertexPair pxyz[], Triangle v[], int &ntri);
+    void TriangulateActual(int nv, VertexPair vertex[], Triangle v[], int &ntri);
 
     int maxVertices = 0;
 
