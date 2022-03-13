@@ -49,7 +49,7 @@ uint32_t NexStar::handleRequest(uint8_t *request, size_t requestLength, uint8_t 
     else if (requestLength >= 1 && request[0] == 'e')
     {
         double localSiderealTimeDegrees = MathHelper::getLocalSiderealTimeDegrees(this->gnss->utcTimestamp, this->gnss->longitude);
-        Telescope::Equatorial position = this->telescope->getCalibratedOrientation(this->gnss->latitude, localSiderealTimeDegrees);
+        Equatorial position = this->telescope->getCalibratedOrientation(this->gnss->latitude, localSiderealTimeDegrees);
         // Telescope::Equatorial position = this->telescope->horizontalToEquatorial(corrected, this->gnss->latitude, localSiderealTimeDegrees);
         return snprintf((char *)response, responseMaxLength, "%08X,%08X#",
                         uint32_t(position.ra / 360.0L * 4294967296.0L),
@@ -87,7 +87,7 @@ uint32_t NexStar::handleRequest(uint8_t *request, size_t requestLength, uint8_t 
     else if (requestLength >= 18 && request[0] == 's')
     {
         char hexString[9] = {0};
-        Telescope::Equatorial reference;
+        Equatorial reference;
 
         strncpy(hexString, (char *)request + 1, sizeof(hexString) - 1);
         reference.ra = (double)strtoul(hexString, NULL, 16) * 360L / 4294967296.0L;

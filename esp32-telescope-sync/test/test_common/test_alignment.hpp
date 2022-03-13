@@ -10,15 +10,15 @@ namespace Test_Alignment
         TEST_ASSERT_EQUAL(0, alignment.getNumVertices());
         TEST_ASSERT_EQUAL(0, alignment.getNumTriangles());
 
-        alignment.addVertex(1, 8);
-        alignment.addVertex(4, 7);
-        alignment.addVertex(10, 5);
-        alignment.addVertex(5, 1);
-        alignment.addVertex(3, 5);
+        alignment.addVertexPair(Equatorial(1, 8), Equatorial());
+        alignment.addVertexPair(Equatorial(4, 7), Equatorial());
+        alignment.addVertexPair(Equatorial(10, 5), Equatorial());
+        alignment.addVertexPair(Equatorial(5, 1), Equatorial());
+        alignment.addVertexPair(Equatorial(3, 5), Equatorial());
 
         // Duplicates should be removed
-        alignment.addVertex(3, 5);
-        alignment.addVertex(3, 5);
+        alignment.addVertexPair(Equatorial(3, 5), Equatorial());
+        alignment.addVertexPair(Equatorial(3, 5), Equatorial());
 
         TEST_ASSERT_EQUAL(5, alignment.getNumVertices());
     }
@@ -27,11 +27,11 @@ namespace Test_Alignment
     {
         Alignment alignment;
 
-        alignment.addVertex(10, 5);
-        alignment.addVertex(5, 1);
-        alignment.addVertex(4, 7);
-        alignment.addVertex(3, 5);
-        alignment.addVertex(1, 8);
+        alignment.addVertexPair(Equatorial(10, 5), Equatorial());
+        alignment.addVertexPair(Equatorial(5, 1), Equatorial());
+        alignment.addVertexPair(Equatorial(4, 7), Equatorial());
+        alignment.addVertexPair(Equatorial(3, 5), Equatorial());
+        alignment.addVertexPair(Equatorial(1, 8), Equatorial());
 
         TEST_ASSERT_EQUAL(5, alignment.getNumVertices());
 
@@ -39,7 +39,7 @@ namespace Test_Alignment
 
         TEST_ASSERT_EQUAL(4, alignment.getNumTriangles());
 
-        Alignment::VertexPair *vertices = alignment.getVerticesPtr();
+        VertexPair *vertices = alignment.getVerticesPtr();
 
         // test sorting
         TEST_ASSERT_FLOAT_WITHIN(0.0001, 1, vertices[0].actual.ra);
@@ -61,12 +61,12 @@ namespace Test_Alignment
     void test_function_Triangulate1(void)
     {
         Alignment alignment;
-
-        alignment.addVertex(10, 5);
-        alignment.addVertex(5, 1);
-        alignment.addVertex(4, 7);
-        alignment.addVertex(3, 5);
-        alignment.addVertex(1, 8);
+        
+        alignment.addVertexPair(Equatorial(10, 5), Equatorial());
+        alignment.addVertexPair(Equatorial(5, 1), Equatorial());
+        alignment.addVertexPair(Equatorial(4, 7), Equatorial());
+        alignment.addVertexPair(Equatorial(3, 5), Equatorial());
+        alignment.addVertexPair(Equatorial(1, 8), Equatorial());
 
         TEST_ASSERT_EQUAL(5, alignment.getNumVertices());
 
@@ -74,7 +74,7 @@ namespace Test_Alignment
 
         TEST_ASSERT_EQUAL(4, alignment.getNumTriangles());
 
-        Alignment::Triangle *triangles = alignment.getTrianglesPtr();
+        Triangle *triangles = alignment.getTrianglesPtr();
         // Alignment::VertexPair *vertices = alignment.getVerticesPtr();
 
         // for (int i = 0; i < alignment.getNumVertices(); i++)
@@ -111,17 +111,17 @@ namespace Test_Alignment
         Alignment alignment;
 
         // np.random.seed(19)
-        alignment.addVertex(1, 8);
-        alignment.addVertex(2, 1);
-        alignment.addVertex(3, 1);
-        alignment.addVertex(7, 8);
-        alignment.addVertex(10, 6);
+        alignment.addVertexPair(Equatorial(1, 8), Equatorial());
+        alignment.addVertexPair(Equatorial(2, 1), Equatorial());
+        alignment.addVertexPair(Equatorial(3, 1), Equatorial());
+        alignment.addVertexPair(Equatorial(7, 8), Equatorial());
+        alignment.addVertexPair(Equatorial(10, 6), Equatorial());
 
         alignment.TriangulateActual();
 
         TEST_ASSERT_EQUAL(3, alignment.getNumTriangles());
 
-        Alignment::Triangle *triangles = alignment.getTrianglesPtr();
+        Triangle *triangles = alignment.getTrianglesPtr();
 
         // // compare with the *sorted* vertices
         TEST_ASSERT_EQUAL(2, triangles[0].p1);
@@ -142,17 +142,17 @@ namespace Test_Alignment
         Alignment alignment;
 
         //     // np.random.seed(26)
-        alignment.addVertex(3, 5);
-        alignment.addVertex(8, 8);
-        alignment.addVertex(9, 2);
-        alignment.addVertex(3, 5);
-        alignment.addVertex(7, 2);
+        alignment.addVertexPair(Equatorial(3, 5), Equatorial());
+        alignment.addVertexPair(Equatorial(8, 8), Equatorial());
+        alignment.addVertexPair(Equatorial(9, 2), Equatorial());
+        alignment.addVertexPair(Equatorial(3, 5), Equatorial());
+        alignment.addVertexPair(Equatorial(7, 2), Equatorial());
 
         alignment.TriangulateActual();
 
         TEST_ASSERT_EQUAL(2, alignment.getNumTriangles());
 
-        Alignment::Triangle *triangles = alignment.getTrianglesPtr();
+        Triangle *triangles = alignment.getTrianglesPtr();
 
         // compare with the *sorted* vertices
         TEST_ASSERT_EQUAL(1, triangles[0].p1);
@@ -172,7 +172,7 @@ namespace Test_Alignment
         RUN_TEST(test_function_addVertex);
         RUN_TEST(test_function_sorting);
 
-        // Triangulation
+        // // Triangulation
         RUN_TEST(test_function_Triangulate1);
         RUN_TEST(test_function_Triangulate2);
         RUN_TEST(test_function_Triangulate3);

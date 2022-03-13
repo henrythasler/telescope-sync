@@ -9,6 +9,7 @@ using namespace std;
 #include <algorithm>
 #include <helper.h>
 #include <linalg.h>
+// #include <alignment.h>
 
 #ifdef ARDUINO
 #include <Arduino.h>
@@ -20,24 +21,28 @@ using namespace std;
 #define MESSAGE_CURRENT_POSITION_TYPE (0)
 #define MAX_ALIGNMENT_POINTS (64)
 
+struct Equatorial
+{
+    double ra = 0;  // in degrees
+    double dec = 0; // in degrees
+    Equatorial(double raIn, double decIn) : ra(raIn), dec(decIn){};
+    Equatorial() {}
+};
+
+struct Horizontal
+{
+    double az = 0;  // in degrees
+    double alt = 0; // in degrees
+    Horizontal(double azIn, double altIn) : az(azIn), alt(altIn){};
+    Horizontal() {}
+};
+
 class Telescope
 {
 private:
 public:
-    typedef struct
-    {
-        double ra = 0;  // in degrees
-        double dec = 0; // in degrees
-    } Equatorial;
+    // Alignment alignment;
 
-    typedef struct
-    {
-        double az = 0;  // in degrees
-        double alt = 0; // in degrees
-    } Horizontal;
-
-    // Equatorial eqPosition;
-    
     Horizontal orientation;
     Horizontal offset;
 
@@ -52,7 +57,7 @@ public:
     Telescope(double az, double alt);
 
     void setOrientation(double az, double alt);
-    void setOrientation(Telescope::Horizontal orientation);
+    void setOrientation(Horizontal orientation);
 
     bool isCalibrated = false;
     // void calibrate(Equatorial reference, double latitude, double localSiderealTimeDegrees);
@@ -85,4 +90,5 @@ public:
     bool unpackPosition(Equatorial *equatorial, uint64_t *timestamp, uint8_t *data, size_t dataLength);
     // bool unpackPosition(uint8_t *data, size_t dataLength = 20);
 };
+
 #endif

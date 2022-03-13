@@ -413,7 +413,7 @@ void loop()
                 }
                 else
                 {
-                    Telescope::Equatorial reference;
+                    Equatorial reference;
 
                     // check if the packet could be decoded correctly before using it to calibrate the offset
                     if (telescope.unpackPosition(&reference, NULL, rxBuffer, received))
@@ -502,8 +502,8 @@ void loop()
         if (orientationSensorAvailable)
         {
             double localSiderealTimeDegrees = MathHelper::getLocalSiderealTimeDegrees(gnss.utcTimestamp, gnss.longitude);
-            Telescope::Equatorial position = telescope.getCalibratedOrientation(gnss.latitude, localSiderealTimeDegrees);
-            Telescope::Horizontal corrected = telescope.equatorialToHorizontal(position, gnss.latitude, localSiderealTimeDegrees);
+            Equatorial position = telescope.getCalibratedOrientation(gnss.latitude, localSiderealTimeDegrees);
+            Horizontal corrected = telescope.equatorialToHorizontal(position, gnss.latitude, localSiderealTimeDegrees);
 
             if (remoteClient && remoteClient.connected() && gnssAvailable && !nexStarMode)
             {

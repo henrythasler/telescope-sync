@@ -61,7 +61,7 @@ namespace Test_Telescope
     void test_function_toHorizontalPosition(void)
     {
         Telescope telescope;
-        Telescope::Horizontal res = telescope.equatorialToHorizontal(250.425, 36.467, 52.5, 304.808);
+        Horizontal res = telescope.equatorialToHorizontal(250.425, 36.467, 52.5, 304.808);
         TEST_ASSERT_FLOAT_WITHIN(0.01, 269.14634, res.az);
         TEST_ASSERT_FLOAT_WITHIN(0.01, 49.169122, res.alt);
 
@@ -69,10 +69,7 @@ namespace Test_Telescope
         TEST_ASSERT_FLOAT_WITHIN(0.01, 269.14634, res.az);
         TEST_ASSERT_FLOAT_WITHIN(0.01, 49.169122, res.alt);
 
-        Telescope::Equatorial pos;
-        pos.ra = 250.425;
-        pos.dec = 36.467;
-        res = telescope.equatorialToHorizontal(pos, 52.5, 304.808);
+        res = telescope.equatorialToHorizontal(Equatorial(250.425, 36.467), 52.5, 304.808);
         TEST_ASSERT_FLOAT_WITHIN(0.01, 269.14634, res.az);
         TEST_ASSERT_FLOAT_WITHIN(0.01, 49.169122, res.alt);
     }
@@ -81,7 +78,7 @@ namespace Test_Telescope
     {
         // Sirius on 2021-12-28 00:38:39 UTC+1 at lng=11 lat=48
         Telescope telescope;
-        Telescope::Equatorial position;
+        Equatorial position;
         uint8_t buffer[24];
         uint32_t res = 0;
 
@@ -138,7 +135,7 @@ namespace Test_Telescope
     {
         Telescope telescope;
         bool res = true;
-        Telescope::Equatorial position;
+        Equatorial position;
         uint64_t timestamp;
 
         // LENGTH too small
@@ -156,7 +153,7 @@ namespace Test_Telescope
     {
         // Sirius on 2021-12-28 00:38:39 UTC+1 at lng=11 lat=48
         Telescope telescope;
-        Telescope::Equatorial position;
+        Equatorial position;
         uint64_t timestamp;
         bool res = false;
 
@@ -181,7 +178,7 @@ namespace Test_Telescope
         Telescope telescope;
         uint8_t dataA[] = {0x14, 0x00, 0x00, 0x00, 0x9C, 0x78, 0x7A, 0x74, 0x21, 0xD4, 0x05, 0x00, 0x74, 0x24, 0x07, 0x48, 0x3A, 0x7D, 0x1B, 0xF4};
 
-        Telescope::Equatorial position;
+        Equatorial position;
         bool res = false;
         res = telescope.unpackPosition(&position, NULL, static_cast<uint8_t *>(dataA), sizeof(dataA));
         TEST_ASSERT_TRUE_MESSAGE(res, "return value");
@@ -215,7 +212,7 @@ namespace Test_Telescope
     void test_function_addReferencePoint(void)
     {
         Telescope telescope;
-        Telescope::Equatorial reference;
+        Equatorial reference;
         reference.ra = 101.29;
         reference.dec = -16.72;
 
@@ -237,7 +234,7 @@ namespace Test_Telescope
     void test_function_getTransformationMatrix1Point(void)
     {
         Telescope telescope;
-        Telescope::Equatorial reference;
+        Equatorial reference;
 
         reference.ra = 4;
         reference.dec = 3;
@@ -275,7 +272,7 @@ namespace Test_Telescope
     void test_function_getTransformationMatrix2Point(void)
     {
         Telescope telescope;
-        Telescope::Equatorial reference;
+        Equatorial reference;
 
         reference.ra = 2;
         reference.dec = 6;
@@ -312,7 +309,7 @@ namespace Test_Telescope
     void test_function_getTransformationMatrix3Point(void)
     {
         Telescope telescope;
-        Telescope::Equatorial reference;
+        Equatorial reference;
 
         reference.ra = 2;
         reference.dec = 1;

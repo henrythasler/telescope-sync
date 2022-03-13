@@ -25,7 +25,7 @@ void Telescope::setOrientation(double az, double alt)
     this->orientation.alt = alt;
 }
 
-void Telescope::setOrientation(Telescope::Horizontal orientation)
+void Telescope::setOrientation(Horizontal orientation)
 {
     this->orientation.az = orientation.az;
     this->orientation.alt = orientation.alt;
@@ -86,7 +86,7 @@ BLA::Matrix<3, 3, BLA::Array<3, 3, double>> Telescope::getTransformationMatrix(u
             transformMatrix = ref * actual;
     }
 
-    // Serial.printf("transformMatrix = [%.2f %.2f %.2f %.2f %.2f %.2f %.2f %.2f %.2f]\n", 
+    // Serial.printf("transformMatrix = [%.2f %.2f %.2f %.2f %.2f %.2f %.2f %.2f %.2f]\n",
     //     transformMatrix(0, 0),
     //     transformMatrix(0, 1),
     //     transformMatrix(0, 2),
@@ -99,15 +99,15 @@ BLA::Matrix<3, 3, BLA::Array<3, 3, double>> Telescope::getTransformationMatrix(u
     return transformMatrix;
 }
 
-Telescope::Equatorial Telescope::getCalibratedOrientation(double latitude, double localSiderealTimeDegrees)
+Equatorial Telescope::getCalibratedOrientation(double latitude, double localSiderealTimeDegrees)
 {
     auto matrix = this->getTransformationMatrix(0);
     return this->getCalibratedOrientation(matrix, latitude, localSiderealTimeDegrees);
 }
 
-Telescope::Equatorial Telescope::getCalibratedOrientation(BLA::Matrix<3, 3, BLA::Array<3, 3, double>> M, double latitude, double localSiderealTimeDegrees)
+Equatorial Telescope::getCalibratedOrientation(BLA::Matrix<3, 3, BLA::Array<3, 3, double>> M, double latitude, double localSiderealTimeDegrees)
 {
-    Telescope::Equatorial result;
+    Equatorial result;
     auto position = this->horizontalToEquatorial(this->orientation, latitude, localSiderealTimeDegrees);
     BLA::Matrix<3, 1, BLA::Array<3, 1, double>> in = {position.ra, position.dec, 1};
     BLA::Matrix<3, 1, BLA::Array<3, 1, double>> out = M * in;
@@ -136,10 +136,10 @@ double Telescope::degToHours(double degrees)
  * based on: iauAe2hd() from http://www.iausofa.org
  * according to SOFA Software License this function contains modifications regarding input/output types
  * @param latitude in decimal degrees
- * @param localSiderealTimeDegrees 
+ * @param localSiderealTimeDegrees
  * @returns a struct containing the ALT/AZ values
  */
-void Telescope::horizontalToEquatorial(double azimuth, double altitude, double latitude, double localSiderealTimeDegrees, Telescope::Equatorial *result)
+void Telescope::horizontalToEquatorial(double azimuth, double altitude, double latitude, double localSiderealTimeDegrees, Equatorial *result)
 {
     double az = rad(azimuth);
     double el = rad(altitude);
@@ -162,36 +162,36 @@ void Telescope::horizontalToEquatorial(double azimuth, double altitude, double l
     result->ra = MathHelper::f_mod(localSiderealTimeDegrees - deg(ha), 360);
 }
 
-void Telescope::horizontalToEquatorial(Horizontal horizontal, double latitude, double localSiderealTimeDegrees, Telescope::Equatorial *result)
+void Telescope::horizontalToEquatorial(Horizontal horizontal, double latitude, double localSiderealTimeDegrees, Equatorial *result)
 {
     this->horizontalToEquatorial(horizontal.az, horizontal.alt, latitude, localSiderealTimeDegrees, result);
 }
 
-Telescope::Equatorial Telescope::horizontalToEquatorial(double azimuth, double altitude, double latitude, double localSiderealTimeDegrees)
+Equatorial Telescope::horizontalToEquatorial(double azimuth, double altitude, double latitude, double localSiderealTimeDegrees)
 {
-    Telescope::Equatorial equatorial;
+    Equatorial equatorial;
     this->horizontalToEquatorial(azimuth, altitude, latitude, localSiderealTimeDegrees, &equatorial);
     return equatorial;
 }
 
-Telescope::Equatorial Telescope::horizontalToEquatorial(Horizontal horizontal, double latitude, double localSiderealTimeDegrees)
+Equatorial Telescope::horizontalToEquatorial(Horizontal horizontal, double latitude, double localSiderealTimeDegrees)
 {
-    Telescope::Equatorial equatorial;
+    Equatorial equatorial;
     this->horizontalToEquatorial(horizontal.az, horizontal.alt, latitude, localSiderealTimeDegrees, &equatorial);
     return equatorial;
 }
 
 /**
  * Converts the current position to horizontal coordinates
- * based on: iauHd2ae() from http://www.iausofa.org 
+ * based on: iauHd2ae() from http://www.iausofa.org
  * according to SOFA Software License this function contains modifications regarding input/output types.
  * @param ra in decimal degrees
  * @param dec in decimal degrees
  * @param latitude in decimal degrees
- * @param localSiderealTimeDegrees 
+ * @param localSiderealTimeDegrees
  * @returns a struct containing the ALT/AZ values
  */
-void Telescope::equatorialToHorizontal(double ra, double dec, double latitude, double localSiderealTimeDegrees, Telescope::Horizontal *result)
+void Telescope::equatorialToHorizontal(double ra, double dec, double latitude, double localSiderealTimeDegrees, Horizontal *result)
 {
     double hourAngle = localSiderealTimeDegrees - ra;
     double ha = hourAngle >= 0 ? rad(hourAngle) : rad(hourAngle + 360);
@@ -219,21 +219,21 @@ void Telescope::equatorialToHorizontal(double ra, double dec, double latitude, d
     result->alt = deg(el);
 }
 
-void Telescope::equatorialToHorizontal(Equatorial equatorial, double latitude, double localSiderealTimeDegrees, Telescope::Horizontal *result)
+void Telescope::equatorialToHorizontal(Equatorial equatorial, double latitude, double localSiderealTimeDegrees, Horizontal *result)
 {
     this->equatorialToHorizontal(equatorial.ra, equatorial.dec, latitude, localSiderealTimeDegrees, result);
 }
 
-Telescope::Horizontal Telescope::equatorialToHorizontal(Equatorial equatorial, double latitude, double localSiderealTimeDegrees)
+Horizontal Telescope::equatorialToHorizontal(Equatorial equatorial, double latitude, double localSiderealTimeDegrees)
 {
-    Telescope::Horizontal result;
+    Horizontal result;
     this->equatorialToHorizontal(equatorial.ra, equatorial.dec, latitude, localSiderealTimeDegrees, &result);
     return result;
 }
 
-Telescope::Horizontal Telescope::equatorialToHorizontal(double ra, double dec, double latitude, double localSiderealTimeDegrees)
+Horizontal Telescope::equatorialToHorizontal(double ra, double dec, double latitude, double localSiderealTimeDegrees)
 {
-    Telescope::Horizontal result;
+    Horizontal result;
     this->equatorialToHorizontal(ra, dec, latitude, localSiderealTimeDegrees, &result);
     return result;
 }

@@ -2,10 +2,10 @@
 
 int XYZCompare(const void *v1, const void *v2)
 {
-    Alignment::VertexPair *p1, *p2;
+    VertexPair *p1, *p2;
 
-    p1 = (Alignment::VertexPair *)v1;
-    p2 = (Alignment::VertexPair *)v2;
+    p1 = (VertexPair *)v1;
+    p2 = (VertexPair *)v2;
     if (p1->actual.ra < p2->actual.ra)
         return (-1);
     else if (p1->actual.ra > p2->actual.ra)
@@ -18,20 +18,24 @@ Alignment::Alignment()
 {
     this->maxVertices = MAX_ALIGNMENT_POINTS;
     this->vertices = new VertexPair[this->maxVertices + 3];
-    this->triangles = new Alignment::Triangle[3 * this->maxVertices];
+    this->triangles = new Triangle[3 * this->maxVertices];
 }
 
-bool Alignment::addVertex(double x, double y)
+bool Alignment::addVertexPair(Equatorial actual, Equatorial reference)
 {
-    this->vertices[this->numVertices].actual.ra = x;
-    this->vertices[this->numVertices].actual.dec = y;
-
+    // prevent adding duplicates
     for (int i = 0; i < this->numVertices; i++)
     {
-        if ((this->vertices[i].actual.ra == x) && (this->vertices[i].actual.dec == y))
+        if ((this->vertices[i].actual.ra == actual.ra) && (this->vertices[i].actual.dec == actual.dec))
             return false;
     }
+
+    // add new vertex
+    this->vertices[this->numVertices].actual = actual;
+    this->vertices[this->numVertices].reference = reference;
     this->numVertices = (this->numVertices + 1) % this->maxVertices;
+
+    // make sure it's sorted correctly for triangulation
     qsort(this->vertices, this->numVertices, sizeof(VertexPair), XYZCompare);
     return true;
 }
@@ -46,12 +50,12 @@ int Alignment::getNumTriangles()
     return this->numTriangles;
 }
 
-Alignment::Triangle* Alignment::getTrianglesPtr()
+Triangle *Alignment::getTrianglesPtr()
 {
     return this->triangles;
 }
 
-Alignment::VertexPair* Alignment::getVerticesPtr()
+VertexPair *Alignment::getVerticesPtr()
 {
     return this->vertices;
 }
@@ -60,7 +64,6 @@ void Alignment::TriangulateActual()
 {
     this->TriangulateActual(this->numVertices, this->vertices, this->triangles, this->numTriangles);
 }
-
 
 // from http://paulbourke.net/papers/triangulate/
 ////////////////////////////////////////////////////////////////////////
@@ -142,7 +145,6 @@ void Alignment::TriangulateActual(int nv, VertexPair vertex[], Triangle v[], int
     double xp, yp, x1, y1, x2, y2, x3, y3, xc, yc, r;
     double xmin, xmax, ymin, ymax, xmid, ymid;
     double dx, dy, dmax;
-
 
     /* Allocate memory for the completeness list, flag for each triangle */
     trimax = 4 * nv;

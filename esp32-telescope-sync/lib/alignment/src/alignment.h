@@ -9,42 +9,40 @@ using namespace std;
 #include <stddef.h>
 #include <math.h>
 
-#include "telescope.h"
+#include <telescope.h>
 
 #define MAX_ALIGNMENT_POINTS (64)
+
+const double EPSILON = 0.000001;
+struct Triangle
+{
+    int p1, p2, p3;
+};
+
+struct Edge
+{
+    int p1, p2;
+};
+
+struct VertexPair
+{
+    Equatorial actual;
+    Equatorial reference;
+};
 
 class Alignment
 {
 public:
     Alignment();
-
-    const double EPSILON = 0.000001;
-    struct Triangle
-    {
-        int p1, p2, p3;
-    };
-
-    struct Edge
-    {
-        int p1, p2;
-    };
-
-    struct VertexPair
-    {
-        Telescope::Equatorial actual;
-        Telescope::Equatorial reference;
-        // double x, y, z;
-    };
-
     void TriangulateActual();
 
-    bool addVertex(double x, double y);
+    bool addVertexPair(Equatorial actual, Equatorial reference);
     int getNumVertices();
     int getNumTriangles();
-    Alignment::Triangle* getTrianglesPtr();
-    Alignment::VertexPair* getVerticesPtr();
+    Triangle *getTrianglesPtr();
+    VertexPair *getVerticesPtr();
 
-private:    
+private:
     int CircumCircle(double, double, double, double, double, double, double, double, double &, double &, double &);
     void TriangulateActual(int nv, VertexPair vertex[], Triangle v[], int &ntri);
 
