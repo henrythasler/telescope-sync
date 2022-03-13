@@ -1,7 +1,7 @@
 #ifndef TELESCOPE_H
 #define TELESCOPE_H
 
-using namespace std;
+// using namespace std;
 
 #include <stdint.h>
 #include <stddef.h>
@@ -25,16 +25,16 @@ struct Equatorial
 {
     double ra = 0;  // in degrees
     double dec = 0; // in degrees
-    Equatorial(double raIn, double decIn) : ra(raIn), dec(decIn){};
-    Equatorial() {}
+    Equatorial(double raIn, double decIn);
+    Equatorial();
 };
 
 struct Horizontal
 {
     double az = 0;  // in degrees
     double alt = 0; // in degrees
-    Horizontal(double azIn, double altIn) : az(azIn), alt(altIn){};
-    Horizontal() {}
+    Horizontal(double azIn, double altIn);
+    Horizontal();
 };
 
 class Telescope

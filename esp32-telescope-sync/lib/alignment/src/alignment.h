@@ -1,14 +1,11 @@
 #ifndef ALIGNMENT_H
 #define ALIGNMENT_H
 
-using namespace std;
-
 #include <stdio.h>
 #include <stdint.h>
 #include <stdlib.h>
 #include <stddef.h>
 #include <math.h>
-
 #include <telescope.h>
 
 #define MAX_ALIGNMENT_POINTS (64)
