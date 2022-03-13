@@ -91,7 +91,7 @@ MQTTBroker broker(&Serial);          // set-up own broker, needs a HardwareSeria
 
 Persistency persistency;            // load and save data in flash memory
 GNSS gnss(48, 11);                  // GNSS data provider; set initial position to enable operation before GNSS fix
-Telescope telescope(1);             // Telescope properties and related calculations
+Telescope telescope(2);             // Telescope properties and related calculations
 NexStar nexstar(&telescope, &gnss); // Communication to Stellarium-App
 LEDManager ledmanager;
 
@@ -443,7 +443,7 @@ void loop()
         }
         else if (remoteClient && remoteClient.connected())
         {
-            ledmanager.setMode(LEDManager::LEDMode::FLASH_4X_EVERY_5S);
+            ledmanager.setMode(LEDManager::LEDMode::FLASH_2X_EVERY_5S);
         }
         else
         {

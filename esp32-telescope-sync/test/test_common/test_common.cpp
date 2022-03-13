@@ -8,6 +8,7 @@
 #include "test_gnss.hpp"
 #include "test_nexstar.hpp"
 #include "test_telescope.hpp"
+#include "test_alignment.hpp"
 
 
 void process(void)
@@ -16,6 +17,7 @@ void process(void)
     Test_Mathhelper::process();
     Test_GNSS::process();
     Test_Nexstar::process();
+    Test_Alignment::process();
 }
 
 #ifdef ARDUINO
