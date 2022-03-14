@@ -96,7 +96,7 @@ uint32_t NexStar::handleRequest(uint8_t *request, size_t requestLength, uint8_t 
         reference.dec = (double)strtoul(hexString, NULL, 16) * 360L / 4294967296.0L;
 
         double localSiderealTimeDegrees = MathHelper::getLocalSiderealTimeDegrees(this->gnss->utcTimestamp, this->gnss->longitude);
-        telescope->addReferencePoint(&reference, this->gnss->latitude, localSiderealTimeDegrees);
+        telescope->addReferencePoint(reference, this->gnss->latitude, localSiderealTimeDegrees);
         telescope->isCalibrated = true;
         return snprintf((char *)response, responseMaxLength, "#");
     }

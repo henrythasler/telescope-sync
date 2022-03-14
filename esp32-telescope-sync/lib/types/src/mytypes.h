@@ -1,11 +1,12 @@
-#pragma once
+#ifndef MYTYPES_H
+#define MYTYPES_H
 
 // #include <stdint.h>
 // #include <stddef.h>
 // #include <math.h>
 // #include <algorithm>
 // #include <helper.h>
-// #include <linalg.h>
+#include <linalg.h>
 
 struct Equatorial
 {
@@ -39,3 +40,4 @@ struct VertexPair
     Equatorial actual;
     Equatorial reference;
 };
+#endif

@@ -61,7 +61,7 @@ namespace Test_Alignment
     void test_function_Triangulate1(void)
     {
         Alignment alignment;
-        
+
         alignment.addVertexPair(Equatorial(10, 5), Equatorial());
         alignment.addVertexPair(Equatorial(5, 1), Equatorial());
         alignment.addVertexPair(Equatorial(4, 7), Equatorial());
@@ -164,6 +164,88 @@ namespace Test_Alignment
         TEST_ASSERT_EQUAL(2, triangles[1].p3);
     }
 
+    void test_function_TriangulateIncomplete(void)
+    {
+        Alignment alignment;
+
+        alignment.TriangulateActual();
+
+        TEST_ASSERT_EQUAL(0, alignment.getNumTriangles());
+
+        TransformationMatrix *matrices = alignment.getMatricesPtr();
+
+        // 1st column
+        TEST_ASSERT_FLOAT_WITHIN(0.001, 1, matrices[0](0, 0));
+        TEST_ASSERT_FLOAT_WITHIN(0.001, 0, matrices[0](1, 0));
+        TEST_ASSERT_FLOAT_WITHIN(0.001, 0, matrices[0](2, 0));
+
+        // 2nd column
+        TEST_ASSERT_FLOAT_WITHIN(0.001, 0, matrices[0](0, 1));
+        TEST_ASSERT_FLOAT_WITHIN(0.001, 1, matrices[0](1, 1));
+        TEST_ASSERT_FLOAT_WITHIN(0.001, 0, matrices[0](2, 1));
+
+        // 3rd column
+        TEST_ASSERT_FLOAT_WITHIN(0.001, 0, matrices[0](0, 2));
+        TEST_ASSERT_FLOAT_WITHIN(0.001, 0, matrices[0](1, 2));
+        TEST_ASSERT_FLOAT_WITHIN(0.001, 1, matrices[0](2, 2));
+    }
+
+    void test_function_Triangulate1Point(void)
+    {
+        Alignment alignment;
+
+        alignment.addVertexPair(Equatorial(1, 2), Equatorial(4, 3));
+        alignment.TriangulateActual();
+
+        TEST_ASSERT_EQUAL(0, alignment.getNumTriangles());
+
+        TransformationMatrix *matrices = alignment.getMatricesPtr();
+
+        // 1st column
+        TEST_ASSERT_FLOAT_WITHIN(0.001, 1, matrices[0](0, 0));
+        TEST_ASSERT_FLOAT_WITHIN(0.001, 0, matrices[0](1, 0));
+        TEST_ASSERT_FLOAT_WITHIN(0.001, 0, matrices[0](2, 0));
+
+        // 2nd column
+        TEST_ASSERT_FLOAT_WITHIN(0.001, 0, matrices[0](0, 1));
+        TEST_ASSERT_FLOAT_WITHIN(0.001, 1, matrices[0](1, 1));
+        TEST_ASSERT_FLOAT_WITHIN(0.001, 0, matrices[0](2, 1));
+
+        // 3rd column
+        TEST_ASSERT_FLOAT_WITHIN(0.001, 3, matrices[0](0, 2));
+        TEST_ASSERT_FLOAT_WITHIN(0.001, 1, matrices[0](1, 2));
+        TEST_ASSERT_FLOAT_WITHIN(0.001, 1, matrices[0](2, 2));
+    }
+
+    void test_function_Triangulate2Point(void)
+    {
+        Alignment alignment;
+
+        alignment.addVertexPair(Equatorial(1, 6), Equatorial(2, 6));
+        alignment.addVertexPair(Equatorial(6, 8), Equatorial(5, 4));
+
+        alignment.TriangulateActual();
+
+        TEST_ASSERT_EQUAL(0, alignment.getNumTriangles());
+
+        TransformationMatrix *matrices = alignment.getMatricesPtr();
+
+        // 1st column
+        TEST_ASSERT_FLOAT_WITHIN(0.001, .3793103, matrices[0](0, 0));
+        TEST_ASSERT_FLOAT_WITHIN(0.001, -.5517241, matrices[0](1, 0));
+        TEST_ASSERT_FLOAT_WITHIN(0.001, 0, matrices[0](2, 0));
+
+        // 2nd column
+        TEST_ASSERT_FLOAT_WITHIN(0.001, .5517241, matrices[0](0, 1));
+        TEST_ASSERT_FLOAT_WITHIN(0.001, .3793103, matrices[0](1, 1));
+        TEST_ASSERT_FLOAT_WITHIN(0.001, 0, matrices[0](2, 1));
+
+        // 3rd column
+        TEST_ASSERT_FLOAT_WITHIN(0.001, -1.689655, matrices[0](0, 2));
+        TEST_ASSERT_FLOAT_WITHIN(0.001, 4.275862, matrices[0](1, 2));
+        TEST_ASSERT_FLOAT_WITHIN(0.001, 1, matrices[0](2, 2));        
+    }
+
     void process(void)
     {
         UNITY_BEGIN();
@@ -176,6 +258,9 @@ namespace Test_Alignment
         RUN_TEST(test_function_Triangulate1);
         RUN_TEST(test_function_Triangulate2);
         RUN_TEST(test_function_Triangulate3);
+        RUN_TEST(test_function_TriangulateIncomplete);
+        RUN_TEST(test_function_Triangulate1Point);
+        RUN_TEST(test_function_Triangulate2Point);
 
         UNITY_END();
     }
