@@ -65,41 +65,6 @@ namespace Test_Mathhelper
         TEST_ASSERT_FALSE(Checksum::verifyAmtCheckbits(0xffff));
     }
 
-    void test_function_triangleArea(void)
-    {
-        float res = 0;
-
-        LinAlg::Point A = {.x = 0, .y = 0};
-        LinAlg::Point B = {.x = 3, .y = 0};
-        LinAlg::Point C = {.x = 3, .y = 4};
-        LinAlg::Point D = {.x = -3, .y = -4};
-
-        res = LinAlg::triangleArea(A, B, C);
-        TEST_ASSERT_FLOAT_WITHIN(0.0001, 6, res);
-
-        res = LinAlg::triangleArea(A, B, D);
-        TEST_ASSERT_FLOAT_WITHIN(0.0001, 6, res);
-
-        res = LinAlg::triangleArea(B, C, D);
-        TEST_ASSERT_FLOAT_WITHIN(0.0001, 12, res);
-    }
-
-    void test_function_isInTriangle(void)
-    {
-        float res = 0;
-
-        LinAlg::Point A = {.x = 0, .y = 0};
-        LinAlg::Point B = {.x = 3, .y = 0};
-        LinAlg::Point C = {.x = 3, .y = 4};
-        LinAlg::Point D = {.x = -3, .y = -4};
-
-        TEST_ASSERT_TRUE(LinAlg::isInTriangle({.x = 1, .y = 1}, A, B, C));
-        TEST_ASSERT_FALSE(LinAlg::isInTriangle({.x = 1, .y = 2}, A, B, C));
-        TEST_ASSERT_TRUE(LinAlg::isInTriangle({.x = 0, .y = 0}, A, B, C));
-        TEST_ASSERT_TRUE(LinAlg::isInTriangle({.x = -1.4, .y = -2.8}, B, C, D));
-        TEST_ASSERT_FALSE(LinAlg::isInTriangle({.x = -1.4, .y = -3}, B, C, D));
-    }
-
     void process(void)
     {
         UNITY_BEGIN();
@@ -111,10 +76,6 @@ namespace Test_Mathhelper
 
         // checksums
         RUN_TEST(test_function_amt_checksum);
-
-        // linear algebra
-        RUN_TEST(test_function_triangleArea);
-        RUN_TEST(test_function_isInTriangle);
 
         UNITY_END();
     }

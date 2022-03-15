@@ -13,7 +13,7 @@
 #define MAX_ALIGNMENT_POINTS (64)
 
 typedef BLA::Matrix<3, 3, BLA::Array<3, 3, double>> TransformationMatrix;
-
+typedef BLA::Matrix<3, 1, BLA::Array<3, 1, double>> Vector3D;
 class Alignment
 {
 public:
@@ -27,14 +27,16 @@ public:
     VertexPair *getVerticesPtr();
     TransformationMatrix *getMatricesPtr();
 
+    double triangleArea(Point p1, Point p2, Point p3);
+    bool isInTriangle(Point p, Point p1, Point p2, Point p3);    
+
     Equatorial getCalibratedOrientation(Equatorial actual);
+    TransformationMatrix getTransformationMatrix(Equatorial actual);
 
 private:
     int CircumCircle(double, double, double, double, double, double, double, double, double &, double &, double &);
     void TriangulateActual(int nv, VertexPair vertex[], Triangle v[], int &ntri);
     void updateTransformationMatrices(void);
-
-    TransformationMatrix getTransformationMatrix(Equatorial actual);
 
     int maxVertices = 0;
 

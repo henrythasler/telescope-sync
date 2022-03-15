@@ -44,21 +44,3 @@ namespace Checksum
         return ((even_parity == K0) && (odd_parity == K1));
     }
 }
-
-namespace LinAlg
-{
-    float triangleArea(Point p1, Point p2, Point p3)
-    {
-        return fabs((p1.x * (p2.y - p3.y) + p2.x * (p3.y - p1.y) + p3.x * (p1.y - p2.y)) / 2.0);
-    }
-
-    float isInTriangle(Point p, Point p1, Point p2, Point p3)
-    {
-        float area = triangleArea(p1, p2, p3);
-        float area1 = triangleArea(p, p2, p3);
-        float area2 = triangleArea(p1, p, p3);
-        float area3 = triangleArea(p1, p2, p);
-
-        return (fabs(area - (area1 + area2 + area3)) < 0.0001);
-    }
-}

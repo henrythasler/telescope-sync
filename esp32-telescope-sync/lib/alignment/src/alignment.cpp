@@ -321,56 +321,33 @@ void Alignment::TriangulateActual(int nv, VertexPair vertex[], Triangle v[], int
  * */
 TransformationMatrix Alignment::getTransformationMatrix(Equatorial actual)
 {
-    BLA::Matrix<3, 3, BLA::Array<3, 3, double>> transformMatrix = BLA::Identity<3, 3>();
+    if ((this->numTriangles == 0) && (this->numVertices == 1))
+    {
+        return this->transormationMatrices[0];
+    }
+    else if ((this->numTriangles == 0) && (this->numVertices >= 2))
+    {
+        return this->transormationMatrices[0];
+    }
+    else if (this->numTriangles >= 1)
+    {
+        for (int i = 0; i < this->numTriangles; i++)
+        {
+            if (this->isInTriangle(Point(actual),
+                                   Point(this->vertices[this->triangles[i].p1].actual),
+                                   Point(this->vertices[this->triangles[i].p2].actual),
+                                   Point(this->vertices[this->triangles[i].p3].actual)))
+            {
+                return this->transormationMatrices[i];
+            }
+        }
+    }
+    else // need to find the triangle that contains the given actual position
+    {
+    }
 
-    // if (this->numTriangles == 1)
-    // {
-    //     transformMatrix(0, 2) = this->referencePoints[0].ra - this->actualPoints[0].ra;
-    //     transformMatrix(1, 2) = this->referencePoints[0].dec - this->actualPoints[0].dec;
-    // }
-    // else if (this->maxAlignmentPoints >= 2 && this->alignmentPoints == 2)
-    // {
-    //     BLA::Matrix<3, 3, BLA::Array<3, 3, double>> ref = {
-    //         this->referencePoints[0].ra, this->referencePoints[1].ra, this->referencePoints[1].ra + (this->referencePoints[1].dec - this->referencePoints[0].dec),
-    //         this->referencePoints[0].dec, this->referencePoints[1].dec, this->referencePoints[1].dec - (this->referencePoints[1].ra - this->referencePoints[0].ra),
-    //         1, 1, 1};
-
-    //     BLA::Matrix<3, 3, BLA::Array<3, 3, double>> actual = {
-    //         this->actualPoints[0].ra, this->actualPoints[1].ra, this->actualPoints[1].ra + (this->actualPoints[1].dec - this->actualPoints[0].dec),
-    //         this->actualPoints[0].dec, this->actualPoints[1].dec, this->actualPoints[1].dec - (this->actualPoints[1].ra - this->actualPoints[0].ra),
-    //         1, 1, 1};
-
-    //     if (BLA::Invert(actual))
-    //         transformMatrix = ref * actual;
-    // }
-
-    // else if (this->maxAlignmentPoints >= 3 && this->alignmentPoints > 2 && (triangleOffset < this->alignmentPoints - 2))
-    // {
-    //     BLA::Matrix<3, 3, BLA::Array<3, 3, double>> ref = {
-    //         this->referencePoints[triangleOffset + 0].ra, this->referencePoints[triangleOffset + 1].ra, this->referencePoints[triangleOffset + 2].ra,
-    //         this->referencePoints[triangleOffset + 0].dec, this->referencePoints[triangleOffset + 1].dec, this->referencePoints[triangleOffset + 2].dec,
-    //         1, 1, 1};
-
-    //     BLA::Matrix<3, 3, BLA::Array<3, 3, double>> actual = {
-    //         this->actualPoints[triangleOffset + 0].ra, this->actualPoints[triangleOffset + 1].ra, this->actualPoints[triangleOffset + 2].ra,
-    //         this->actualPoints[triangleOffset + 0].dec, this->actualPoints[triangleOffset + 1].dec, this->actualPoints[triangleOffset + 2].dec,
-    //         1, 1, 1};
-
-    //     if (BLA::Invert(actual))
-    //         transformMatrix = ref * actual;
-    // }
-
-    // Serial.printf("transformMatrix = [%.2f %.2f %.2f %.2f %.2f %.2f %.2f %.2f %.2f]\n",
-    //     transformMatrix(0, 0),
-    //     transformMatrix(0, 1),
-    //     transformMatrix(0, 2),
-    //     transformMatrix(1, 0),
-    //     transformMatrix(1, 1),
-    //     transformMatrix(1, 2),
-    //     transformMatrix(2, 0),
-    //     transformMatrix(2, 1),
-    //     transformMatrix(2, 2));
-    return transformMatrix;
+    // if nothing was found, default is identity matrix
+    return BLA::Identity<3, 3>();
 }
 
 void Alignment::updateTransformationMatrices(void)
@@ -415,8 +392,6 @@ void Alignment::updateTransformationMatrices(void)
             TransformationMatrix actual = {
                 this->vertices[this->triangles[i].p1].actual.ra, this->vertices[this->triangles[i].p2].actual.ra, this->vertices[this->triangles[i].p3].actual.ra,
                 this->vertices[this->triangles[i].p1].actual.dec, this->vertices[this->triangles[i].p2].actual.dec, this->vertices[this->triangles[i].p3].actual.dec,
-                // this->actualPoints[triangleOffset + 0].ra, this->actualPoints[triangleOffset + 1].ra, this->actualPoints[triangleOffset + 2].ra,
-                // this->actualPoints[triangleOffset + 0].dec, this->actualPoints[triangleOffset + 1].dec, this->actualPoints[triangleOffset + 2].dec,
                 1, 1, 1};
 
             if (BLA::Invert(actual))
@@ -438,5 +413,22 @@ void Alignment::updateTransformationMatrices(void)
 Equatorial Alignment::getCalibratedOrientation(Equatorial actual)
 {
     auto matrix = this->getTransformationMatrix(actual);
-    return (Equatorial(0, 0));
+    Vector3D in = {actual.ra, actual.dec, 1};
+    Vector3D out = matrix * in;
+    return (Equatorial(out(0), out(1)));
+}
+
+double Alignment::triangleArea(Point p1, Point p2, Point p3)
+{
+    return fabs((p1.x * (p2.y - p3.y) + p2.x * (p3.y - p1.y) + p3.x * (p1.y - p2.y)) / 2.0);
+}
+
+bool Alignment::isInTriangle(Point p, Point p1, Point p2, Point p3)
+{
+    float area = triangleArea(p1, p2, p3);
+    float area1 = triangleArea(p, p2, p3);
+    float area2 = triangleArea(p1, p, p3);
+    float area3 = triangleArea(p1, p2, p);
+
+    return (fabs(area - (area1 + area2 + area3)) < 0.0001);
 }

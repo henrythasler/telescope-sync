@@ -35,6 +35,15 @@ struct Edge
     int p1, p2;
 };
 
+struct Point
+{
+    double x = 0;
+    double y = 0;
+    Point(double xIn, double yIn);
+    Point(Equatorial in);
+    Point();    
+};
+
 struct VertexPair
 {
     Equatorial actual;
