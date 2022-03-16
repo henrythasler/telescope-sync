@@ -217,7 +217,7 @@ namespace Test_Alignment
         // 3rd column
         TEST_ASSERT_FLOAT_WITHIN(0.001, 0, matrix(0, 2));
         TEST_ASSERT_FLOAT_WITHIN(0.001, 0, matrix(1, 2));
-        TEST_ASSERT_FLOAT_WITHIN(0.001, 1, matrix(2, 2));        
+        TEST_ASSERT_FLOAT_WITHIN(0.001, 1, matrix(2, 2));
     }
 
     void test_function_Triangulate1Point(void)
@@ -321,6 +321,52 @@ namespace Test_Alignment
         TEST_ASSERT_FLOAT_WITHIN(0.01, 2.55555556, res.dec);
     }
 
+    void test_function_Triangulate3PointOutside1(void)
+    {
+        Alignment alignment;
+
+        alignment.addVertexPair(Equatorial(1, 2), Equatorial(2, 1));
+        alignment.addVertexPair(Equatorial(6, 3), Equatorial(8, 2));
+        alignment.addVertexPair(Equatorial(3, 6), Equatorial(3, 4));
+
+        alignment.TriangulateActual();
+
+        TEST_ASSERT_EQUAL(1, alignment.getNumTriangles());
+
+        TransformationMatrix matrix = alignment.getTransformationMatrix(Equatorial(3, 4));
+
+        // 1st column
+        TEST_ASSERT_FLOAT_WITHIN(0.000001, 1.27777778, matrix(0, 0));
+        TEST_ASSERT_FLOAT_WITHIN(0.000001, 0.05555556, matrix(1, 0));
+        TEST_ASSERT_FLOAT_WITHIN(0.000001, 0, matrix(2, 0));
+
+        // 2nd column
+        TEST_ASSERT_FLOAT_WITHIN(0.000001, -0.38888889, matrix(0, 1));
+        TEST_ASSERT_FLOAT_WITHIN(0.000001, 0.72222222, matrix(1, 1));
+        TEST_ASSERT_FLOAT_WITHIN(0.000001, 0, matrix(2, 1));
+
+        // 3rd column
+        TEST_ASSERT_FLOAT_WITHIN(0.000001, 1.5, matrix(0, 2));
+        TEST_ASSERT_FLOAT_WITHIN(0.000001, -0.5, matrix(1, 2));
+        TEST_ASSERT_FLOAT_WITHIN(0.000001, 1, matrix(2, 2));
+
+        // test transformation
+        auto res = alignment.getCalibratedOrientation(Equatorial(8, 8));
+        TEST_ASSERT_FLOAT_WITHIN(0.01, 8.61111111, res.ra);
+        TEST_ASSERT_FLOAT_WITHIN(0.01, 5.72222222, res.dec);
+    }
+
+    void test_function_getCalibratedOrientationIdentity(void)
+    {
+        Alignment alignment;
+        alignment.TriangulateActual();
+        TEST_ASSERT_EQUAL(0, alignment.getNumTriangles());
+        auto res = alignment.getCalibratedOrientation(Equatorial(1, 2));
+
+        TEST_ASSERT_FLOAT_WITHIN(0.001, 1, res.ra);
+        TEST_ASSERT_FLOAT_WITHIN(0.001, 2, res.dec);
+    }
+
     void test_function_triangleArea(void)
     {
         Alignment alignment;
@@ -357,17 +403,6 @@ namespace Test_Alignment
         TEST_ASSERT_FALSE(alignment.isInTriangle(Point(-1.4, -3), B, C, D));
     }
 
-    void test_function_getCalibratedOrientationIdentity(void)
-    {
-        Alignment alignment;
-        alignment.TriangulateActual();
-        TEST_ASSERT_EQUAL(0, alignment.getNumTriangles());
-        auto res = alignment.getCalibratedOrientation(Equatorial(1, 2));
-
-        TEST_ASSERT_FLOAT_WITHIN(0.001, 1, res.ra);
-        TEST_ASSERT_FLOAT_WITHIN(0.001, 2, res.dec);
-    }
-
     void process(void)
     {
         UNITY_BEGIN();
@@ -385,6 +420,8 @@ namespace Test_Alignment
         RUN_TEST(test_function_Triangulate1Point);
         RUN_TEST(test_function_Triangulate2Point);
         RUN_TEST(test_function_Triangulate3Point);
+
+        RUN_TEST(test_function_Triangulate3PointOutside1);
 
         // Triangle Math
         RUN_TEST(test_function_triangleArea);

@@ -341,6 +341,29 @@ TransformationMatrix Alignment::getTransformationMatrix(Equatorial actual)
                 return this->transormationMatrices[i];
             }
         }
+        // looks like the point is not in any of the triangles
+        // find the triangle that is closest and use this transformation
+
+        float minDistance = INFINITY;
+        int triangleIndex = -1;
+        for (int i = 0; i < this->numTriangles; i++)
+        {
+            Equatorial center((this->vertices[this->triangles[i].p1].actual.ra +
+                               this->vertices[this->triangles[i].p2].actual.ra +
+                               this->vertices[this->triangles[i].p3].actual.ra) /
+                                  3.,
+                              (this->vertices[this->triangles[i].p1].actual.dec +
+                               this->vertices[this->triangles[i].p2].actual.dec +
+                               this->vertices[this->triangles[i].p3].actual.dec) /
+                                  3.);
+            float distance = (center.ra - actual.ra) * (center.ra - actual.ra) + (center.dec - actual.dec) * (center.dec - actual.dec);
+            if (distance < minDistance)
+            {
+                minDistance = distance;
+                triangleIndex = i;
+            }
+            return this->transormationMatrices[triangleIndex];
+        }
     }
     else // need to find the triangle that contains the given actual position
     {

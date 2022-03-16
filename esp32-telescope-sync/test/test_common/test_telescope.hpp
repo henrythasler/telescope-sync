@@ -194,20 +194,74 @@ namespace Test_Telescope
         TEST_ASSERT_FLOAT_WITHIN(0.001, 7.4070, position.dec);
     }
 
-    // void test_function_calibrate(void)
-    // {
-    //     Telescope telescope;
-    //     Telescope::Equatorial reference;
-    //     reference.ra = 101.29;
-    //     reference.dec = -16.72;
-    //     telescope.setOrientation(180, 45);
-    //     double localSiderealTimeDegrees = MathHelper::getLocalSiderealTimeDegrees({.tm_sec = 0, .tm_min = 0, .tm_hour = 1, .tm_mday = 2, .tm_mon = 1, .tm_year = 2022}, 11);
-    //     TEST_ASSERT_FLOAT_WITHIN(0.0001, 127.6567, localSiderealTimeDegrees);
+    void test_function_getCalibratedOrientationIdentity(void)
+    {
+        Telescope telescope;
 
-    //     telescope.calibrate(reference, 48, localSiderealTimeDegrees);
-    //     TEST_ASSERT_FLOAT_WITHIN(0.01, -23.88, telescope.offset.alt);
-    //     TEST_ASSERT_FLOAT_WITHIN(0.01, 27.13, telescope.offset.az);
-    // }
+        auto orientation = telescope.equatorialToHorizontal(1, 2, 0, 0);
+        telescope.setOrientation(orientation);
+
+        auto res = telescope.getCalibratedOrientation(0, 0);
+
+        TEST_ASSERT_FLOAT_WITHIN(0.001, 1, res.ra);
+        TEST_ASSERT_FLOAT_WITHIN(0.001, 2, res.dec);
+    }
+
+    void test_function_getCalibratedOrientation3Point(void)
+    {
+        // Testsite, 11°E, 48°N, height 0m
+        // 2022-03-16 18:00:00 UTC
+        Telescope telescope;
+
+        double localSiderealTimeDegrees = MathHelper::getLocalSiderealTimeDegrees({.tm_sec = 0, .tm_min = 0, .tm_hour = 18, .tm_mday = 16, .tm_mon = 3, .tm_year = 2022}, 11);
+        TEST_ASSERT_FLOAT_WITHIN(0.0001, 95.3072, localSiderealTimeDegrees);
+
+        // we map the actual position triangle Sirius, Rigel and Betelgeuse
+        // with (az: 0, alt:0) set to Sirius
+
+        // Sirius
+        telescope.setOrientation(Horizontal(0, 0));
+        telescope.addReferencePoint(Equatorial(101.29, -16.72), 48, localSiderealTimeDegrees);
+
+        // Rigel
+        telescope.setOrientation(Horizontal(199.25 - 173.42, 32.01 - 25.05));
+        telescope.addReferencePoint(Equatorial(78.63, -8.20), 48, localSiderealTimeDegrees);
+
+        // Betelgeuse
+        telescope.setOrientation(Horizontal(189.43 - 173.42, 49.08 - 25.05));
+        telescope.addReferencePoint(Equatorial(88.79, 7.40), 48, localSiderealTimeDegrees);
+
+        TEST_ASSERT_EQUAL(3, telescope.alignment.getNumVertices());
+        TEST_ASSERT_EQUAL(1, telescope.alignment.getNumTriangles());
+
+        // Test all 3 points first
+        telescope.setOrientation(Horizontal(0, 0));
+        auto res = telescope.getCalibratedOrientation(48, localSiderealTimeDegrees);
+        TEST_ASSERT_FLOAT_WITHIN(0.01, 101.29, res.ra);
+        TEST_ASSERT_FLOAT_WITHIN(0.01, -16.72, res.dec);
+
+        telescope.setOrientation(Horizontal(199.25 - 173.42, 32.01 - 25.05));
+        res = telescope.getCalibratedOrientation(48, localSiderealTimeDegrees);
+        TEST_ASSERT_FLOAT_WITHIN(0.01, 78.63, res.ra);
+        TEST_ASSERT_FLOAT_WITHIN(0.01, -8.20, res.dec);
+
+        telescope.setOrientation(Horizontal(189.43 - 173.42, 49.08 - 25.05));
+        res = telescope.getCalibratedOrientation(48, localSiderealTimeDegrees);
+        TEST_ASSERT_FLOAT_WITHIN(0.01, 88.79, res.ra);
+        TEST_ASSERT_FLOAT_WITHIN(0.01, 7.40, res.dec);
+
+        // and something in between (Alnitak)
+        telescope.setOrientation(Horizontal(192.76 - 173.42, 39.35 - 25.05));
+        res = telescope.getCalibratedOrientation(48, localSiderealTimeDegrees);
+        TEST_ASSERT_FLOAT_WITHIN(0.01, 85.47, res.ra);
+        TEST_ASSERT_FLOAT_WITHIN(0.01, -1.42, res.dec);
+
+        // and something outside the triangle (Bellantrix)
+        telescope.setOrientation(Horizontal(200 - 173.42, 47 - 25.05));
+        res = telescope.getCalibratedOrientation(48, localSiderealTimeDegrees);
+        TEST_ASSERT_FLOAT_WITHIN(0.01, 81, res.ra);
+        TEST_ASSERT_FLOAT_WITHIN(0.01, 6, res.dec);
+    }
 
     void test_function_addReferencePoint(void)
     {
@@ -215,149 +269,7 @@ namespace Test_Telescope
 
         telescope.addReferencePoint(Equatorial(101.29, -16.72), 38.59, 297.93);
         TEST_ASSERT_EQUAL(1, telescope.alignment.getNumVertices());
-
-        // TEST_ASSERT_EQUAL_INT32(16, telescope.alignmentWritePointer);
-        // TEST_ASSERT_EQUAL_INT32(64, telescope.alignmentPoints);
-
-        // TEST_ASSERT_FLOAT_WITHIN(0.01, 101.29, telescope.referencePoints[0].ra);
-        // TEST_ASSERT_FLOAT_WITHIN(0.01, -16.72, telescope.referencePoints[0].dec);
-
-        // TEST_ASSERT_FLOAT_WITHIN(0.01, 297.92, telescope.actualPoints[0].ra);
-        // TEST_ASSERT_FLOAT_WITHIN(0.01, 8.93, telescope.actualPoints[0].dec);
     }
-
-    // void test_function_getTransformationMatrix1Point(void)
-    // {
-    //     Telescope telescope;
-    //     Equatorial reference;
-
-    //     reference.ra = 4;
-    //     reference.dec = 3;
-
-    //     auto orientation = telescope.equatorialToHorizontal(1, 2, 0, 0);
-    //     telescope.setOrientation(orientation);
-    //     telescope.addReferencePoint(&reference, 0, 0);
-
-    //     TEST_ASSERT_EQUAL_INT32(1, telescope.alignmentWritePointer);
-    //     TEST_ASSERT_EQUAL_INT32(1, telescope.alignmentPoints);
-
-    //     TEST_ASSERT_FLOAT_WITHIN(0.01, 4, telescope.referencePoints[0].ra);
-    //     TEST_ASSERT_FLOAT_WITHIN(0.01, 3, telescope.referencePoints[0].dec);
-
-    //     TEST_ASSERT_FLOAT_WITHIN_MESSAGE(0.01, 1, telescope.actualPoints[0].ra, "telescope.actualPoints[0].ra");
-    //     TEST_ASSERT_FLOAT_WITHIN_MESSAGE(0.01, 2, telescope.actualPoints[0].dec, "telescope.actualPoints[0].dec");
-
-    //     auto res = telescope.getTransformationMatrix(0);
-    //     // 1st column
-    //     TEST_ASSERT_FLOAT_WITHIN(0.001, 1, res(0, 0));
-    //     TEST_ASSERT_FLOAT_WITHIN(0.001, 0, res(1, 0));
-    //     TEST_ASSERT_FLOAT_WITHIN(0.001, 0, res(2, 0));
-
-    //     // 2nd column
-    //     TEST_ASSERT_FLOAT_WITHIN(0.001, 0, res(0, 1));
-    //     TEST_ASSERT_FLOAT_WITHIN(0.001, 1, res(1, 1));
-    //     TEST_ASSERT_FLOAT_WITHIN(0.001, 0, res(2, 1));
-
-    //     // 3rd column
-    //     TEST_ASSERT_FLOAT_WITHIN(0.001, 3, res(0, 2));
-    //     TEST_ASSERT_FLOAT_WITHIN(0.001, 1, res(1, 2));
-    //     TEST_ASSERT_FLOAT_WITHIN(0.001, 1, res(2, 2));
-    // }
-
-    // void test_function_getTransformationMatrix2Point(void)
-    // {
-    //     Telescope telescope;
-    //     Equatorial reference;
-
-    //     reference.ra = 2;
-    //     reference.dec = 6;
-    //     auto orientation = telescope.equatorialToHorizontal(1, 6, 0, 0);
-    //     telescope.setOrientation(orientation);
-    //     telescope.addReferencePoint(&reference, 0, 0);
-
-    //     reference.ra = 5;
-    //     reference.dec = 4;
-    //     orientation = telescope.equatorialToHorizontal(6, 8, 0, 0);
-    //     telescope.setOrientation(orientation);
-    //     telescope.addReferencePoint(&reference, 0, 0);
-
-    //     TEST_ASSERT_EQUAL_INT32(2, telescope.alignmentWritePointer);
-    //     TEST_ASSERT_EQUAL_INT32(2, telescope.alignmentPoints);
-
-    //     auto res = telescope.getTransformationMatrix(0);
-    //     // 1st column
-    //     TEST_ASSERT_FLOAT_WITHIN(0.000001, .3793103, res(0, 0));
-    //     TEST_ASSERT_FLOAT_WITHIN(0.000001, -.5517241, res(1, 0));
-    //     TEST_ASSERT_FLOAT_WITHIN(0.000001, 0, res(2, 0));
-
-    //     // 2nd column
-    //     TEST_ASSERT_FLOAT_WITHIN(0.000001, .5517241, res(0, 1));
-    //     TEST_ASSERT_FLOAT_WITHIN(0.000001, .3793103, res(1, 1));
-    //     TEST_ASSERT_FLOAT_WITHIN(0.000001, 0, res(2, 1));
-
-    //     // 3rd column
-    //     TEST_ASSERT_FLOAT_WITHIN(0.000001, -1.689655, res(0, 2));
-    //     TEST_ASSERT_FLOAT_WITHIN(0.000001, 4.275862, res(1, 2));
-    //     TEST_ASSERT_FLOAT_WITHIN(0.000001, 1, res(2, 2));
-    // }
-
-    // void test_function_getTransformationMatrix3Point(void)
-    // {
-    //     Telescope telescope;
-    //     Equatorial reference;
-
-    //     reference.ra = 2;
-    //     reference.dec = 1;
-    //     auto orientation = telescope.equatorialToHorizontal(1, 2, 0, 0);
-    //     telescope.setOrientation(orientation);
-    //     telescope.addReferencePoint(&reference, 0, 0);
-
-    //     reference.ra = 8;
-    //     reference.dec = 2;
-    //     orientation = telescope.equatorialToHorizontal(6, 3, 0, 0);
-    //     telescope.setOrientation(orientation);
-    //     telescope.addReferencePoint(&reference, 0, 0);
-
-    //     reference.ra = 3;
-    //     reference.dec = 4;
-    //     orientation = telescope.equatorialToHorizontal(3, 6, 0, 0);
-    //     telescope.setOrientation(orientation);
-    //     telescope.addReferencePoint(&reference, 0, 0);
-
-    //     TEST_ASSERT_EQUAL_INT32(3, telescope.alignmentWritePointer);
-    //     TEST_ASSERT_EQUAL_INT32(3, telescope.alignmentPoints);
-
-    //     auto res = telescope.getTransformationMatrix(0);
-    //     // printf("%f, %f, %f\n%f, %f, %f\n%f, %f, %f\n", res(0,0), res(0,1), res(0,2), res(1,0), res(1,1), res(1,2), res(2,0), res(2,1), res(2,2));
-    //     // 1st column
-    //     TEST_ASSERT_FLOAT_WITHIN(0.000001, 1.27777778, res(0, 0));
-    //     TEST_ASSERT_FLOAT_WITHIN(0.000001, 0.05555556, res(1, 0));
-    //     TEST_ASSERT_FLOAT_WITHIN(0.000001, 0, res(2, 0));
-
-    //     // 2nd column
-    //     TEST_ASSERT_FLOAT_WITHIN(0.000001, -0.38888889, res(0, 1));
-    //     TEST_ASSERT_FLOAT_WITHIN(0.000001, 0.72222222, res(1, 1));
-    //     TEST_ASSERT_FLOAT_WITHIN(0.000001, 0, res(2, 1));
-
-    //     // 3rd column
-    //     TEST_ASSERT_FLOAT_WITHIN(0.000001, 1.5, res(0, 2));
-    //     TEST_ASSERT_FLOAT_WITHIN(0.000001, -0.5, res(1, 2));
-    //     TEST_ASSERT_FLOAT_WITHIN(0.000001, 1, res(2, 2));
-    // }
-
-    // void test_function_calibrateMatrix(void)
-    // {
-    //     Telescope telescope;
-
-    //     auto orientation = telescope.equatorialToHorizontal(4, 8, 0, 0);
-    //     telescope.setOrientation(orientation);
-
-    //     BLA::Matrix<3, 3, BLA::Array<3, 3, double>> mat = {1.27777778, -0.38888889, 1.5, 0.05555556, 0.72222222, -0.5, 0., 0., 1.};
-    //     auto res = telescope.getCalibratedOrientation(mat, 0, 0);
-
-    //     TEST_ASSERT_FLOAT_WITHIN(0.01, 3.5, res.ra);
-    //     TEST_ASSERT_FLOAT_WITHIN(0.01, 5.5, res.dec);
-    // }
 
     void process(void)
     {
@@ -377,6 +289,9 @@ namespace Test_Telescope
 
         // n-Point-Alignment
         RUN_TEST(test_function_addReferencePoint);
+        RUN_TEST(test_function_getCalibratedOrientationIdentity);
+        RUN_TEST(test_function_getCalibratedOrientation3Point);
+
         // RUN_TEST(test_function_getTransformationMatrix1Point);
         // RUN_TEST(test_function_getTransformationMatrix2Point);
         // RUN_TEST(test_function_getTransformationMatrix3Point);
