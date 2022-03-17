@@ -331,6 +331,7 @@ TransformationMatrix Alignment::getTransformationMatrix(Equatorial actual)
     }
     else if (this->numTriangles >= 1)
     {
+        // need to find the triangle that contains the given actual position
         for (int i = 0; i < this->numTriangles; i++)
         {
             if (this->isInTriangle(Point(actual),
@@ -344,29 +345,11 @@ TransformationMatrix Alignment::getTransformationMatrix(Equatorial actual)
         // looks like the point is not in any of the triangles
         // find the triangle that is closest and use this transformation
 
-        float minDistance = INFINITY;
-        int triangleIndex = -1;
-        for (int i = 0; i < this->numTriangles; i++)
+        int triangleIndex = this->nearestTriangle(actual);
+        if (triangleIndex >= 0)
         {
-            Equatorial center((this->vertices[this->triangles[i].p1].actual.ra +
-                               this->vertices[this->triangles[i].p2].actual.ra +
-                               this->vertices[this->triangles[i].p3].actual.ra) /
-                                  3.,
-                              (this->vertices[this->triangles[i].p1].actual.dec +
-                               this->vertices[this->triangles[i].p2].actual.dec +
-                               this->vertices[this->triangles[i].p3].actual.dec) /
-                                  3.);
-            float distance = (center.ra - actual.ra) * (center.ra - actual.ra) + (center.dec - actual.dec) * (center.dec - actual.dec);
-            if (distance < minDistance)
-            {
-                minDistance = distance;
-                triangleIndex = i;
-            }
             return this->transormationMatrices[triangleIndex];
         }
-    }
-    else // need to find the triangle that contains the given actual position
-    {
     }
 
     // if nothing was found, default is identity matrix
@@ -431,6 +414,50 @@ void Alignment::updateTransformationMatrices(void)
     {
         this->transormationMatrices[0] = BLA::Identity<3, 3>();
     }
+}
+
+int Alignment::nearestTriangle(Equatorial actual)
+{
+    /*
+            // Option 1: Switch to 1-Point alignment with nearest point
+            float minDistance = INFINITY;
+            int vertexIndex = -1;
+            for (int i = 0; i < this->numVertices; i++)
+            {
+                float distance = (this->vertices[i].actual.ra - actual.ra) * (this->vertices[i].actual.ra - actual.ra) + (this->vertices[i].actual.dec - actual.dec) * (this->vertices[i].actual.dec - actual.dec);
+                if (distance < minDistance)
+                {
+                    minDistance = distance;
+                    vertexIndex = i;
+                }
+            }
+            TransformationMatrix matrix = BLA::Identity<3, 3>();
+            matrix(0, 2) = this->vertices[vertexIndex].reference.ra - this->vertices[vertexIndex].actual.ra;
+            matrix(1, 2) = this->vertices[vertexIndex].reference.dec - this->vertices[vertexIndex].actual.dec;
+            return matrix;
+    */
+
+    // Option 2: Use transformationMatrix of nearest triangle
+    float minDistance = INFINITY;
+    int triangleIndex = -1;
+    for (int i = 0; i < this->numTriangles; i++)
+    {
+        Equatorial center((this->vertices[this->triangles[i].p1].actual.ra +
+                           this->vertices[this->triangles[i].p2].actual.ra +
+                           this->vertices[this->triangles[i].p3].actual.ra) /
+                              3.,
+                          (this->vertices[this->triangles[i].p1].actual.dec +
+                           this->vertices[this->triangles[i].p2].actual.dec +
+                           this->vertices[this->triangles[i].p3].actual.dec) /
+                              3.);
+        float distance = (center.ra - actual.ra) * (center.ra - actual.ra) + (center.dec - actual.dec) * (center.dec - actual.dec);
+        if (distance < minDistance)
+        {
+            minDistance = distance;
+            triangleIndex = i;
+        }
+    }
+    return triangleIndex;
 }
 
 Equatorial Alignment::getCalibratedOrientation(Equatorial actual)

@@ -75,18 +75,6 @@ namespace Test_Alignment
         TEST_ASSERT_EQUAL(4, alignment.getNumTriangles());
 
         Triangle *triangles = alignment.getTrianglesPtr();
-        // Alignment::VertexPair *vertices = alignment.getVerticesPtr();
-
-        // for (int i = 0; i < alignment.getNumVertices(); i++)
-        //     printf("Vertices %i: (%.0f, %.0f)\n", i,
-        //            vertices[i].x, vertices[i].y);
-
-        // printf("Triangles: %i\n", alignment.getNumTriangles());
-        // for (int i = 0; i < alignment.getNumTriangles(); i++)
-        //     printf("Triangle %i: (%.0f, %.0f) (%.0f, %.0f) (%.0f, %.0f)\n", i,
-        //            vertices[triangles[i].p1].x, vertices[triangles[i].p1].y,
-        //            vertices[triangles[i].p2].x, vertices[triangles[i].p2].y,
-        //            vertices[triangles[i].p3].x, vertices[triangles[i].p3].y);
 
         // // compare with the *sorted* vertices
         TEST_ASSERT_EQUAL(3, triangles[0].p1);
@@ -403,6 +391,40 @@ namespace Test_Alignment
         TEST_ASSERT_FALSE(alignment.isInTriangle(Point(-1.4, -3), B, C, D));
     }
 
+    void test_function_nearestTriangle(void)
+    {
+        Alignment alignment;
+
+        // np.random.seed(7)
+        alignment.addVertexPair(Equatorial(10, 5), Equatorial());
+        alignment.addVertexPair(Equatorial(5, 1), Equatorial());
+        alignment.addVertexPair(Equatorial(4, 7), Equatorial());
+        alignment.addVertexPair(Equatorial(3, 5), Equatorial());
+        alignment.addVertexPair(Equatorial(1, 8), Equatorial());
+
+        alignment.TriangulateActual();
+
+        // Triangle *triangles = alignment.getTrianglesPtr();
+        // VertexPair *vertices = alignment.getVerticesPtr();
+
+        // for (int i = 0; i < alignment.getNumVertices(); i++)
+        //     printf("Vertices %i: (%.0f, %.0f)\n", i,
+        //            vertices[i].actual.ra, vertices[i].actual.dec);
+
+        // printf("Triangles: %i\n", alignment.getNumTriangles());
+        // for (int i = 0; i < alignment.getNumTriangles(); i++)
+        //     printf("Triangle %i: (%.0f, %.0f) (%.0f, %.0f) (%.0f, %.0f)\n", i,
+        //            vertices[triangles[i].p1].actual.ra, vertices[triangles[i].p1].actual.dec,
+        //            vertices[triangles[i].p2].actual.ra, vertices[triangles[i].p2].actual.dec,
+        //            vertices[triangles[i].p3].actual.ra, vertices[triangles[i].p3].actual.dec);
+
+        TEST_ASSERT_EQUAL(4, alignment.getNumTriangles());
+
+        TEST_ASSERT_EQUAL(2, alignment.nearestTriangle(Equatorial(7, 7)));
+        TEST_ASSERT_EQUAL(0, alignment.nearestTriangle(Equatorial(5, 0)));
+        TEST_ASSERT_EQUAL(1, alignment.nearestTriangle(Equatorial(0, 10)));
+    }
+
     void process(void)
     {
         UNITY_BEGIN();
@@ -426,6 +448,7 @@ namespace Test_Alignment
         // Triangle Math
         RUN_TEST(test_function_triangleArea);
         RUN_TEST(test_function_isInTriangle);
+        RUN_TEST(test_function_nearestTriangle);
 
         // Calibration
         RUN_TEST(test_function_getCalibratedOrientationIdentity);

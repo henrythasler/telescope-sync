@@ -28,7 +28,8 @@ public:
     TransformationMatrix *getMatricesPtr();
 
     double triangleArea(Point p1, Point p2, Point p3);
-    bool isInTriangle(Point p, Point p1, Point p2, Point p3);    
+    bool isInTriangle(Point p, Point p1, Point p2, Point p3);
+    int nearestTriangle(Equatorial actual);
 
     Equatorial getCalibratedOrientation(Equatorial actual);
     TransformationMatrix getTransformationMatrix(Equatorial actual);
@@ -47,6 +48,6 @@ private:
     Triangle *triangles = NULL;
 
     // each triangle has a transformation matrix assigned, that transforms the actual vertex to the reference vertex for each VertexPair
-    TransformationMatrix *transormationMatrices = NULL;  
+    TransformationMatrix *transormationMatrices = NULL;
 };
 #endif // ALIGNMENT_H
