@@ -40,83 +40,12 @@ void Telescope::addReferencePoint(Equatorial reference, double latitude, double 
     alignment.TriangulateActual();
 }
 
-// /**
-//  * ra = x
-//  * dec = y
-//  * */
-// BLA::Matrix<3, 3, BLA::Array<3, 3, double>> Telescope::getTransformationMatrix(uint32_t triangleOffset)
-// {
-//     BLA::Matrix<3, 3, BLA::Array<3, 3, double>> transformMatrix = BLA::Identity<3, 3>();
-
-//     if (this->alignmentPoints == 1)
-//     {
-//         transformMatrix(0, 2) = this->referencePoints[0].ra - this->actualPoints[0].ra;
-//         transformMatrix(1, 2) = this->referencePoints[0].dec - this->actualPoints[0].dec;
-//     }
-//     else if (this->maxAlignmentPoints >= 2 && this->alignmentPoints == 2)
-//     {
-//         BLA::Matrix<3, 3, BLA::Array<3, 3, double>> ref = {
-//             this->referencePoints[0].ra, this->referencePoints[1].ra, this->referencePoints[1].ra + (this->referencePoints[1].dec - this->referencePoints[0].dec),
-//             this->referencePoints[0].dec, this->referencePoints[1].dec, this->referencePoints[1].dec - (this->referencePoints[1].ra - this->referencePoints[0].ra),
-//             1, 1, 1};
-
-//         BLA::Matrix<3, 3, BLA::Array<3, 3, double>> actual = {
-//             this->actualPoints[0].ra, this->actualPoints[1].ra, this->actualPoints[1].ra + (this->actualPoints[1].dec - this->actualPoints[0].dec),
-//             this->actualPoints[0].dec, this->actualPoints[1].dec, this->actualPoints[1].dec - (this->actualPoints[1].ra - this->actualPoints[0].ra),
-//             1, 1, 1};
-
-//         if (BLA::Invert(actual))
-//             transformMatrix = ref * actual;
-//     }
-
-//     else if (this->maxAlignmentPoints >= 3 && this->alignmentPoints > 2 && (triangleOffset < this->alignmentPoints - 2))
-//     {
-//         BLA::Matrix<3, 3, BLA::Array<3, 3, double>> ref = {
-//             this->referencePoints[triangleOffset + 0].ra, this->referencePoints[triangleOffset + 1].ra, this->referencePoints[triangleOffset + 2].ra,
-//             this->referencePoints[triangleOffset + 0].dec, this->referencePoints[triangleOffset + 1].dec, this->referencePoints[triangleOffset + 2].dec,
-//             1, 1, 1};
-
-//         BLA::Matrix<3, 3, BLA::Array<3, 3, double>> actual = {
-//             this->actualPoints[triangleOffset + 0].ra, this->actualPoints[triangleOffset + 1].ra, this->actualPoints[triangleOffset + 2].ra,
-//             this->actualPoints[triangleOffset + 0].dec, this->actualPoints[triangleOffset + 1].dec, this->actualPoints[triangleOffset + 2].dec,
-//             1, 1, 1};
-
-//         if (BLA::Invert(actual))
-//             transformMatrix = ref * actual;
-//     }
-
-//     // Serial.printf("transformMatrix = [%.2f %.2f %.2f %.2f %.2f %.2f %.2f %.2f %.2f]\n",
-//     //     transformMatrix(0, 0),
-//     //     transformMatrix(0, 1),
-//     //     transformMatrix(0, 2),
-//     //     transformMatrix(1, 0),
-//     //     transformMatrix(1, 1),
-//     //     transformMatrix(1, 2),
-//     //     transformMatrix(2, 0),
-//     //     transformMatrix(2, 1),
-//     //     transformMatrix(2, 2));
-//     return transformMatrix;
-// }
-
 Equatorial Telescope::getCalibratedOrientation(double latitude, double localSiderealTimeDegrees)
 {
     Equatorial actual;
     this->horizontalToEquatorial(this->orientation, latitude, localSiderealTimeDegrees, &actual);    
     return(this->alignment.getCalibratedOrientation(actual));
-    // auto matrix = this->getTransformationMatrix(0);
-    // return this->getCalibratedOrientation(matrix, latitude, localSiderealTimeDegrees);
 }
-
-// Equatorial Telescope::getCalibratedOrientation(BLA::Matrix<3, 3, BLA::Array<3, 3, double>> M, double latitude, double localSiderealTimeDegrees)
-// {
-//     Equatorial result;
-//     auto position = this->horizontalToEquatorial(this->orientation, latitude, localSiderealTimeDegrees);
-//     BLA::Matrix<3, 1, BLA::Array<3, 1, double>> in = {position.ra, position.dec, 1};
-//     BLA::Matrix<3, 1, BLA::Array<3, 1, double>> out = M * in;
-//     result.ra = out(0);
-//     result.dec = out(1);
-//     return result;
-// }
 
 double Telescope::rad(double degrees)
 {

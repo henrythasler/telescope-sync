@@ -119,7 +119,6 @@ uint32_t gnssTimeout = 0;
 uint8_t txBuffer[265];
 uint8_t rxBuffer[265];
 
-
 void mqttCallback(char *topic, byte *payload, unsigned int length)
 {
     Serial.print("[  MQTT  ] Message arrived [");
@@ -396,7 +395,6 @@ void loop()
             heading = float(heading_raw & 0x3fff) * 360. / 16385.;
         }
         telescope.setOrientation(heading + headingOffset, pitch);
-        
 
         if (remoteClient && remoteClient.connected())
         {
@@ -419,10 +417,8 @@ void loop()
                     if (telescope.unpackPosition(&reference, NULL, rxBuffer, received))
                     {
                         double localSiderealTimeDegrees = MathHelper::getLocalSiderealTimeDegrees(gnss.utcTimestamp, gnss.longitude);
-
                         Serial.printf("[ SENSOR ] Received Calibration Data  Ra: %.3f Dec: %.3f\n", reference.ra, reference.dec);
-
-                        telescope.addReferencePoint(&reference, gnss.latitude, localSiderealTimeDegrees);
+                        telescope.addReferencePoint(reference, gnss.latitude, localSiderealTimeDegrees);
                     }
                 }
             }
@@ -456,7 +452,6 @@ void loop()
 
         if (localBrokerAvailable)
             broker.update();
-
 
         if (DEBUG)
         {
@@ -546,12 +541,6 @@ void loop()
             if (localBrokerAvailable)
                 broker.publish("home/appliance/telescope/orientation/lst", (char *)txBuffer);
 
-            len = snprintf((char *)txBuffer, sizeof(txBuffer), "%.3f", roll);
-            if (mqttAvailable)
-                mqttClient.publish("home/appliance/telescope/orientation/roll", txBuffer, len);
-            if (localBrokerAvailable)
-                broker.publish("home/appliance/telescope/orientation/roll", (char *)txBuffer);
-
             len = snprintf((char *)txBuffer, sizeof(txBuffer), "%.3f", pitch);
             if (mqttAvailable)
                 mqttClient.publish("home/appliance/telescope/orientation/pitch", txBuffer, len);
@@ -564,15 +553,19 @@ void loop()
             if (localBrokerAvailable)
                 broker.publish("home/appliance/telescope/orientation/heading", (char *)txBuffer);
 
-            // filter.getQuaternion(&qw, &qx, &qy, &qz);
 
-            len = snprintf((char *)txBuffer, sizeof(txBuffer), "[%.4f, %.4f, %.4f, %.4f]", qw, qx, qy, qz);
+            auto matrix = telescope.alignment.getTransformationMatrix(telescope.horizontalToEquatorial(telescope.orientation, gnss.latitude, localSiderealTimeDegrees));
+            len = snprintf((char *)txBuffer, sizeof(txBuffer), "[%.2f, %.2f, %.2f, %.2f, %.2f, %.2f, %.2f, %.2f, %.2f]",
+                           matrix(0, 0), matrix(0, 1), matrix(0, 2),
+                           matrix(1, 0), matrix(1, 1), matrix(1, 2),
+                           matrix(2, 0), matrix(2, 1), matrix(2, 2));
             if (mqttAvailable)
-                mqttClient.publish("home/appliance/telescope/orientation/quat", txBuffer, len);
+                mqttClient.publish("home/appliance/telescope/orientation/matrix", txBuffer, len);
             if (localBrokerAvailable)
-                broker.publish("home/appliance/telescope/orientation/quat", (char *)txBuffer);
+                broker.publish("home/appliance/telescope/orientation/matrix", (char *)txBuffer);
 
-            len = snprintf((char *)txBuffer, sizeof(txBuffer), "{\"ax\":%.3f,\"ay\":%.3f,\"az\":%.3f,\"gx\":%.3f,\"gy\":%.3f,\"gz\":%.3f,\"mx\":%.3f,\"my\":%.3f,\"mz\":%.3f}",
+            len = snprintf((char *)txBuffer, sizeof(txBuffer),
+                           "{\"ax\":%.3f,\"ay\":%.3f,\"az\":%.3f,\"gx\":%.3f,\"gy\":%.3f,\"gz\":%.3f,\"mx\":%.3f,\"my\":%.3f,\"mz\":%.3f}",
                            accel.acceleration.x, accel.acceleration.y, accel.acceleration.z,
                            gx, gy, gz,
                            mag.magnetic.x, mag.magnetic.y, mag.magnetic.z);
