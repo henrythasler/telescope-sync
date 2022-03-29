@@ -12,7 +12,7 @@
 class LSM6Wrapper
 {
 public:
-    LSM6Wrapper(int32_t accSensorID = -1, uint8_t accAddress = LSM6DS_I2CADDR_DEFAULT, TwoWire *theWire = &Wire);
+    LSM6Wrapper(int32_t accSensorID = -1, uint8_t accAddress = LSM6DS_I2CADDR_DEFAULT, TwoWire * const theWire = &Wire);
     bool begin(void);
     void setCalibration(void);
     void getEvent(sensors_event_t *acc, sensors_event_t *gyr);

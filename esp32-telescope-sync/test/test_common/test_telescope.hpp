@@ -56,6 +56,14 @@ namespace Test_Telescope
         res = telescope.horizontalToEquatorial(269.14634, 49.169122, 52.5, 304.80762);
         TEST_ASSERT_FLOAT_WITHIN(0.01, 250.43, res.ra);
         TEST_ASSERT_FLOAT_WITHIN(0.01, 36.47, res.dec);
+
+        res = telescope.horizontalToEquatorial(Horizontal(269.14634, 49.169122), 52.5, 304.80762);
+        TEST_ASSERT_FLOAT_WITHIN(0.01, 250.43, res.ra);
+        TEST_ASSERT_FLOAT_WITHIN(0.01, 36.47, res.dec);
+
+        telescope.horizontalToEquatorial(Horizontal(269.14634, 49.169122), 52.5, 304.80762, &res);
+        TEST_ASSERT_FLOAT_WITHIN(0.01, 250.43, res.ra);
+        TEST_ASSERT_FLOAT_WITHIN(0.01, 36.47, res.dec);
     }
 
     void test_function_toHorizontalPosition(void)
@@ -70,6 +78,10 @@ namespace Test_Telescope
         TEST_ASSERT_FLOAT_WITHIN(0.01, 49.169122, res.alt);
 
         res = telescope.equatorialToHorizontal(Equatorial(250.425, 36.467), 52.5, 304.808);
+        TEST_ASSERT_FLOAT_WITHIN(0.01, 269.14634, res.az);
+        TEST_ASSERT_FLOAT_WITHIN(0.01, 49.169122, res.alt);
+
+        telescope.equatorialToHorizontal(Equatorial(250.425, 36.467), 52.5, 304.808, &res);
         TEST_ASSERT_FLOAT_WITHIN(0.01, 269.14634, res.az);
         TEST_ASSERT_FLOAT_WITHIN(0.01, 49.169122, res.alt);
     }
@@ -106,6 +118,18 @@ namespace Test_Telescope
         res = telescope.packPosition(position, 0, buffer, sizeof(buffer));
         TEST_ASSERT_EQUAL_UINT32(24, res);
         TEST_ASSERT_EQUAL_UINT8_ARRAY(expected4, buffer, 24);
+    }
+
+    void test_function_packPositionNegative(void)
+    {
+        Equatorial position(0, 0);
+        Telescope telescope;
+        uint32_t res = -1;
+        uint8_t buffer[23];
+
+        // insufficient buffer size
+        res = telescope.packPosition(position, 0, buffer, sizeof(buffer));
+        TEST_ASSERT_EQUAL_UINT32(0, res);
     }
 
     void test_function_unpackPosition(void)
@@ -147,6 +171,11 @@ namespace Test_Telescope
         uint8_t dataB[] = {0x14, 0x00, 0x00, 0x00, 0x9C, 0x78, 0x7A, 0x74, 0x21, 0xD4, 0x05, 0x00, 0x74, 0x24, 0x07, 0x48, 0x3A, 0x7D, 0x1B};
         res = telescope.unpackPosition(&position, &timestamp, static_cast<uint8_t *>(dataB), sizeof(dataB));
         TEST_ASSERT_FALSE(res);
+
+        // type != 0
+        uint8_t dataC[] = {0x14, 0x00, 0x01, 0x00, 0xE5, 0xE3, 0xA5, 0xCD, 0x21, 0xD4, 0x05, 0x00, 0x58, 0x59, 0x25, 0x3F, 0x12, 0x66, 0x44, 0x05};
+        res = telescope.unpackPosition(&position, &timestamp, static_cast<uint8_t *>(dataC), sizeof(dataC));
+        TEST_ASSERT_FALSE(res);
     }
 
     void test_function_unpackPositionWrapper(void)
@@ -158,7 +187,7 @@ namespace Test_Telescope
         bool res = false;
 
         uint8_t dataA[] = {0x14, 0x00, 0x00, 0x00, 0x9C, 0x78, 0x7A, 0x74, 0x21, 0xD4, 0x05, 0x00, 0x74, 0x24, 0x07, 0x48, 0x3A, 0x7D, 0x1B, 0xF4};
-        res = telescope.unpackPosition(&position, &timestamp, static_cast<uint8_t *>(dataA), sizeof(dataA));
+        res = telescope.unpackPosition(&position.ra, &position.dec, &timestamp, static_cast<uint8_t *>(dataA), sizeof(dataA));
         TEST_ASSERT_TRUE_MESSAGE(res, "return value");
         TEST_ASSERT_FLOAT_WITHIN(0.001, 101.289, position.ra);
         TEST_ASSERT_FLOAT_WITHIN(0.001, -16.724 + 360.0, position.dec);
@@ -166,7 +195,7 @@ namespace Test_Telescope
         // Betelgeuse on 2021-12-28 00:38:39 UTC+1 at lng=11 lat=48
         uint8_t dataB[] = {0x14, 0x00, 0x00, 0x00, 0xE5, 0xE3, 0xA5, 0xCD, 0x21, 0xD4, 0x05, 0x00, 0x58, 0x59, 0x25, 0x3F, 0x12, 0x66, 0x44, 0x05};
 
-        res = telescope.unpackPosition(&position, &timestamp, static_cast<uint8_t *>(dataB), sizeof(dataB));
+        res = telescope.unpackPosition(&position.ra, &position.dec, &timestamp, static_cast<uint8_t *>(dataB), sizeof(dataB));
         TEST_ASSERT_TRUE_MESSAGE(res, "return value");
         TEST_ASSERT_FLOAT_WITHIN(0.001, 88.79891, position.ra);
         TEST_ASSERT_FLOAT_WITHIN(0.001, 7.4070, position.dec);
@@ -259,7 +288,7 @@ namespace Test_Telescope
         // and something outside the triangle (Bellantrix)
         telescope.setOrientation(Horizontal(200 - 173.42, 47 - 25.05));
         res = telescope.getCalibratedOrientation(48, localSiderealTimeDegrees);
-        TEST_ASSERT_FLOAT_WITHIN(0.01, 76.48, res.ra);  // this is way off, but it's out of the calibration area, so what.
+        TEST_ASSERT_FLOAT_WITHIN(0.01, 76.48, res.ra); // this is way off, but it's out of the calibration area, so what.
         TEST_ASSERT_FLOAT_WITHIN(0.01, 4.98, res.dec);
     }
 
@@ -281,6 +310,7 @@ namespace Test_Telescope
         RUN_TEST(test_function_fromHorizontalPosition);
         RUN_TEST(test_function_toHorizontalPosition);
         RUN_TEST(test_function_packPosition);
+        RUN_TEST(test_function_packPositionNegative);
         RUN_TEST(test_function_unpackPosition);
         RUN_TEST(test_function_unpackPositionWrapper);
         RUN_TEST(test_function_unpackPositionAnotherWrapper);

@@ -1,12 +1,3 @@
-// Arduino base
-#include <Arduino.h>
-#include <WiFi.h>
-
-// external Libraries
-#include <PubSubClient.h>
-#include <SPIFFS.h>
-// #include <AsyncTCP.h>
-
 // own libraries
 #include <persistency.h>
 #include <telescope.h>
@@ -18,7 +9,7 @@
 #include <orientationsensor.h>
 
 /**
- * A file called 'secrets.h' must be placed in lib/secrets and contain the following content:
+ * A file called 'secrets.h' must be placed in 'lib/secrets' and contain the following content:
  *
  * #ifndef SECRETS_H
  * #define SECRETS_H
@@ -36,49 +27,61 @@
  **/
 #include <secrets.h>
 
-#define DEBUG (false)
+// external Libraries
+#include <PubSubClient.h>
+#include <SPIFFS.h>
+// #include <AsyncTCP.h>
 
-#define IMU_PIN_VCC (4)
-#define IMU_PIN_I2C_SCL (22)
-#define IMU_PIN_I2C_SDA (21)
-#define IMU_I2C_CLOCK (400000U)
+// Arduino base
+#include <Arduino.h>
+#include <WiFi.h>
 
-#define IMU_BUS_ID (0)
+constexpr bool DEBUG = false;
+
+// global switches for connected devices
+constexpr bool ENABLE_WIFI = true;
+constexpr bool WIFIMODE_AUTO = true;
+constexpr bool WIFIMODE_FORCE_AP = false; // don't try to connect to a wifi-network and set up an AP immediately
+
+constexpr bool ENABLE_MQTT = true;
+constexpr bool ENABLE_GNSS = true;
+constexpr bool ENABLE_ORIENTATION = true;
+constexpr bool ENABLE_ROTATION = true;
+constexpr bool ENABLE_BROKER = true;
+
+// I/O settings
+constexpr int IMU_PIN_VCC = 4;
+constexpr int IMU_PIN_I2C_SCL = 22;
+constexpr int IMU_PIN_I2C_SDA = 21;
+constexpr int IMU_I2C_CLOCK = 400000U;
+constexpr int IMU_BUS_ID = 0;
 
 TwoWire I2CBus = TwoWire(IMU_BUS_ID); // set up a new Wire-Instance
 LSM6Wrapper imu(0, 0x6A, &I2CBus);
 
-#define AMT_SS (15)
+constexpr int AMT_SS = 15;
 SPIClass AMT22(HSPI);
 
+// stores the availability of certain modules
+bool orientationSensorAvailable = false;
+bool gnssModuleAvailable = false;
+bool filesystemAvailable = false;
+bool gnssAvailable = false;
+bool mqttAvailable = false;
+bool localBrokerAvailable = false;
+
+// internal variables
 Adafruit_Sensor *accelerometer, *gyroscope;
 sensors_event_t accel, gyro, mag;
 float roll = 0, pitch = 0, heading = 0;
 float gx = 0, gy = 0, gz = 0;
 float qw = 0, qx = 0, qy = 0, qz = 0;
-
-// global switches for connected devices
-#define ENABLE_WIFI (true)
-#define WIFIMODE_AUTO (true)
-#define WIFIMODE_FORCE_AP (false)
-
-#define ENABLE_MQTT (true)
-#define ENABLE_GNSS (true)
-#define ENABLE_ORIENTATION (true)
-#define ENABLE_ROTATION (true)
-#define ENABLE_BROKER (true)
-
-bool orientationSensorAvailable = false;
-bool gnssModuleAvailable = false;
-bool filesystemAvailable = false;
 bool wifiClientMode = false;
 bool wifiAccessPointMode = false;
-bool gnssAvailable = false;
-bool mqttAvailable = false;
-bool localBrokerAvailable = false;
 float headingOffset = 0;
 bool nexStarMode = false;
 
+// Network settings and components
 #define TCP_SERVER_PORT (10001)
 #define SSID "ESP32"
 // AsyncServer server(TCP_SERVER_PORT);
@@ -89,9 +92,10 @@ WiFiClient wifiClient;
 PubSubClient mqttClient(wifiClient); // for connecting to a remote broker
 MQTTBroker broker(&Serial);          // set-up own broker, needs a HardwareSerial for logging
 
+// Library modules
 Persistency persistency;            // load and save data in flash memory
 GNSS gnss(48, 11);                  // GNSS data provider; set initial position to enable operation before GNSS fix
-Telescope telescope(2);             // Telescope properties and related calculations
+Telescope telescope;                // Telescope properties and related calculations
 NexStar nexstar(&telescope, &gnss); // Communication to Stellarium-App
 LEDManager ledmanager;
 
@@ -116,8 +120,9 @@ uint32_t task30sTimer = 0;
 
 uint32_t gnssTimeout = 0;
 
-uint8_t txBuffer[265];
-uint8_t rxBuffer[265];
+// multi-purpose static bytearray
+uint8_t txBuffer[256];
+uint8_t rxBuffer[256];
 
 void mqttCallback(char *topic, byte *payload, unsigned int length)
 {
@@ -302,6 +307,7 @@ void setup()
 
     if (ENABLE_GNSS)
     {
+        // The GNSS module streams out it's data every second via the serial interface; no further setup required
         Serial2.begin(9600u);
         Serial.print("[  INIT  ] GNSS-Module enabled\n");
     }
@@ -383,17 +389,22 @@ void loop()
     {
         task100msTimer = timestamp;
 
+        // read filtered accelerometer data and compute pitch from calibrated values
         imu.getMeanAcc(&accel);
         imu.calibrate(&accel, &gyro);
         pitch = atan2(accel.acceleration.x, accel.acceleration.y) * 180 / PI;
 
+        // read rotation sensor data via SPI and verify checksum
         digitalWrite(AMT_SS, LOW);
         uint16_t heading_raw = (AMT22.transfer(0) << 8) | AMT22.transfer(0);
         digitalWrite(AMT_SS, HIGH);
         if (Checksum::verifyAmtCheckbits(heading_raw))
         {
+            // update heading if checksum is ok
             heading = float(heading_raw & 0x3fff) * 360. / 16385.;
         }
+
+        // update telescope properties with current measurements
         telescope.setOrientation(heading + headingOffset, pitch);
 
         if (remoteClient && remoteClient.connected())
@@ -553,7 +564,6 @@ void loop()
             if (localBrokerAvailable)
                 broker.publish("home/appliance/telescope/orientation/heading", (char *)txBuffer);
 
-
             auto matrix = telescope.alignment.getTransformationMatrix(telescope.horizontalToEquatorial(telescope.orientation, gnss.latitude, localSiderealTimeDegrees));
             len = snprintf((char *)txBuffer, sizeof(txBuffer), "[%.2f, %.2f, %.2f, %.2f, %.2f, %.2f, %.2f, %.2f, %.2f]",
                            matrix(0, 0), matrix(0, 1), matrix(0, 2),
@@ -633,9 +643,13 @@ void loop()
                            gnss.satUsed,
                            gnss.satView);
             if (localBrokerAvailable)
+            {
                 broker.publish("home/appliance/telescope/gnss", (char *)txBuffer);
+            }
             if (mqttAvailable)
+            {
                 mqttClient.publish("home/appliance/telescope/gnss", txBuffer, len);
+            }
         }
 
         if (mqttAvailable && !mqttClient.connected())

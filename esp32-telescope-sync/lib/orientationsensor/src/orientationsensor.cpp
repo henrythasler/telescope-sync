@@ -1,7 +1,7 @@
 #include <orientationsensor.h>
 
 #ifdef ARDUINO
-LSM6Wrapper::LSM6Wrapper(int32_t accSensorID, uint8_t accAddress, TwoWire *theWire)
+LSM6Wrapper::LSM6Wrapper(int32_t accSensorID, uint8_t accAddress, TwoWire * const theWire)
 {
     this->accSensorID = accSensorID;
     this->accAddress = accAddress;
@@ -11,7 +11,7 @@ LSM6Wrapper::LSM6Wrapper(int32_t accSensorID, uint8_t accAddress, TwoWire *theWi
 
 bool LSM6Wrapper::begin(void)
 {
-    if (!this->lsm6.begin_I2C(accAddress, wire, accSensorID))
+    if (!this->lsm6.begin_I2C(this->accAddress, this->wire, this->accSensorID))
     {
         return false;
     }

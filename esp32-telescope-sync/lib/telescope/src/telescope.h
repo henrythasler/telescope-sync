@@ -30,7 +30,6 @@ public:
     Horizontal offset;
 
     Telescope(void);
-    Telescope(int32_t maxAlignmentPoints);
     Telescope(double az, double alt);
 
     void setOrientation(double az, double alt);

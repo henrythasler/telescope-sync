@@ -128,6 +128,7 @@ Blink 1Hz | Orientation Sensor not yet calibrated
 ### ESP32 Programming
 
 - [How to format strings without the String class](https://cpp4arduino.com/2020/02/07/how-to-format-strings-without-the-string-class.html)
+- [C++ Core Guidelines](http://isocpp.github.io/CppCoreGuidelines/CppCoreGuidelines)
 
 ### Stellarium
 

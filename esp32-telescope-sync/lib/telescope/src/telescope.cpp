@@ -4,11 +4,6 @@ Telescope::Telescope(void)
 {
 }
 
-Telescope::Telescope(int32_t maxAlignmentPoints)
-{
-    // this->maxAlignmentPoints = maxAlignmentPoints;
-}
-
 /**
  * az = x
  * alt = y
