@@ -41,6 +41,12 @@ bool Alignment::addVertexPair(Equatorial actual, Equatorial reference)
     return true;
 }
 
+void Alignment::clearAll()
+{
+    this->numVertices = 0;
+    this->numTriangles = 0;
+}
+
 int Alignment::getNumVertices()
 {
     return this->numVertices;
@@ -68,7 +74,10 @@ VertexPair *Alignment::getVerticesPtr()
 
 void Alignment::TriangulateActual()
 {
-    this->TriangulateActual(this->numVertices, this->vertices, this->triangles, this->numTriangles);
+    if (this->numVertices > 0)
+    {
+        this->TriangulateActual(this->numVertices, this->vertices, this->triangles, this->numTriangles);
+    }
     this->updateTransformationMatrices();
 }
 
@@ -146,7 +155,6 @@ void Alignment::TriangulateActual(int nv, VertexPair vertex[], Triangle v[], int
     Edge *p_EdgeTemp;
     int nedge = 0;
     int trimax, emax = 200;
-    int status = 0;
     int inside;
     int i, j, k;
     double xp, yp, x1, y1, x2, y2, x3, y3, xc, yc, r;
@@ -354,6 +362,39 @@ TransformationMatrix Alignment::getTransformationMatrix(Equatorial actual)
 
     // if nothing was found, default is identity matrix
     return BLA::Identity<3, 3>();
+}
+
+
+TransformationType Alignment::getTransformationType(Equatorial actual)
+{
+    if ((this->numTriangles == 0) && (this->numVertices == 1))
+    {
+        return TransformationType::POINT;
+    }
+    else if ((this->numTriangles == 0) && (this->numVertices >= 2))
+    {
+        return TransformationType::LINE;
+    }
+    else if (this->numTriangles >= 1)
+    {
+        // need to find the triangle that contains the given actual position
+        for (int i = 0; i < this->numTriangles; i++)
+        {
+            if (this->isInTriangle(Point(actual),
+                                   Point(this->vertices[this->triangles[i].p1].actual),
+                                   Point(this->vertices[this->triangles[i].p2].actual),
+                                   Point(this->vertices[this->triangles[i].p3].actual)))
+            {
+                return TransformationType::TRIANGLE_IN;
+            }
+        }
+        // looks like the point is not in any of the triangles
+        // find the triangle that is closest and use this transformation
+        return TransformationType::TRIANGLE_OUT;
+    }
+
+    // if nothing was found, default is identity matrix
+    return TransformationType::NONE;
 }
 
 void Alignment::updateTransformationMatrices(void)

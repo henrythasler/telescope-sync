@@ -49,4 +49,13 @@ struct VertexPair
     Equatorial actual;
     Equatorial reference;
 };
+
+enum TransformationType
+{
+    NONE = 0,
+    POINT = 1,
+    LINE = 2,
+    TRIANGLE_OUT = 3,
+    TRIANGLE_IN = 4,
+};
 #endif

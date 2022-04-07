@@ -14,12 +14,14 @@
 
 typedef BLA::Matrix<3, 3, BLA::Array<3, 3, double>> TransformationMatrix;
 typedef BLA::Matrix<3, 1, BLA::Array<3, 1, double>> Vector3D;
+
 class Alignment
 {
 public:
     Alignment();
     void TriangulateActual();
 
+    void clearAll();
     bool addVertexPair(Equatorial actual, Equatorial reference);
     int getNumVertices();
     int getNumTriangles();
@@ -33,6 +35,7 @@ public:
 
     Equatorial getCalibratedOrientation(Equatorial actual);
     TransformationMatrix getTransformationMatrix(Equatorial actual);
+    TransformationType getTransformationType(Equatorial actual);
 
 private:
     int CircumCircle(double, double, double, double, double, double, double, double, double &, double &, double &);

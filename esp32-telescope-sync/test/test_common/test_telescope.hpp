@@ -292,6 +292,62 @@ namespace Test_Telescope
         TEST_ASSERT_FLOAT_WITHIN(0.01, 4.98, res.dec);
     }
 
+    void test_function_realWorldExample1(void)
+    {
+        // Date: 2022-04-06
+        // Time: 19:30 UTC
+
+        Telescope telescope;
+
+        double localSiderealTimeDegrees = MathHelper::getLocalSiderealTimeDegrees({.tm_sec = 0, .tm_min = 30, .tm_hour = 19, .tm_mday = 6, .tm_mon = 4, .tm_year = 2022}, 11);
+        TEST_ASSERT_FLOAT_WITHIN(0.0001, 138.5674, localSiderealTimeDegrees);
+
+        // Betelgeuse
+        telescope.setOrientation(Horizontal(280.64, 33.51));
+        telescope.addReferencePoint(Equatorial(88.79, 7.4), 48.3, localSiderealTimeDegrees);
+
+        // Sirius
+        telescope.setOrientation(Horizontal(256.7, 18.15));
+        telescope.addReferencePoint(Equatorial(101.28, -16.72), 48.3, localSiderealTimeDegrees);
+
+        // Procyon
+        telescope.setOrientation(Horizontal(252.2, 44.19));
+        telescope.addReferencePoint(Equatorial(114.82, 5.22), 48.3, localSiderealTimeDegrees);
+
+        TEST_ASSERT_EQUAL(3, telescope.alignment.getNumVertices());
+        TEST_ASSERT_EQUAL(1, telescope.alignment.getNumTriangles());
+
+        // Test all 3 points first
+        telescope.setOrientation(Horizontal(280.64, 33.51));
+        auto res = telescope.getCalibratedOrientation(48.3, localSiderealTimeDegrees);
+        TEST_ASSERT_FLOAT_WITHIN(0.01, 88.79, res.ra);
+        TEST_ASSERT_FLOAT_WITHIN(0.01, 7.4, res.dec);
+
+        telescope.setOrientation(Horizontal(256.7, 18.15));
+        res = telescope.getCalibratedOrientation(48.3, localSiderealTimeDegrees);
+        TEST_ASSERT_FLOAT_WITHIN(0.01, 101.28, res.ra);
+        TEST_ASSERT_FLOAT_WITHIN(0.01, -16.72, res.dec);
+
+        telescope.setOrientation(Horizontal(252.2, 44.19));
+        res = telescope.getCalibratedOrientation(48.3, localSiderealTimeDegrees);
+        TEST_ASSERT_FLOAT_WITHIN(0.01, 114.82, res.ra);
+        TEST_ASSERT_FLOAT_WITHIN(0.01, 5.22, res.dec);
+
+        // and something in between
+        telescope.setOrientation(Horizontal(261, 30));
+        res = telescope.getCalibratedOrientation(48.3, localSiderealTimeDegrees);
+        TEST_ASSERT_FLOAT_WITHIN(0.01, 102.27, res.ra);
+        TEST_ASSERT_FLOAT_WITHIN(0.01, -4.24, res.dec);
+
+        // auto matrix = telescope.alignment.getTransformationMatrix(telescope.horizontalToEquatorial(telescope.orientation, 48.3, localSiderealTimeDegrees));
+        // printf("[%.2f, %.2f, %.2f, %.2f, %.2f, %.2f, %.2f, %.2f, %.2f]",
+        //        matrix(0, 0), matrix(0, 1), matrix(0, 2),
+        //        matrix(1, 0), matrix(1, 1), matrix(1, 2),
+        //        matrix(2, 0), matrix(2, 1), matrix(2, 2));
+        // expected  [ 0.91,  -0.32,  38.73,  -4.96,  -13.83,  761.51,  0,  0,  1]
+        // actual    [ 0.9 ,  -0.31,  39.95,  -4.89,  -13.85,  755.12,  0,  0,  1]
+    }
+
     void test_function_addReferencePoint(void)
     {
         Telescope telescope(180, 60.34);
@@ -321,6 +377,8 @@ namespace Test_Telescope
         RUN_TEST(test_function_addReferencePoint);
         RUN_TEST(test_function_getCalibratedOrientationIdentity);
         RUN_TEST(test_function_getCalibratedOrientation3Point);
+
+        RUN_TEST(test_function_realWorldExample1);
 
         // RUN_TEST(test_function_getTransformationMatrix1Point);
         // RUN_TEST(test_function_getTransformationMatrix2Point);

@@ -355,6 +355,43 @@ namespace Test_Alignment
         TEST_ASSERT_FLOAT_WITHIN(0.001, 2, res.dec);
     }
 
+    void test_function_ClearAlignment(void)
+    {
+        Alignment alignment;
+
+        alignment.addVertexPair(Equatorial(1, 2), Equatorial(2, 1));
+        alignment.addVertexPair(Equatorial(6, 3), Equatorial(8, 2));
+        alignment.addVertexPair(Equatorial(3, 6), Equatorial(3, 4));
+
+        alignment.TriangulateActual();
+
+        TEST_ASSERT_EQUAL(3, alignment.getNumVertices());
+        TEST_ASSERT_EQUAL(1, alignment.getNumTriangles());
+
+        alignment.clearAll();
+
+        alignment.TriangulateActual();
+        TEST_ASSERT_EQUAL(0, alignment.getNumVertices());
+        TEST_ASSERT_EQUAL(0, alignment.getNumTriangles());
+
+        TransformationMatrix matrix = alignment.getTransformationMatrix(Equatorial(3, 4));
+
+        // 1st column
+        TEST_ASSERT_FLOAT_WITHIN(0.001, 1, matrix(0, 0));
+        TEST_ASSERT_FLOAT_WITHIN(0.001, 0, matrix(1, 0));
+        TEST_ASSERT_FLOAT_WITHIN(0.001, 0, matrix(2, 0));
+
+        // 2nd column
+        TEST_ASSERT_FLOAT_WITHIN(0.001, 0, matrix(0, 1));
+        TEST_ASSERT_FLOAT_WITHIN(0.001, 1, matrix(1, 1));
+        TEST_ASSERT_FLOAT_WITHIN(0.001, 0, matrix(2, 1));
+
+        // 3rd column
+        TEST_ASSERT_FLOAT_WITHIN(0.001, 0, matrix(0, 2));
+        TEST_ASSERT_FLOAT_WITHIN(0.001, 0, matrix(1, 2));
+        TEST_ASSERT_FLOAT_WITHIN(0.001, 1, matrix(2, 2));        
+    }
+
     void test_function_triangleArea(void)
     {
         Alignment alignment;
@@ -452,6 +489,7 @@ namespace Test_Alignment
 
         // Calibration
         RUN_TEST(test_function_getCalibratedOrientationIdentity);
+        RUN_TEST(test_function_ClearAlignment);
 
         UNITY_END();
     }

@@ -144,8 +144,6 @@ namespace Test_Nexstar
 
         Telescope telescope;
         telescope.setOrientation(0, 0);
-        TEST_ASSERT_FLOAT_WITHIN(0.01, 0.0, telescope.offset.alt);
-        TEST_ASSERT_FLOAT_WITHIN(0.01, 0.0, telescope.offset.az);
 
         NexStar nexstar(&telescope, &gnss);
 
@@ -189,8 +187,6 @@ namespace Test_Nexstar
 
         Telescope telescope;
         telescope.setOrientation(0, 0);
-        TEST_ASSERT_FLOAT_WITHIN(0.01, 0.0, telescope.offset.alt);
-        TEST_ASSERT_FLOAT_WITHIN(0.01, 0.0, telescope.offset.az);
 
         NexStar nexstar(&telescope, &gnss);
 
@@ -205,14 +201,55 @@ namespace Test_Nexstar
         TEST_ASSERT_EQUAL(1, bytes);
         TEST_ASSERT_EQUAL_HEX8_ARRAY("#", response, bytes);
         TEST_ASSERT_TRUE(telescope.isCalibrated);
-        // TEST_ASSERT_EQUAL_INT32(1, telescope.alignmentWritePointer);
-        // TEST_ASSERT_EQUAL_INT32(1, telescope.alignmentPoints);
 
         // should report aligned now
         bytes = nexstar.handleRequest(isAlignmentComplete, sizeof(isAlignmentComplete), response, sizeof(response));
         TEST_ASSERT_EQUAL(2, bytes);
         TEST_ASSERT_EQUAL_HEX8_ARRAY("\x01#", response, bytes);
     }
+
+    void test_function_nexstar_sync_precise_3(void)
+    {
+        uint8_t response[32];
+        int32_t bytes = 0;
+
+        GNSS gnss(48, 11);
+        gnss.utcTimestamp.tm_year = 2022;
+        gnss.utcTimestamp.tm_mon = 4;
+        gnss.utcTimestamp.tm_mday = 7;
+        gnss.utcTimestamp.tm_hour = 16;
+        gnss.utcTimestamp.tm_min = 30;
+        gnss.utcTimestamp.tm_sec = 0;
+
+        Telescope telescope;
+        telescope.setOrientation(0, 0);
+        NexStar nexstar(&telescope, &gnss);
+
+        // not yet aligned
+        uint8_t isAlignmentComplete[] = "J";
+        bytes = nexstar.handleRequest(isAlignmentComplete, sizeof(isAlignmentComplete), response, sizeof(response));
+        TEST_ASSERT_EQUAL(2, bytes);
+        TEST_ASSERT_EQUAL_HEX8_ARRAY("\x00#", response, bytes);
+
+        uint8_t sampleA[] = "s9C5943BF,D4BE256F03"; // Alpha Centauri
+        bytes = nexstar.handleRequest(sampleA, sizeof(sampleA), response, sizeof(response));
+        TEST_ASSERT_EQUAL(1, bytes);
+        TEST_ASSERT_EQUAL_HEX8_ARRAY("#", response, bytes);
+        TEST_ASSERT_TRUE(telescope.isCalibrated);
+
+
+        telescope.setOrientation(Horizontal(0, 0));
+        double localSiderealTimeDegrees = MathHelper::getLocalSiderealTimeDegrees({.tm_sec = 0, .tm_min = 30, .tm_hour = 16, .tm_mday = 7, .tm_mon = 4, .tm_year = 2022}, 11);
+        auto res = telescope.getCalibratedOrientation(48, localSiderealTimeDegrees);
+        TEST_ASSERT_FLOAT_WITHIN(0.01, 219.86, res.ra);
+        TEST_ASSERT_FLOAT_WITHIN(0.01, -60.83, res.dec);
+
+
+        // should report aligned now
+        bytes = nexstar.handleRequest(isAlignmentComplete, sizeof(isAlignmentComplete), response, sizeof(response));
+        TEST_ASSERT_EQUAL(2, bytes);
+        TEST_ASSERT_EQUAL_HEX8_ARRAY("\x01#", response, bytes);
+    }    
 
     void process(void)
     {
@@ -227,6 +264,7 @@ namespace Test_Nexstar
         RUN_TEST(test_function_nexstar_get_radec);
         RUN_TEST(test_function_nexstar_sync_precise_1);
         RUN_TEST(test_function_nexstar_sync_precise_2);
+        RUN_TEST(test_function_nexstar_sync_precise_3);
 
         UNITY_END();
     }

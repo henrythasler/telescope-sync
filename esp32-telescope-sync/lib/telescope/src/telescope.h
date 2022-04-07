@@ -27,7 +27,6 @@ public:
     Alignment alignment;
 
     Horizontal orientation;
-    Horizontal offset;
 
     Telescope(void);
     Telescope(double az, double alt);
@@ -37,6 +36,7 @@ public:
 
     bool isCalibrated = false;
     void addReferencePoint(Equatorial reference, double latitude, double localSiderealTimeDegrees);
+    Equatorial getCalibratedOrientation(double latitude, double localSiderealTimeDegrees, TransformationType &transformationType);
     Equatorial getCalibratedOrientation(double latitude, double localSiderealTimeDegrees);
 
     double rad(double degrees);

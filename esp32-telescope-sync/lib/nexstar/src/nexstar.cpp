@@ -50,7 +50,7 @@ uint32_t NexStar::handleRequest(uint8_t *request, size_t requestLength, uint8_t 
     {
         double localSiderealTimeDegrees = MathHelper::getLocalSiderealTimeDegrees(this->gnss->utcTimestamp, this->gnss->longitude);
         Equatorial position = this->telescope->getCalibratedOrientation(this->gnss->latitude, localSiderealTimeDegrees);
-        // Telescope::Equatorial position = this->telescope->horizontalToEquatorial(corrected, this->gnss->latitude, localSiderealTimeDegrees);
+        // Serial.printf("%s ra=%.2f, dec=%.2f",request, position.ra, position.dec);
         return snprintf((char *)response, responseMaxLength, "%08X,%08X#",
                         uint32_t(position.ra / 360.0L * 4294967296.0L),
                         uint32_t(position.dec / 360.0L * 4294967296.0L));
@@ -94,6 +94,11 @@ uint32_t NexStar::handleRequest(uint8_t *request, size_t requestLength, uint8_t 
 
         strncpy(hexString, (char *)request + 10, sizeof(hexString) - 1);
         reference.dec = (double)strtoul(hexString, NULL, 16) * 360L / 4294967296.0L;
+
+        // wrap for negative values
+        reference.dec = reference.dec > 270 ? reference.dec - 360. : reference.dec;
+
+        // Serial.printf("'%s' -> ra=%.2f, dec=%.2f",request, reference.ra, reference.dec);
 
         double localSiderealTimeDegrees = MathHelper::getLocalSiderealTimeDegrees(this->gnss->utcTimestamp, this->gnss->longitude);
         telescope->addReferencePoint(reference, this->gnss->latitude, localSiderealTimeDegrees);

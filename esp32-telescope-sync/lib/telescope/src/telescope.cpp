@@ -35,11 +35,18 @@ void Telescope::addReferencePoint(Equatorial reference, double latitude, double 
     alignment.TriangulateActual();
 }
 
-Equatorial Telescope::getCalibratedOrientation(double latitude, double localSiderealTimeDegrees)
+Equatorial Telescope::getCalibratedOrientation(double latitude, double localSiderealTimeDegrees, TransformationType &transformationType)
 {
     Equatorial actual;
-    this->horizontalToEquatorial(this->orientation, latitude, localSiderealTimeDegrees, &actual);    
-    return(this->alignment.getCalibratedOrientation(actual));
+    this->horizontalToEquatorial(this->orientation, latitude, localSiderealTimeDegrees, &actual);
+    transformationType = this->alignment.getTransformationType(actual);
+    return (this->alignment.getCalibratedOrientation(actual));
+}
+
+Equatorial Telescope::getCalibratedOrientation(double latitude, double localSiderealTimeDegrees)
+{
+    TransformationType _dummy;
+    return (this->getCalibratedOrientation(latitude, localSiderealTimeDegrees, _dummy));
 }
 
 double Telescope::rad(double degrees)
