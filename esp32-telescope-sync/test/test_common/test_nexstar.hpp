@@ -111,8 +111,7 @@ namespace Test_Nexstar
 
         Telescope telescope;
 
-        telescope.orientation.alt = 49.169122;
-        telescope.orientation.az = 269.14634;
+        telescope.setOrientation(Horizontal(269.14634, 49.169122));
 
         // make sure the input is correct
         double localSiderealTimeDegrees = MathHelper::getLocalSiderealTimeDegrees(gnss.utcTimestamp, gnss.longitude);

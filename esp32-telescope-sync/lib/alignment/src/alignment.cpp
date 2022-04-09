@@ -31,6 +31,19 @@ bool Alignment::addVertexPair(Equatorial actual, Equatorial reference)
             return false;
     }
 
+    // first vertex defines wrapping
+    if (this->numVertices > 0)
+    {
+        if ((this->vertices[0].reference.ra - reference.ra) > 180)
+        {
+            reference.ra += 360;
+        }
+
+        if ((this->vertices[0].reference.ra - reference.ra) < -180)
+        {
+            reference.ra -= 360;
+        }
+    }
     // add new vertex
     this->vertices[this->numVertices].actual = actual;
     this->vertices[this->numVertices].reference = reference;
@@ -364,7 +377,6 @@ TransformationMatrix Alignment::getTransformationMatrix(Equatorial actual)
     return BLA::Identity<3, 3>();
 }
 
-
 TransformationType Alignment::getTransformationType(Equatorial actual)
 {
     if ((this->numTriangles == 0) && (this->numVertices == 1))
@@ -506,7 +518,8 @@ Equatorial Alignment::getCalibratedOrientation(Equatorial actual)
     auto matrix = this->getTransformationMatrix(actual);
     Vector3D in = {actual.ra, actual.dec, 1};
     Vector3D out = matrix * in;
-    return (Equatorial(out(0), out(1)));
+    // return (Equatorial(out(0), out(1)));
+    return (Equatorial(MathHelper::f_mod(out(0), 360), out(1)));
 }
 
 double Alignment::triangleArea(Point p1, Point p2, Point p3)

@@ -50,7 +50,7 @@ uint32_t NexStar::handleRequest(uint8_t *request, size_t requestLength, uint8_t 
     {
         double localSiderealTimeDegrees = MathHelper::getLocalSiderealTimeDegrees(this->gnss->utcTimestamp, this->gnss->longitude);
         Equatorial position = this->telescope->getCalibratedOrientation(this->gnss->latitude, localSiderealTimeDegrees);
-        // Serial.printf("%s ra=%.2f, dec=%.2f",request, position.ra, position.dec);
+        // printf("getPosition ra=%.2f, dec=%.2f\n",position.ra, position.dec);
         return snprintf((char *)response, responseMaxLength, "%08X,%08X#",
                         uint32_t(position.ra / 360.0L * 4294967296.0L),
                         uint32_t(position.dec / 360.0L * 4294967296.0L));
@@ -98,11 +98,37 @@ uint32_t NexStar::handleRequest(uint8_t *request, size_t requestLength, uint8_t 
         // wrap for negative values
         reference.dec = reference.dec > 270 ? reference.dec - 360. : reference.dec;
 
-        // Serial.printf("'%s' -> ra=%.2f, dec=%.2f",request, reference.ra, reference.dec);
-
         double localSiderealTimeDegrees = MathHelper::getLocalSiderealTimeDegrees(this->gnss->utcTimestamp, this->gnss->longitude);
         telescope->addReferencePoint(reference, this->gnss->latitude, localSiderealTimeDegrees);
         telescope->isCalibrated = true;
+
+#ifdef ARDUINO
+        Serial.printf("az=%.2f alt=%.2f -> ra=%.2f, dec=%.2f\n", telescope->orientation.az, telescope->orientation.alt, reference.ra, reference.dec);
+
+        int numVertices = telescope->alignment.getNumVertices();
+        VertexPair *vertices = telescope->alignment.getVerticesPtr();
+        for (int i = 0; i < numVertices; i++)
+        {
+            Serial.printf(" %i: actual=(%.2f, %.2f) ref=(%.2f, %.2f)\n", i, vertices[i].actual.ra, vertices[i].actual.dec, vertices[i].reference.ra, vertices[i].reference.dec);
+        }
+
+        auto triangles = this->telescope->alignment.getNumTriangles();
+        TransformationMatrix *matrices = this->telescope->alignment.getMatricesPtr();
+
+        for (int i = 0; i < triangles; i++)
+        {
+            Serial.printf("Matrix %i: [%.2f, %.2f, %.2f, %.2f, %.2f, %.2f, %.2f, %.2f, %.2f)\n", i,
+                          matrices[i](0, 0),
+                          matrices[i](0, 1),
+                          matrices[i](0, 2),
+                          matrices[i](1, 0),
+                          matrices[i](1, 1),
+                          matrices[i](1, 2),
+                          matrices[i](2, 0),
+                          matrices[i](2, 1),
+                          matrices[i](2, 2));
+        }
+#endif
         return snprintf((char *)response, responseMaxLength, "#");
     }
     return 0;

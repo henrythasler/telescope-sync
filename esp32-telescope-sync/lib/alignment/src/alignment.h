@@ -9,6 +9,7 @@
 
 #include <linalg.h>
 #include <mytypes.h>
+#include <helper.h>
 
 #define MAX_ALIGNMENT_POINTS (64)
 
