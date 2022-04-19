@@ -35,6 +35,9 @@
 // Arduino base
 #include <Arduino.h>
 #include <WiFi.h>
+#include "esp_bt_main.h"
+#include "esp_bt_device.h"
+#include "BluetoothSerial.h"
 
 constexpr bool DEBUG = false;
 
@@ -48,6 +51,7 @@ constexpr bool ENABLE_GNSS = true;
 constexpr bool ENABLE_ORIENTATION = true;
 constexpr bool ENABLE_ROTATION = true;
 constexpr bool ENABLE_BROKER = true;
+constexpr bool ENABLE_BLUETOOTH = true;
 constexpr char *CONTROL_TOPIC = "home/appliance/telescope/control";
 
 // I/O settings
@@ -70,6 +74,7 @@ bool filesystemAvailable = false;
 bool gnssAvailable = false;
 bool mqttAvailable = false;
 bool localBrokerAvailable = false;
+bool bluetoothAvailable = false;
 
 // internal variables
 Adafruit_Sensor *accelerometer, *gyroscope;
@@ -92,6 +97,7 @@ WiFiClient remoteClient;
 WiFiClient wifiClient;
 PubSubClient mqttClient(wifiClient); // for connecting to a remote broker
 MQTTBroker broker(&Serial);          // set-up own broker, needs a HardwareSerial for logging
+BluetoothSerial SerialBT;
 
 // Library modules
 Persistency persistency;            // load and save data in flash memory
@@ -172,6 +178,38 @@ void onWifiConnected(WiFiEvent_t event, WiFiEventInfo_t info)
 void onWifiIPAddress(WiFiEvent_t event, WiFiEventInfo_t info)
 {
     Serial.printf("[  WIFI  ] IP=%s\n", WiFi.localIP().toString().c_str());
+}
+
+void onBluetooth(esp_spp_cb_event_t event, esp_spp_cb_param_t *param)
+{
+    // Serial.printf("[   BT   ] SPP-Event: %i\n", event);
+    if (event == ESP_SPP_DATA_IND_EVT)
+    {
+        // strncpy((char *)rxBuffer, (char *)param->data_ind.data, param->data_ind.len);
+        // rxBuffer[param->data_ind.len] = 0;
+        // Serial.printf("[   BT   ] SPP-Data: '%s'\n", rxBuffer);
+        int32_t nexstarResponseLength = nexstar.handleRequest(param->data_ind.data, param->data_ind.len, txBuffer, sizeof(txBuffer));
+
+        if (nexstarResponseLength > 0)
+        {
+            SerialBT.write(txBuffer, nexstarResponseLength);
+            nexStarMode = true;
+        }
+    }
+    else if (event == ESP_SPP_SRV_OPEN_EVT)
+    {
+        Serial.printf("[   BT   ] Client connected (%02X:%02X:%02X:%02X:%02X:%02X)\n",
+                      param->srv_open.rem_bda[0], param->srv_open.rem_bda[1], param->srv_open.rem_bda[2],
+                      param->srv_open.rem_bda[3], param->srv_open.rem_bda[4], param->srv_open.rem_bda[5]);
+    }
+    else if (event == ESP_SPP_CLOSE_EVT)
+    {
+        Serial.printf("[   BT   ] Connection closed\n");
+    }
+    // else
+    // {
+    //     Serial.printf("[   BT   ] SPP-Event: %i\n", event);
+    // }
 }
 
 void setup()
@@ -322,6 +360,35 @@ void setup()
             Serial.println("ok");
             initStage++;
             mqttAvailable = true;
+        }
+    }
+
+    if (ENABLE_BLUETOOTH)
+    {
+        if (!btStart())
+        {
+            Serial.println("[  INIT  ] Failed to initialize Bluettooth controller");
+        }
+        else if (esp_bluedroid_init() != ESP_OK)
+        {
+            Serial.println("[  INIT  ] Failed to initialize bluedroid");
+        }
+        else if (esp_bluedroid_enable() != ESP_OK)
+        {
+            Serial.println("[  INIT  ] Failed to enable bluedroid");
+        }
+        else
+        {
+            bluetoothAvailable = true;
+            // https://techtutorialsx.com/2018/03/09/esp32-arduino-getting-the-bluetooth-device-address/
+            const uint8_t *deviceAddress = esp_bt_dev_get_address();
+            Serial.printf("[  INIT  ] Bluetooth enabled (%02X:%02X:%02X:%02X:%02X:%02X)\n",
+                          *(deviceAddress + 0), *(deviceAddress + 1),
+                          *(deviceAddress + 2), *(deviceAddress + 3),
+                          *(deviceAddress + 4), *(deviceAddress + 5));
+            SerialBT.begin(SSID);
+            SerialBT.enableSSP();
+            SerialBT.register_callback(onBluetooth);
         }
     }
 

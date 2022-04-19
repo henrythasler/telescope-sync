@@ -129,6 +129,8 @@ Blink 1Hz | Orientation Sensor not yet calibrated
 
 - [How to format strings without the String class](https://cpp4arduino.com/2020/02/07/how-to-format-strings-without-the-string-class.html)
 - [C++ Core Guidelines](http://isocpp.github.io/CppCoreGuidelines/CppCoreGuidelines)
+- [ESP32: Getting started with Bluetooth](https://www.electrosoftcloud.com/en/esp32-getting-started-with-bluetooth/)
+- [ESP32 Arduino Tutorial: 38. Serial over Bluetooth - Client connection event](https://www.dfrobot.com/blog-1203.html)
 
 ### Stellarium
 
