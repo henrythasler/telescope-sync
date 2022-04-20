@@ -13,7 +13,7 @@ class NexStar
 {
 public:
     NexStar(Telescope *telescope, GNSS *gnss);
-    uint32_t handleRequest(uint8_t *request, size_t requestLength, uint8_t *response, size_t responseMaxLength);
+    uint32_t handleRequest(const uint8_t *request, size_t requestLength, uint8_t *response, size_t responseMaxLength);
 
 private:    
     Telescope *telescope;

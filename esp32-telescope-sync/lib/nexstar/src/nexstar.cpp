@@ -6,7 +6,7 @@ NexStar::NexStar(Telescope *telescope, GNSS *gnss)
     this->gnss = gnss;
 }
 
-uint32_t NexStar::handleRequest(uint8_t *request, size_t requestLength, uint8_t *response, size_t responseMaxLength)
+uint32_t NexStar::handleRequest(const uint8_t *request, size_t requestLength, uint8_t *response, size_t responseMaxLength)
 {
     // Echo
     if (requestLength >= 2 && request[0] == 'K')
