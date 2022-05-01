@@ -6,7 +6,7 @@ NexStar::NexStar(Telescope *telescope, GNSS *gnss)
     this->gnss = gnss;
 }
 
-uint32_t NexStar::handleRequest(uint8_t *request, size_t requestLength, uint8_t *response, size_t responseMaxLength)
+uint32_t NexStar::handleRequest(const uint8_t *request, size_t requestLength, uint8_t *response, size_t responseMaxLength)
 {
     // Echo
     if (requestLength >= 2 && request[0] == 'K')
@@ -130,6 +130,14 @@ uint32_t NexStar::handleRequest(uint8_t *request, size_t requestLength, uint8_t 
         }
 #endif
         return snprintf((char *)response, responseMaxLength, "#");
+    }
+    else
+    {
+#ifdef ARDUINO
+        Serial.printf("[ NEXSTAR] Unknown Command: %c, %i, %i, %i, %i, %i, %i, %i \n",
+                      request[0], request[1], request[2], request[3],
+                      request[4], request[5], request[6], request[7]);
+#endif
     }
     return 0;
 }
