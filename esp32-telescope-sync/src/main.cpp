@@ -48,7 +48,7 @@ constexpr bool ENABLE_GNSS = true;
 constexpr bool ENABLE_ORIENTATION = true;
 constexpr bool ENABLE_ROTATION = true;
 constexpr bool ENABLE_BROKER = true;
-constexpr char *CONTROL_TOPIC = "home/appliance/telescope/control";
+constexpr char CONTROL_TOPIC[] = "home/appliance/telescope/control";
 
 // I/O settings
 constexpr int IMU_PIN_VCC = 4;
@@ -595,6 +595,35 @@ void loop()
                 mqttClient.publish("home/appliance/telescope/alignment", txBuffer, len);
             if (localBrokerAvailable)
                 broker.publish("home/appliance/telescope/alignment", (char *)txBuffer);
+
+
+            auto vertices = telescope.alignment.getVerticesPtr();
+            len = 0;
+            txBuffer[len++] = '[';
+            for (int i = 0; i < telescope.alignment.getNumVertices(); i++)
+            {
+                len += snprintf((char *)(txBuffer + len), sizeof(txBuffer) - len,
+                                 "[%.2f,%.2f],", vertices[i].actual.ra, vertices[i].actual.dec);
+            }
+            txBuffer[len++] = ']';
+            if (mqttAvailable)
+                mqttClient.publish("home/appliance/telescope/actual", txBuffer, len);
+            if (localBrokerAvailable)
+                broker.publish("home/appliance/telescope/actual", (char *)txBuffer);
+
+            len = 0;
+            txBuffer[len++] = '[';
+            for (int i = 0; i < telescope.alignment.getNumVertices(); i++)
+            {
+                len += snprintf((char *)(txBuffer + len), sizeof(txBuffer) - len,
+                                 "[%.2f,%.2f],", vertices[i].reference.ra, vertices[i].reference.dec);
+            }
+            txBuffer[len++] = ']';
+            if (mqttAvailable)
+                mqttClient.publish("home/appliance/telescope/reference", txBuffer, len);
+            if (localBrokerAvailable)
+                broker.publish("home/appliance/telescope/reference", (char *)txBuffer);
+
 
             auto matrix = telescope.alignment.getTransformationMatrix(telescope.horizontalToEquatorial(telescope.orientation, gnss.latitude, localSiderealTimeDegrees));
             len = snprintf((char *)txBuffer, sizeof(txBuffer), "[%.2f, %.2f, %.2f, %.2f, %.2f, %.2f, %.2f, %.2f, %.2f]",
