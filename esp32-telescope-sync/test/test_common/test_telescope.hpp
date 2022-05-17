@@ -231,12 +231,148 @@ namespace Test_Telescope
         telescope.setOrientation(orientation);
 
         auto res = telescope.getCalibratedOrientation(0, 0);
-
         TEST_ASSERT_FLOAT_WITHIN(0.001, 1, res.ra);
         TEST_ASSERT_FLOAT_WITHIN(0.001, 2, res.dec);
+        auto hor = telescope.equatorialToHorizontal(res, 0, 0);
+        TEST_ASSERT_FLOAT_WITHIN(0.001, orientation.az, hor.az);
+        TEST_ASSERT_FLOAT_WITHIN(0.001, orientation.alt, hor.alt);
+
+        // check time invariance
+        auto res2 = telescope.getCalibratedOrientation(0, 30);
+        auto hor2 = telescope.equatorialToHorizontal(res2, 0, 30);
+        TEST_ASSERT_FLOAT_WITHIN(0.001, orientation.az, hor2.az);
+        TEST_ASSERT_FLOAT_WITHIN(0.001, orientation.alt, hor2.alt);
     }
 
-    void test_function_getCalibratedOrientation3Point(void)
+    void test_function_getCalibratedOrientation1Point(void)
+    {
+        // Testsite, 11°E, 48°N, height 0m
+        // 2022-05-15 20:00:00 UTC
+        Telescope telescope;
+
+        double localSiderealTimeDegrees = MathHelper::getLocalSiderealTimeDegrees({.tm_sec = 0, .tm_min = 0, .tm_hour = 20, .tm_mday = 15, .tm_mon = 5, .tm_year = 2022}, 11);
+        TEST_ASSERT_FLOAT_WITHIN(0.0001, 184.5282, localSiderealTimeDegrees);
+
+        // Arcturus
+        telescope.setOrientation(Horizontal(110, 60));
+        telescope.addReferencePoint(Equatorial(213.91, 19.17), 48, localSiderealTimeDegrees);
+
+        TEST_ASSERT_EQUAL(1, telescope.alignment.getNumVertices());
+        TEST_ASSERT_EQUAL(0, telescope.alignment.getNumTriangles());
+
+        auto res = telescope.getCalibratedOrientation(48, localSiderealTimeDegrees);
+        TEST_ASSERT_FLOAT_WITHIN(0.01, 213.91, res.ra);
+        TEST_ASSERT_FLOAT_WITHIN(0.01, 19.17, res.dec);
+
+        auto corrected = telescope.equatorialToHorizontal(res, 48, localSiderealTimeDegrees);
+        TEST_ASSERT_FLOAT_WITHIN(0.01, 130.22, corrected.az);
+        TEST_ASSERT_FLOAT_WITHIN(0.01, 52.63, corrected.alt);
+
+        // Check time invariance
+        double localSiderealTimeDegrees2 = MathHelper::getLocalSiderealTimeDegrees({.tm_sec = 0, .tm_min = 6, .tm_hour = 22, .tm_mday = 15, .tm_mon = 5, .tm_year = 2022}, 11);
+        TEST_ASSERT_FLOAT_WITHIN(0.0001, 216.1144, localSiderealTimeDegrees2);
+
+        res = telescope.getCalibratedOrientation(48, localSiderealTimeDegrees2);
+        TEST_ASSERT_FLOAT_WITHIN(0.01, 245.49, res.ra);
+        TEST_ASSERT_FLOAT_WITHIN(0.01, 19.17, res.dec);
+
+        corrected = telescope.equatorialToHorizontal(res, 48, localSiderealTimeDegrees2);
+        TEST_ASSERT_FLOAT_WITHIN(0.01, 130.22, corrected.az);
+        TEST_ASSERT_FLOAT_WITHIN(0.01, 52.63, corrected.alt);
+    }
+
+    void test_function_getCalibratedOrientation2Point(void)
+    {
+        // Testsite, 11°E, 48°N, height 0m
+        // 2022-05-15 20:00:00 UTC
+        Telescope telescope;
+
+        double localSiderealTimeDegrees = MathHelper::getLocalSiderealTimeDegrees({.tm_sec = 0, .tm_min = 0, .tm_hour = 20, .tm_mday = 15, .tm_mon = 5, .tm_year = 2022}, 11);
+        TEST_ASSERT_FLOAT_WITHIN(0.0001, 184.5282, localSiderealTimeDegrees);
+
+        // Arcturus
+        telescope.setOrientation(Horizontal(110, 60));
+        telescope.addReferencePoint(Equatorial(213.91, 19.17), 48, localSiderealTimeDegrees);
+
+        // Izar
+        telescope.setOrientation(Horizontal(90, 64));
+        telescope.addReferencePoint(Equatorial(221.25, 27.07), 48, localSiderealTimeDegrees);
+
+        TEST_ASSERT_EQUAL(2, telescope.alignment.getNumVertices());
+        TEST_ASSERT_EQUAL(0, telescope.alignment.getNumTriangles());
+
+        // Arcturus
+        telescope.setOrientation(Horizontal(110, 60));
+        auto res = telescope.getCalibratedOrientation(48, localSiderealTimeDegrees);
+        TEST_ASSERT_FLOAT_WITHIN(0.01, 213.91, res.ra);
+        TEST_ASSERT_FLOAT_WITHIN(0.01, 19.17, res.dec);
+
+        auto corrected = telescope.equatorialToHorizontal(res, 48, localSiderealTimeDegrees);
+        TEST_ASSERT_FLOAT_WITHIN(0.01, 130.22, corrected.az);
+        TEST_ASSERT_FLOAT_WITHIN(0.01, 52.63, corrected.alt);
+
+        // Check time invariance
+        double localSiderealTimeDegrees2 = MathHelper::getLocalSiderealTimeDegrees({.tm_sec = 0, .tm_min = 6, .tm_hour = 22, .tm_mday = 15, .tm_mon = 5, .tm_year = 2022}, 11);
+        TEST_ASSERT_FLOAT_WITHIN(0.0001, 216.1144, localSiderealTimeDegrees2);
+
+        res = telescope.getCalibratedOrientation(48, localSiderealTimeDegrees2);
+        TEST_ASSERT_FLOAT_WITHIN(0.01, 245.49, res.ra);
+        TEST_ASSERT_FLOAT_WITHIN(0.01, 19.17, res.dec);
+
+        corrected = telescope.equatorialToHorizontal(res, 48, localSiderealTimeDegrees2);
+        TEST_ASSERT_FLOAT_WITHIN(0.01, 130.22, corrected.az);
+        TEST_ASSERT_FLOAT_WITHIN(0.01, 52.63, corrected.alt);
+    }
+
+    void test_function_getCalibratedOrientation3PointSampleA(void)
+    {
+        // Testsite, 11°E, 48°N, height 0m
+        // 2022-05-15 20:00:00 UTC
+        Telescope telescope;
+
+        double localSiderealTimeDegrees = MathHelper::getLocalSiderealTimeDegrees({.tm_sec = 0, .tm_min = 0, .tm_hour = 20, .tm_mday = 15, .tm_mon = 5, .tm_year = 2022}, 11);
+        TEST_ASSERT_FLOAT_WITHIN(0.0001, 184.5282, localSiderealTimeDegrees);
+
+        // Arcturus
+        telescope.setOrientation(Horizontal(110, 60));
+        telescope.addReferencePoint(Equatorial(213.91, 19.17), 48, localSiderealTimeDegrees);
+
+        // Izar
+        telescope.setOrientation(Horizontal(90, 64));
+        telescope.addReferencePoint(Equatorial(221.25, 27.07), 48, localSiderealTimeDegrees);
+
+        // 25 Boo
+        telescope.setOrientation(Horizontal(90, 67));
+        telescope.addReferencePoint(Equatorial(217.96, 30.37), 48, localSiderealTimeDegrees);
+
+        TEST_ASSERT_EQUAL(3, telescope.alignment.getNumVertices());
+        TEST_ASSERT_EQUAL(1, telescope.alignment.getNumTriangles());
+
+        // Arcturus
+        telescope.setOrientation(Horizontal(110, 60));
+        auto res = telescope.getCalibratedOrientation(48, localSiderealTimeDegrees);
+        TEST_ASSERT_FLOAT_WITHIN(0.01, 213.91, res.ra);
+        TEST_ASSERT_FLOAT_WITHIN(0.01, 19.17, res.dec);
+
+        auto corrected = telescope.equatorialToHorizontal(res, 48, localSiderealTimeDegrees);
+        TEST_ASSERT_FLOAT_WITHIN(0.01, 130.22, corrected.az);
+        TEST_ASSERT_FLOAT_WITHIN(0.01, 52.63, corrected.alt);
+
+        // Check time invariance
+        double localSiderealTimeDegrees2 = MathHelper::getLocalSiderealTimeDegrees({.tm_sec = 0, .tm_min = 6, .tm_hour = 22, .tm_mday = 15, .tm_mon = 5, .tm_year = 2022}, 11);
+        TEST_ASSERT_FLOAT_WITHIN(0.0001, 216.1144, localSiderealTimeDegrees2);
+
+        res = telescope.getCalibratedOrientation(48, localSiderealTimeDegrees2);
+        TEST_ASSERT_FLOAT_WITHIN(0.01, 245.49, res.ra);
+        TEST_ASSERT_FLOAT_WITHIN(0.01, 19.17, res.dec);
+
+        corrected = telescope.equatorialToHorizontal(res, 48, localSiderealTimeDegrees2);
+        TEST_ASSERT_FLOAT_WITHIN(0.01, 130.22, corrected.az);
+        TEST_ASSERT_FLOAT_WITHIN(0.01, 52.63, corrected.alt);
+
+    }
+
+    void test_function_getCalibratedOrientation3PointSampleB(void)
     {
         // Testsite, 11°E, 48°N, height 0m
         // 2022-03-16 18:00:00 UTC
@@ -290,6 +426,16 @@ namespace Test_Telescope
         res = telescope.getCalibratedOrientation(48, localSiderealTimeDegrees);
         TEST_ASSERT_FLOAT_WITHIN(0.01, 76.48, res.ra); // this is way off, but it's out of the calibration area, so what.
         TEST_ASSERT_FLOAT_WITHIN(0.01, 4.98, res.dec);
+
+        // check time invariance (Rigel)
+        // telescope.setOrientation(Horizontal(199.25 - 173.42, 32.01 - 25.05));
+        // double localSiderealTimeDegrees2 = MathHelper::getLocalSiderealTimeDegrees({.tm_sec = 0, .tm_min = 0, .tm_hour = 18, .tm_mday = 16, .tm_mon = 3, .tm_year = 2022}, 11);
+        // TEST_ASSERT_FLOAT_WITHIN(0.0001, 216.1144, localSiderealTimeDegrees2);
+
+        // res = telescope.getCalibratedOrientation(48, localSiderealTimeDegrees + 30);
+        // hor = telescope.equatorialToHorizontal(res, 48, localSiderealTimeDegrees + 30);
+        // TEST_ASSERT_FLOAT_WITHIN(0.01, 199.25 - 173.42, hor.az);
+        // TEST_ASSERT_FLOAT_WITHIN(0.01, 32.01 - 25.05, hor.alt);
     }
 
     void test_function_realWorldExample1(void)
@@ -428,20 +574,17 @@ namespace Test_Telescope
         RUN_TEST(test_function_unpackPositionWrapper);
         RUN_TEST(test_function_unpackPositionAnotherWrapper);
         RUN_TEST(test_function_unpackPositionNegative);
-        // RUN_TEST(test_function_calibrate);
 
         // n-Point-Alignment
         RUN_TEST(test_function_addReferencePoint);
         RUN_TEST(test_function_getCalibratedOrientationIdentity);
-        RUN_TEST(test_function_getCalibratedOrientation3Point);
+        RUN_TEST(test_function_getCalibratedOrientation1Point);
+        RUN_TEST(test_function_getCalibratedOrientation2Point);
+        RUN_TEST(test_function_getCalibratedOrientation3PointSampleA);
+        RUN_TEST(test_function_getCalibratedOrientation3PointSampleB);
 
         RUN_TEST(test_function_realWorldExample1);
         RUN_TEST(test_function_wrapAlignment1);
-
-        // RUN_TEST(test_function_getTransformationMatrix1Point);
-        // RUN_TEST(test_function_getTransformationMatrix2Point);
-        // RUN_TEST(test_function_getTransformationMatrix3Point);
-        // RUN_TEST(test_function_calibrateMatrix);
 
         UNITY_END();
     }

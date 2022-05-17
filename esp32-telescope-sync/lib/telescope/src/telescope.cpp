@@ -39,6 +39,7 @@ Equatorial Telescope::getCalibratedOrientation(double latitude, double localSide
 {
     Equatorial actual;
     this->horizontalToEquatorial(this->orientation, latitude, localSiderealTimeDegrees, &actual);
+    // printf("Actual: LST=%.2f° Az=%.2f, Alt=%.2f => ra=%.2f, dec=%.2f\n", localSiderealTimeDegrees, this->orientation.az, this->orientation.alt, actual.ra, actual.dec);
     transformationType = this->alignment.getTransformationType(actual);
     return (this->alignment.getCalibratedOrientation(actual));
 }
