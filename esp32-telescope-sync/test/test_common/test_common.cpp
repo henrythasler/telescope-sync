@@ -16,8 +16,8 @@ void process(void)
 {
     Test_Telescope::process();
     Test_Mathhelper::process();
-    Test_GNSS::process();
-    Test_Nexstar::process();
+    // Test_GNSS::process();
+    // Test_Nexstar::process();
     Test_Alignment::process();
     Test_Types::process();
 }

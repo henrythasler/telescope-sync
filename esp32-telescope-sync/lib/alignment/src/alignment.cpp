@@ -6,9 +6,9 @@ int XYZCompare(const void *v1, const void *v2)
 
     p1 = (VertexPair *)v1;
     p2 = (VertexPair *)v2;
-    if (p1->actual.ra < p2->actual.ra)
+    if (p1->actual.az < p2->actual.az)
         return (-1);
-    else if (p1->actual.ra > p2->actual.ra)
+    else if (p1->actual.az > p2->actual.az)
         return (1);
     else
         return (0);
@@ -22,26 +22,26 @@ Alignment::Alignment()
     this->transormationMatrices = new BLA::Matrix<3, 3, BLA::Array<3, 3, double>>[3 * this->maxVertices];
 }
 
-bool Alignment::addVertexPair(Equatorial actual, Equatorial reference)
+bool Alignment::addVertexPair(Horizontal actual, Horizontal reference)
 {
     // prevent adding duplicates
     for (int i = 0; i < this->numVertices; i++)
     {
-        if ((this->vertices[i].actual.ra == actual.ra) && (this->vertices[i].actual.dec == actual.dec))
+        if ((this->vertices[i].actual.az == actual.az) && (this->vertices[i].actual.alt == actual.alt))
             return false;
     }
 
     // first vertex defines wrapping
     if (this->numVertices > 0)
     {
-        if ((this->vertices[0].reference.ra - reference.ra) > 180)
+        if ((this->vertices[0].reference.az - reference.az) > 180)
         {
-            reference.ra += 360;
+            reference.az += 360;
         }
 
-        if ((this->vertices[0].reference.ra - reference.ra) < -180)
+        if ((this->vertices[0].reference.az - reference.az) < -180)
         {
-            reference.ra -= 360;
+            reference.az -= 360;
         }
     }
     // add new vertex
@@ -183,20 +183,20 @@ void Alignment::TriangulateActual(int nv, VertexPair vertex[], Triangle v[], int
           Find the maximum and minimum vertex bounds.
           This is to allow calculation of the bounding triangle
     */
-    xmin = vertex[0].actual.ra;
-    ymin = vertex[0].actual.dec;
+    xmin = vertex[0].actual.az;
+    ymin = vertex[0].actual.alt;
     xmax = xmin;
     ymax = ymin;
     for (i = 1; i < nv; i++)
     {
-        if (vertex[i].actual.ra < xmin)
-            xmin = vertex[i].actual.ra;
-        if (vertex[i].actual.ra > xmax)
-            xmax = vertex[i].actual.ra;
-        if (vertex[i].actual.dec < ymin)
-            ymin = vertex[i].actual.dec;
-        if (vertex[i].actual.dec > ymax)
-            ymax = vertex[i].actual.dec;
+        if (vertex[i].actual.az < xmin)
+            xmin = vertex[i].actual.az;
+        if (vertex[i].actual.az > xmax)
+            xmax = vertex[i].actual.az;
+        if (vertex[i].actual.alt < ymin)
+            ymin = vertex[i].actual.alt;
+        if (vertex[i].actual.alt > ymax)
+            ymax = vertex[i].actual.alt;
     }
     dx = xmax - xmin;
     dy = ymax - ymin;
@@ -210,12 +210,12 @@ void Alignment::TriangulateActual(int nv, VertexPair vertex[], Triangle v[], int
        vertex list. The supertriangle is the first triangle in
        the triangle list.
     */
-    vertex[nv + 0].actual.ra = xmid - 20 * dmax;
-    vertex[nv + 0].actual.dec = ymid - dmax;
-    vertex[nv + 1].actual.ra = xmid;
-    vertex[nv + 1].actual.dec = ymid + 20 * dmax;
-    vertex[nv + 2].actual.ra = xmid + 20 * dmax;
-    vertex[nv + 2].actual.dec = ymid - dmax;
+    vertex[nv + 0].actual.az = xmid - 20 * dmax;
+    vertex[nv + 0].actual.alt = ymid - dmax;
+    vertex[nv + 1].actual.az = xmid;
+    vertex[nv + 1].actual.alt = ymid + 20 * dmax;
+    vertex[nv + 2].actual.az = xmid + 20 * dmax;
+    vertex[nv + 2].actual.alt = ymid - dmax;
     v[0].p1 = nv;
     v[0].p2 = nv + 1;
     v[0].p3 = nv + 2;
@@ -226,8 +226,8 @@ void Alignment::TriangulateActual(int nv, VertexPair vertex[], Triangle v[], int
     */
     for (i = 0; i < nv; i++)
     {
-        xp = vertex[i].actual.ra;
-        yp = vertex[i].actual.dec;
+        xp = vertex[i].actual.az;
+        yp = vertex[i].actual.alt;
         nedge = 0;
         /*
              Set up the edge buffer.
@@ -239,12 +239,12 @@ void Alignment::TriangulateActual(int nv, VertexPair vertex[], Triangle v[], int
         {
             if (complete[j])
                 continue;
-            x1 = vertex[v[j].p1].actual.ra;
-            y1 = vertex[v[j].p1].actual.dec;
-            x2 = vertex[v[j].p2].actual.ra;
-            y2 = vertex[v[j].p2].actual.dec;
-            x3 = vertex[v[j].p3].actual.ra;
-            y3 = vertex[v[j].p3].actual.dec;
+            x1 = vertex[v[j].p1].actual.az;
+            y1 = vertex[v[j].p1].actual.alt;
+            x2 = vertex[v[j].p2].actual.az;
+            y2 = vertex[v[j].p2].actual.alt;
+            x3 = vertex[v[j].p3].actual.az;
+            y3 = vertex[v[j].p3].actual.alt;
             inside = CircumCircle(xp, yp, x1, y1, x2, y2, x3, y3, xc, yc, r);
             if (xc + r < xp)
                 // Suggested
@@ -340,7 +340,7 @@ void Alignment::TriangulateActual(int nv, VertexPair vertex[], Triangle v[], int
  * ra = x
  * dec = y
  * */
-TransformationMatrix Alignment::getTransformationMatrix(Equatorial actual)
+TransformationMatrix Alignment::getTransformationMatrix(Horizontal actual)
 {
     if ((this->numTriangles == 0) && (this->numVertices == 1))
     {
@@ -377,7 +377,7 @@ TransformationMatrix Alignment::getTransformationMatrix(Equatorial actual)
     return BLA::Identity<3, 3>();
 }
 
-TransformationType Alignment::getTransformationType(Equatorial actual)
+TransformationType Alignment::getTransformationType(Horizontal actual)
 {
     if ((this->numTriangles == 0) && (this->numVertices == 1))
     {
@@ -414,20 +414,20 @@ void Alignment::updateTransformationMatrices(void)
     if ((this->numTriangles == 0) && (this->numVertices == 1))
     {
         this->transormationMatrices[0] = BLA::Identity<3, 3>();
-        this->transormationMatrices[0](0, 2) = this->vertices[0].reference.ra - this->vertices[0].actual.ra;
-        this->transormationMatrices[0](1, 2) = this->vertices[0].reference.dec - this->vertices[0].actual.dec;
+        this->transormationMatrices[0](0, 2) = this->vertices[0].reference.az - this->vertices[0].actual.az;
+        this->transormationMatrices[0](1, 2) = this->vertices[0].reference.alt - this->vertices[0].actual.alt;
         return;
     }
     else if ((this->numTriangles == 0) && (this->numVertices >= 2))
     {
         TransformationMatrix ref = {
-            this->vertices[0].reference.ra, this->vertices[1].reference.ra, this->vertices[1].reference.ra + (this->vertices[1].reference.dec - this->vertices[0].reference.dec),
-            this->vertices[0].reference.dec, this->vertices[1].reference.dec, this->vertices[1].reference.dec - (this->vertices[1].reference.ra - this->vertices[0].reference.ra),
+            this->vertices[0].reference.az, this->vertices[1].reference.az, this->vertices[1].reference.az + (this->vertices[1].reference.alt - this->vertices[0].reference.alt),
+            this->vertices[0].reference.alt, this->vertices[1].reference.alt, this->vertices[1].reference.alt - (this->vertices[1].reference.az - this->vertices[0].reference.az),
             1, 1, 1};
 
         TransformationMatrix actual = {
-            this->vertices[0].actual.ra, this->vertices[1].actual.ra, this->vertices[1].actual.ra + (this->vertices[1].actual.dec - this->vertices[0].actual.dec),
-            this->vertices[0].actual.dec, this->vertices[1].actual.dec, this->vertices[1].actual.dec - (this->vertices[1].actual.ra - this->vertices[0].actual.ra),
+            this->vertices[0].actual.az, this->vertices[1].actual.az, this->vertices[1].actual.az + (this->vertices[1].actual.alt - this->vertices[0].actual.alt),
+            this->vertices[0].actual.alt, this->vertices[1].actual.alt, this->vertices[1].actual.alt - (this->vertices[1].actual.az - this->vertices[0].actual.az),
             1, 1, 1};
 
         if (BLA::Invert(actual))
@@ -444,13 +444,13 @@ void Alignment::updateTransformationMatrices(void)
         for (int i = 0; i < this->numTriangles; i++)
         {
             TransformationMatrix ref = {
-                this->vertices[this->triangles[i].p1].reference.ra, this->vertices[this->triangles[i].p2].reference.ra, this->vertices[this->triangles[i].p3].reference.ra,
-                this->vertices[this->triangles[i].p1].reference.dec, this->vertices[this->triangles[i].p2].reference.dec, this->vertices[this->triangles[i].p3].reference.dec,
+                this->vertices[this->triangles[i].p1].reference.az, this->vertices[this->triangles[i].p2].reference.az, this->vertices[this->triangles[i].p3].reference.az,
+                this->vertices[this->triangles[i].p1].reference.alt, this->vertices[this->triangles[i].p2].reference.alt, this->vertices[this->triangles[i].p3].reference.alt,
                 1, 1, 1};
 
             TransformationMatrix actual = {
-                this->vertices[this->triangles[i].p1].actual.ra, this->vertices[this->triangles[i].p2].actual.ra, this->vertices[this->triangles[i].p3].actual.ra,
-                this->vertices[this->triangles[i].p1].actual.dec, this->vertices[this->triangles[i].p2].actual.dec, this->vertices[this->triangles[i].p3].actual.dec,
+                this->vertices[this->triangles[i].p1].actual.az, this->vertices[this->triangles[i].p2].actual.az, this->vertices[this->triangles[i].p3].actual.az,
+                this->vertices[this->triangles[i].p1].actual.alt, this->vertices[this->triangles[i].p2].actual.alt, this->vertices[this->triangles[i].p3].actual.alt,
                 1, 1, 1};
 
             if (BLA::Invert(actual))
@@ -469,7 +469,7 @@ void Alignment::updateTransformationMatrices(void)
     }
 }
 
-int Alignment::nearestTriangle(Equatorial actual)
+int Alignment::nearestTriangle(Horizontal actual)
 {
     /*
             // Option 1: Switch to 1-Point alignment with nearest point
@@ -477,7 +477,7 @@ int Alignment::nearestTriangle(Equatorial actual)
             int vertexIndex = -1;
             for (int i = 0; i < this->numVertices; i++)
             {
-                float distance = (this->vertices[i].actual.ra - actual.ra) * (this->vertices[i].actual.ra - actual.ra) + (this->vertices[i].actual.dec - actual.dec) * (this->vertices[i].actual.dec - actual.dec);
+                float distance = (this->vertices[i].actual.az - actual.az) * (this->vertices[i].actual.az - actual.az) + (this->vertices[i].actual.alt - actual.alt) * (this->vertices[i].actual.alt - actual.alt);
                 if (distance < minDistance)
                 {
                     minDistance = distance;
@@ -485,8 +485,8 @@ int Alignment::nearestTriangle(Equatorial actual)
                 }
             }
             TransformationMatrix matrix = BLA::Identity<3, 3>();
-            matrix(0, 2) = this->vertices[vertexIndex].reference.ra - this->vertices[vertexIndex].actual.ra;
-            matrix(1, 2) = this->vertices[vertexIndex].reference.dec - this->vertices[vertexIndex].actual.dec;
+            matrix(0, 2) = this->vertices[vertexIndex].reference.az - this->vertices[vertexIndex].actual.az;
+            matrix(1, 2) = this->vertices[vertexIndex].reference.alt - this->vertices[vertexIndex].actual.alt;
             return matrix;
     */
 
@@ -495,15 +495,15 @@ int Alignment::nearestTriangle(Equatorial actual)
     int triangleIndex = -1;
     for (int i = 0; i < this->numTriangles; i++)
     {
-        Equatorial center((this->vertices[this->triangles[i].p1].actual.ra +
-                           this->vertices[this->triangles[i].p2].actual.ra +
-                           this->vertices[this->triangles[i].p3].actual.ra) /
+        Horizontal center((this->vertices[this->triangles[i].p1].actual.az +
+                           this->vertices[this->triangles[i].p2].actual.az +
+                           this->vertices[this->triangles[i].p3].actual.az) /
                               3.,
-                          (this->vertices[this->triangles[i].p1].actual.dec +
-                           this->vertices[this->triangles[i].p2].actual.dec +
-                           this->vertices[this->triangles[i].p3].actual.dec) /
+                          (this->vertices[this->triangles[i].p1].actual.alt +
+                           this->vertices[this->triangles[i].p2].actual.alt +
+                           this->vertices[this->triangles[i].p3].actual.alt) /
                               3.);
-        float distance = (center.ra - actual.ra) * (center.ra - actual.ra) + (center.dec - actual.dec) * (center.dec - actual.dec);
+        float distance = (center.az - actual.az) * (center.az - actual.az) + (center.alt - actual.alt) * (center.alt - actual.alt);
         if (distance < minDistance)
         {
             minDistance = distance;
@@ -513,14 +513,14 @@ int Alignment::nearestTriangle(Equatorial actual)
     return triangleIndex;
 }
 
-Equatorial Alignment::getCalibratedOrientation(Equatorial actual)
+Horizontal Alignment::getCalibratedOrientation(Horizontal actual)
 {
     auto matrix = this->getTransformationMatrix(actual);
     // printf("[%.2f, %.2f, %.2f, %.2f, %.2f, %.2f, %.2f, %.2f, %.2f]\n", matrix(0,0), matrix(0,1), matrix(0,2), matrix(1,0), matrix(1,1), matrix(1,2), matrix(2,0), matrix(2,1), matrix(2,2));
-    Vector3D in = {actual.ra, actual.dec, 1};
+    Vector3D in = {actual.az, actual.alt, 1};
     Vector3D out = matrix * in;
     // return (Equatorial(out(0), out(1)));
-    return (Equatorial(MathHelper::f_mod(out(0), 360), out(1)));
+    return (Horizontal(MathHelper::f_mod(out(0), 360), out(1)));
 }
 
 double Alignment::triangleArea(Point p1, Point p2, Point p3)

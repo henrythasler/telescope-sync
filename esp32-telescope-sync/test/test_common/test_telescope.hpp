@@ -418,14 +418,14 @@ namespace Test_Telescope
         // and something in between (Alnitak)
         telescope.setOrientation(Horizontal(192.76 - 173.42, 39.35 - 25.05));
         res = telescope.getCalibratedOrientation(48, localSiderealTimeDegrees);
-        TEST_ASSERT_FLOAT_WITHIN(0.01, 85.47, res.ra);
-        TEST_ASSERT_FLOAT_WITHIN(0.01, -1.42, res.dec);
+        TEST_ASSERT_FLOAT_WITHIN(0.01, 85.17, res.ra);
+        TEST_ASSERT_FLOAT_WITHIN(0.01, -1.95, res.dec);
 
         // and something outside the triangle (Bellantrix)
         telescope.setOrientation(Horizontal(200 - 173.42, 47 - 25.05));
         res = telescope.getCalibratedOrientation(48, localSiderealTimeDegrees);
-        TEST_ASSERT_FLOAT_WITHIN(0.01, 76.48, res.ra); // this is way off, but it's out of the calibration area, so what.
-        TEST_ASSERT_FLOAT_WITHIN(0.01, 4.98, res.dec);
+        TEST_ASSERT_FLOAT_WITHIN(0.01, 81.41, res.ra); // this is way off, but it's out of the calibration area, so what.
+        TEST_ASSERT_FLOAT_WITHIN(0.01, 6.54, res.dec);
 
         // check time invariance (Rigel)
         // telescope.setOrientation(Horizontal(199.25 - 173.42, 32.01 - 25.05));
@@ -433,7 +433,7 @@ namespace Test_Telescope
         // TEST_ASSERT_FLOAT_WITHIN(0.0001, 216.1144, localSiderealTimeDegrees2);
 
         // res = telescope.getCalibratedOrientation(48, localSiderealTimeDegrees + 30);
-        // hor = telescope.equatorialToHorizontal(res, 48, localSiderealTimeDegrees + 30);
+        // auto hor = telescope.equatorialToHorizontal(res, 48, localSiderealTimeDegrees + 30);
         // TEST_ASSERT_FLOAT_WITHIN(0.01, 199.25 - 173.42, hor.az);
         // TEST_ASSERT_FLOAT_WITHIN(0.01, 32.01 - 25.05, hor.alt);
     }
@@ -482,8 +482,8 @@ namespace Test_Telescope
         // and something in between
         telescope.setOrientation(Horizontal(261, 30));
         res = telescope.getCalibratedOrientation(48.3, localSiderealTimeDegrees);
-        TEST_ASSERT_FLOAT_WITHIN(0.01, 102.27, res.ra);
-        TEST_ASSERT_FLOAT_WITHIN(0.01, -4.24, res.dec);
+        TEST_ASSERT_FLOAT_WITHIN(0.01, 102.40, res.ra);
+        TEST_ASSERT_FLOAT_WITHIN(0.01, -4.55, res.dec);
 
         // auto matrix = telescope.alignment.getTransformationMatrix(telescope.horizontalToEquatorial(telescope.orientation, 48.3, localSiderealTimeDegrees));
         // printf("[%.2f, %.2f, %.2f, %.2f, %.2f, %.2f, %.2f, %.2f, %.2f]",
@@ -539,8 +539,8 @@ namespace Test_Telescope
         // and something in between
         telescope.setOrientation(Horizontal(320, 60));
         res = telescope.getCalibratedOrientation(48, localSiderealTimeDegrees);
-        TEST_ASSERT_FLOAT_WITHIN(0.01, 356.40, res.ra);
-        TEST_ASSERT_FLOAT_WITHIN(0.01, 15.02, res.dec);
+        TEST_ASSERT_FLOAT_WITHIN(0.01, 357.25, res.ra);
+        TEST_ASSERT_FLOAT_WITHIN(0.01, 16.96, res.dec);
 
         // auto matrix = telescope.alignment.getTransformationMatrix(telescope.horizontalToEquatorial(telescope.orientation, 48, localSiderealTimeDegrees));
         // printf("[%.2f, %.2f, %.2f, %.2f, %.2f, %.2f, %.2f, %.2f, %.2f]",

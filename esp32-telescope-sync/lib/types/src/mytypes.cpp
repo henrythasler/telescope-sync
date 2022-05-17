@@ -8,4 +8,5 @@ Horizontal::Horizontal() {}
 
 Point::Point(double xIn, double yIn) : x(xIn), y(yIn){};
 Point::Point(Equatorial in) : x(in.ra), y(in.dec){};
+Point::Point(Horizontal in) : x(in.az), y(in.alt){};
 Point::Point() {}

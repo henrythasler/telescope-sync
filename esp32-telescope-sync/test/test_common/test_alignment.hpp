@@ -10,15 +10,15 @@ namespace Test_Alignment
         TEST_ASSERT_EQUAL(0, alignment.getNumVertices());
         TEST_ASSERT_EQUAL(0, alignment.getNumTriangles());
 
-        alignment.addVertexPair(Equatorial(1, 8), Equatorial());
-        alignment.addVertexPair(Equatorial(4, 7), Equatorial());
-        alignment.addVertexPair(Equatorial(10, 5), Equatorial());
-        alignment.addVertexPair(Equatorial(5, 1), Equatorial());
-        alignment.addVertexPair(Equatorial(3, 5), Equatorial());
+        alignment.addVertexPair(Horizontal(1, 8), Horizontal());
+        alignment.addVertexPair(Horizontal(4, 7), Horizontal());
+        alignment.addVertexPair(Horizontal(10, 5), Horizontal());
+        alignment.addVertexPair(Horizontal(5, 1), Horizontal());
+        alignment.addVertexPair(Horizontal(3, 5), Horizontal());
 
         // Duplicates should be removed
-        alignment.addVertexPair(Equatorial(3, 5), Equatorial());
-        alignment.addVertexPair(Equatorial(3, 5), Equatorial());
+        alignment.addVertexPair(Horizontal(3, 5), Horizontal());
+        alignment.addVertexPair(Horizontal(3, 5), Horizontal());
 
         TEST_ASSERT_EQUAL(5, alignment.getNumVertices());
     }
@@ -27,11 +27,11 @@ namespace Test_Alignment
     {
         Alignment alignment;
 
-        alignment.addVertexPair(Equatorial(10, 5), Equatorial());
-        alignment.addVertexPair(Equatorial(5, 1), Equatorial());
-        alignment.addVertexPair(Equatorial(4, 7), Equatorial());
-        alignment.addVertexPair(Equatorial(3, 5), Equatorial());
-        alignment.addVertexPair(Equatorial(1, 8), Equatorial());
+        alignment.addVertexPair(Horizontal(10, 5), Horizontal());
+        alignment.addVertexPair(Horizontal(5, 1), Horizontal());
+        alignment.addVertexPair(Horizontal(4, 7), Horizontal());
+        alignment.addVertexPair(Horizontal(3, 5), Horizontal());
+        alignment.addVertexPair(Horizontal(1, 8), Horizontal());
 
         TEST_ASSERT_EQUAL(5, alignment.getNumVertices());
 
@@ -42,31 +42,31 @@ namespace Test_Alignment
         VertexPair *vertices = alignment.getVerticesPtr();
 
         // test sorting
-        TEST_ASSERT_FLOAT_WITHIN(0.0001, 1, vertices[0].actual.ra);
-        TEST_ASSERT_FLOAT_WITHIN(0.0001, 8, vertices[0].actual.dec);
+        TEST_ASSERT_FLOAT_WITHIN(0.0001, 1, vertices[0].actual.az);
+        TEST_ASSERT_FLOAT_WITHIN(0.0001, 8, vertices[0].actual.alt);
 
-        TEST_ASSERT_FLOAT_WITHIN(0.0001, 3, vertices[1].actual.ra);
-        TEST_ASSERT_FLOAT_WITHIN(0.0001, 5, vertices[1].actual.dec);
+        TEST_ASSERT_FLOAT_WITHIN(0.0001, 3, vertices[1].actual.az);
+        TEST_ASSERT_FLOAT_WITHIN(0.0001, 5, vertices[1].actual.alt);
 
-        TEST_ASSERT_FLOAT_WITHIN(0.0001, 4, vertices[2].actual.ra);
-        TEST_ASSERT_FLOAT_WITHIN(0.0001, 7, vertices[2].actual.dec);
+        TEST_ASSERT_FLOAT_WITHIN(0.0001, 4, vertices[2].actual.az);
+        TEST_ASSERT_FLOAT_WITHIN(0.0001, 7, vertices[2].actual.alt);
 
-        TEST_ASSERT_FLOAT_WITHIN(0.0001, 5, vertices[3].actual.ra);
-        TEST_ASSERT_FLOAT_WITHIN(0.0001, 1, vertices[3].actual.dec);
+        TEST_ASSERT_FLOAT_WITHIN(0.0001, 5, vertices[3].actual.az);
+        TEST_ASSERT_FLOAT_WITHIN(0.0001, 1, vertices[3].actual.alt);
 
-        TEST_ASSERT_FLOAT_WITHIN(0.0001, 10, vertices[4].actual.ra);
-        TEST_ASSERT_FLOAT_WITHIN(0.0001, 5, vertices[4].actual.dec);
+        TEST_ASSERT_FLOAT_WITHIN(0.0001, 10, vertices[4].actual.az);
+        TEST_ASSERT_FLOAT_WITHIN(0.0001, 5, vertices[4].actual.alt);
     }
 
     void test_function_Triangulate1(void)
     {
         Alignment alignment;
 
-        alignment.addVertexPair(Equatorial(10, 5), Equatorial());
-        alignment.addVertexPair(Equatorial(5, 1), Equatorial());
-        alignment.addVertexPair(Equatorial(4, 7), Equatorial());
-        alignment.addVertexPair(Equatorial(3, 5), Equatorial());
-        alignment.addVertexPair(Equatorial(1, 8), Equatorial());
+        alignment.addVertexPair(Horizontal(10, 5), Horizontal());
+        alignment.addVertexPair(Horizontal(5, 1), Horizontal());
+        alignment.addVertexPair(Horizontal(4, 7), Horizontal());
+        alignment.addVertexPair(Horizontal(3, 5), Horizontal());
+        alignment.addVertexPair(Horizontal(1, 8), Horizontal());
 
         TEST_ASSERT_EQUAL(5, alignment.getNumVertices());
 
@@ -99,11 +99,11 @@ namespace Test_Alignment
         Alignment alignment;
 
         // np.random.seed(19)
-        alignment.addVertexPair(Equatorial(1, 8), Equatorial());
-        alignment.addVertexPair(Equatorial(2, 1), Equatorial());
-        alignment.addVertexPair(Equatorial(3, 1), Equatorial());
-        alignment.addVertexPair(Equatorial(7, 8), Equatorial());
-        alignment.addVertexPair(Equatorial(10, 6), Equatorial());
+        alignment.addVertexPair(Horizontal(1, 8), Horizontal());
+        alignment.addVertexPair(Horizontal(2, 1), Horizontal());
+        alignment.addVertexPair(Horizontal(3, 1), Horizontal());
+        alignment.addVertexPair(Horizontal(7, 8), Horizontal());
+        alignment.addVertexPair(Horizontal(10, 6), Horizontal());
 
         alignment.TriangulateActual();
 
@@ -130,11 +130,11 @@ namespace Test_Alignment
         Alignment alignment;
 
         //     // np.random.seed(26)
-        alignment.addVertexPair(Equatorial(3, 5), Equatorial());
-        alignment.addVertexPair(Equatorial(8, 8), Equatorial());
-        alignment.addVertexPair(Equatorial(9, 2), Equatorial());
-        alignment.addVertexPair(Equatorial(3, 5), Equatorial());
-        alignment.addVertexPair(Equatorial(7, 2), Equatorial());
+        alignment.addVertexPair(Horizontal(3, 5), Horizontal());
+        alignment.addVertexPair(Horizontal(8, 8), Horizontal());
+        alignment.addVertexPair(Horizontal(9, 2), Horizontal());
+        alignment.addVertexPair(Horizontal(3, 5), Horizontal());
+        alignment.addVertexPair(Horizontal(7, 2), Horizontal());
 
         alignment.TriangulateActual();
 
@@ -182,15 +182,15 @@ namespace Test_Alignment
     {
         Alignment alignment;
 
-        alignment.addVertexPair(Equatorial(1, 1), Equatorial(1, 1));
-        alignment.addVertexPair(Equatorial(2, 2), Equatorial(2, 2));
-        alignment.addVertexPair(Equatorial(3, 3), Equatorial(3, 3));
+        alignment.addVertexPair(Horizontal(1, 1), Horizontal(1, 1));
+        alignment.addVertexPair(Horizontal(2, 2), Horizontal(2, 2));
+        alignment.addVertexPair(Horizontal(3, 3), Horizontal(3, 3));
 
         alignment.TriangulateActual();
 
         TEST_ASSERT_EQUAL(0, alignment.getNumTriangles());
 
-        TransformationMatrix matrix = alignment.getTransformationMatrix(Equatorial(0, 0));
+        TransformationMatrix matrix = alignment.getTransformationMatrix(Horizontal(0, 0));
 
         // 1st column
         TEST_ASSERT_FLOAT_WITHIN(0.001, 1, matrix(0, 0));
@@ -212,12 +212,12 @@ namespace Test_Alignment
     {
         Alignment alignment;
 
-        alignment.addVertexPair(Equatorial(1, 2), Equatorial(4, 3));
+        alignment.addVertexPair(Horizontal(1, 2), Horizontal(4, 3));
         alignment.TriangulateActual();
 
         TEST_ASSERT_EQUAL(0, alignment.getNumTriangles());
 
-        TransformationMatrix matrix = alignment.getTransformationMatrix(Equatorial(0, 0));
+        TransformationMatrix matrix = alignment.getTransformationMatrix(Horizontal(0, 0));
 
         // 1st column
         TEST_ASSERT_FLOAT_WITHIN(0.001, 1, matrix(0, 0));
@@ -235,23 +235,23 @@ namespace Test_Alignment
         TEST_ASSERT_FLOAT_WITHIN(0.001, 1, matrix(2, 2));
 
         // test transformation
-        auto res = alignment.getCalibratedOrientation(Equatorial(4, 8));
-        TEST_ASSERT_FLOAT_WITHIN(0.01, 7, res.ra);
-        TEST_ASSERT_FLOAT_WITHIN(0.01, 9, res.dec);
+        auto res = alignment.getCalibratedOrientation(Horizontal(4, 8));
+        TEST_ASSERT_FLOAT_WITHIN(0.01, 7, res.az);
+        TEST_ASSERT_FLOAT_WITHIN(0.01, 9, res.alt);
     }
 
     void test_function_Triangulate2Point(void)
     {
         Alignment alignment;
 
-        alignment.addVertexPair(Equatorial(1, 6), Equatorial(2, 6));
-        alignment.addVertexPair(Equatorial(6, 8), Equatorial(5, 4));
+        alignment.addVertexPair(Horizontal(1, 6), Horizontal(2, 6));
+        alignment.addVertexPair(Horizontal(6, 8), Horizontal(5, 4));
 
         alignment.TriangulateActual();
 
         TEST_ASSERT_EQUAL(0, alignment.getNumTriangles());
 
-        TransformationMatrix matrix = alignment.getTransformationMatrix(Equatorial(0, 0));
+        TransformationMatrix matrix = alignment.getTransformationMatrix(Horizontal(0, 0));
 
         // 1st column
         TEST_ASSERT_FLOAT_WITHIN(0.001, .3793103, matrix(0, 0));
@@ -269,24 +269,24 @@ namespace Test_Alignment
         TEST_ASSERT_FLOAT_WITHIN(0.001, 1, matrix(2, 2));
 
         // test transformation
-        auto res = alignment.getCalibratedOrientation(Equatorial(4, 8));
-        TEST_ASSERT_FLOAT_WITHIN(0.01, 4.24137931, res.ra);
-        TEST_ASSERT_FLOAT_WITHIN(0.01, 5.10344828, res.dec);
+        auto res = alignment.getCalibratedOrientation(Horizontal(4, 8));
+        TEST_ASSERT_FLOAT_WITHIN(0.01, 4.24137931, res.az);
+        TEST_ASSERT_FLOAT_WITHIN(0.01, 5.10344828, res.alt);
     }
 
     void test_function_Triangulate3Point(void)
     {
         Alignment alignment;
 
-        alignment.addVertexPair(Equatorial(1, 2), Equatorial(2, 1));
-        alignment.addVertexPair(Equatorial(6, 3), Equatorial(8, 2));
-        alignment.addVertexPair(Equatorial(3, 6), Equatorial(3, 4));
+        alignment.addVertexPair(Horizontal(1, 2), Horizontal(2, 1));
+        alignment.addVertexPair(Horizontal(6, 3), Horizontal(8, 2));
+        alignment.addVertexPair(Horizontal(3, 6), Horizontal(3, 4));
 
         alignment.TriangulateActual();
 
         TEST_ASSERT_EQUAL(1, alignment.getNumTriangles());
 
-        TransformationMatrix matrix = alignment.getTransformationMatrix(Equatorial(3, 4));
+        TransformationMatrix matrix = alignment.getTransformationMatrix(Horizontal(3, 4));
 
         // 1st column
         TEST_ASSERT_FLOAT_WITHIN(0.000001, 1.27777778, matrix(0, 0));
@@ -304,24 +304,24 @@ namespace Test_Alignment
         TEST_ASSERT_FLOAT_WITHIN(0.000001, 1, matrix(2, 2));
 
         // test transformation
-        auto res = alignment.getCalibratedOrientation(Equatorial(3, 4));
-        TEST_ASSERT_FLOAT_WITHIN(0.01, 3.77777778, res.ra);
-        TEST_ASSERT_FLOAT_WITHIN(0.01, 2.55555556, res.dec);
+        auto res = alignment.getCalibratedOrientation(Horizontal(3, 4));
+        TEST_ASSERT_FLOAT_WITHIN(0.01, 3.77777778, res.az);
+        TEST_ASSERT_FLOAT_WITHIN(0.01, 2.55555556, res.alt);
     }
 
     void test_function_Triangulate3PointOutside1(void)
     {
         Alignment alignment;
 
-        alignment.addVertexPair(Equatorial(1, 2), Equatorial(2, 1));
-        alignment.addVertexPair(Equatorial(6, 3), Equatorial(8, 2));
-        alignment.addVertexPair(Equatorial(3, 6), Equatorial(3, 4));
+        alignment.addVertexPair(Horizontal(1, 2), Horizontal(2, 1));
+        alignment.addVertexPair(Horizontal(6, 3), Horizontal(8, 2));
+        alignment.addVertexPair(Horizontal(3, 6), Horizontal(3, 4));
 
         alignment.TriangulateActual();
 
         TEST_ASSERT_EQUAL(1, alignment.getNumTriangles());
 
-        TransformationMatrix matrix = alignment.getTransformationMatrix(Equatorial(3, 4));
+        TransformationMatrix matrix = alignment.getTransformationMatrix(Horizontal(3, 4));
 
         // 1st column
         TEST_ASSERT_FLOAT_WITHIN(0.000001, 1.27777778, matrix(0, 0));
@@ -339,9 +339,9 @@ namespace Test_Alignment
         TEST_ASSERT_FLOAT_WITHIN(0.000001, 1, matrix(2, 2));
 
         // test transformation
-        auto res = alignment.getCalibratedOrientation(Equatorial(8, 8));
-        TEST_ASSERT_FLOAT_WITHIN(0.01, 8.61111111, res.ra);
-        TEST_ASSERT_FLOAT_WITHIN(0.01, 5.72222222, res.dec);
+        auto res = alignment.getCalibratedOrientation(Horizontal(8, 8));
+        TEST_ASSERT_FLOAT_WITHIN(0.01, 8.61111111, res.az);
+        TEST_ASSERT_FLOAT_WITHIN(0.01, 5.72222222, res.alt);
     }
 
     void test_function_getCalibratedOrientationIdentity(void)
@@ -349,19 +349,19 @@ namespace Test_Alignment
         Alignment alignment;
         alignment.TriangulateActual();
         TEST_ASSERT_EQUAL(0, alignment.getNumTriangles());
-        auto res = alignment.getCalibratedOrientation(Equatorial(1, 2));
+        auto res = alignment.getCalibratedOrientation(Horizontal(1, 2));
 
-        TEST_ASSERT_FLOAT_WITHIN(0.001, 1, res.ra);
-        TEST_ASSERT_FLOAT_WITHIN(0.001, 2, res.dec);
+        TEST_ASSERT_FLOAT_WITHIN(0.001, 1, res.az);
+        TEST_ASSERT_FLOAT_WITHIN(0.001, 2, res.alt);
     }
 
     void test_function_ClearAlignment(void)
     {
         Alignment alignment;
 
-        alignment.addVertexPair(Equatorial(1, 2), Equatorial(2, 1));
-        alignment.addVertexPair(Equatorial(6, 3), Equatorial(8, 2));
-        alignment.addVertexPair(Equatorial(3, 6), Equatorial(3, 4));
+        alignment.addVertexPair(Horizontal(1, 2), Horizontal(2, 1));
+        alignment.addVertexPair(Horizontal(6, 3), Horizontal(8, 2));
+        alignment.addVertexPair(Horizontal(3, 6), Horizontal(3, 4));
 
         alignment.TriangulateActual();
 
@@ -374,7 +374,7 @@ namespace Test_Alignment
         TEST_ASSERT_EQUAL(0, alignment.getNumVertices());
         TEST_ASSERT_EQUAL(0, alignment.getNumTriangles());
 
-        TransformationMatrix matrix = alignment.getTransformationMatrix(Equatorial(3, 4));
+        TransformationMatrix matrix = alignment.getTransformationMatrix(Horizontal(3, 4));
 
         // 1st column
         TEST_ASSERT_FLOAT_WITHIN(0.001, 1, matrix(0, 0));
@@ -433,11 +433,11 @@ namespace Test_Alignment
         Alignment alignment;
 
         // np.random.seed(7)
-        alignment.addVertexPair(Equatorial(10, 5), Equatorial());
-        alignment.addVertexPair(Equatorial(5, 1), Equatorial());
-        alignment.addVertexPair(Equatorial(4, 7), Equatorial());
-        alignment.addVertexPair(Equatorial(3, 5), Equatorial());
-        alignment.addVertexPair(Equatorial(1, 8), Equatorial());
+        alignment.addVertexPair(Horizontal(10, 5), Horizontal());
+        alignment.addVertexPair(Horizontal(5, 1), Horizontal());
+        alignment.addVertexPair(Horizontal(4, 7), Horizontal());
+        alignment.addVertexPair(Horizontal(3, 5), Horizontal());
+        alignment.addVertexPair(Horizontal(1, 8), Horizontal());
 
         alignment.TriangulateActual();
 
@@ -446,20 +446,20 @@ namespace Test_Alignment
 
         // for (int i = 0; i < alignment.getNumVertices(); i++)
         //     printf("Vertices %i: (%.0f, %.0f)\n", i,
-        //            vertices[i].actual.ra, vertices[i].actual.dec);
+        //            vertices[i].actual.az, vertices[i].actual.alt);
 
         // printf("Triangles: %i\n", alignment.getNumTriangles());
         // for (int i = 0; i < alignment.getNumTriangles(); i++)
         //     printf("Triangle %i: (%.0f, %.0f) (%.0f, %.0f) (%.0f, %.0f)\n", i,
-        //            vertices[triangles[i].p1].actual.ra, vertices[triangles[i].p1].actual.dec,
-        //            vertices[triangles[i].p2].actual.ra, vertices[triangles[i].p2].actual.dec,
-        //            vertices[triangles[i].p3].actual.ra, vertices[triangles[i].p3].actual.dec);
+        //            vertices[triangles[i].p1].actual.az, vertices[triangles[i].p1].actual.alt,
+        //            vertices[triangles[i].p2].actual.az, vertices[triangles[i].p2].actual.alt,
+        //            vertices[triangles[i].p3].actual.az, vertices[triangles[i].p3].actual.alt);
 
         TEST_ASSERT_EQUAL(4, alignment.getNumTriangles());
 
-        TEST_ASSERT_EQUAL(2, alignment.nearestTriangle(Equatorial(7, 7)));
-        TEST_ASSERT_EQUAL(0, alignment.nearestTriangle(Equatorial(5, 0)));
-        TEST_ASSERT_EQUAL(1, alignment.nearestTriangle(Equatorial(0, 10)));
+        TEST_ASSERT_EQUAL(2, alignment.nearestTriangle(Horizontal(7, 7)));
+        TEST_ASSERT_EQUAL(0, alignment.nearestTriangle(Horizontal(5, 0)));
+        TEST_ASSERT_EQUAL(1, alignment.nearestTriangle(Horizontal(0, 10)));
     }
 
     void process(void)

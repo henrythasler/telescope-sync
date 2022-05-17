@@ -654,7 +654,7 @@ void loop()
             for (int i = 0; i < telescope.alignment.getNumVertices(); i++)
             {
                 len += snprintf((char *)(txBuffer + len), sizeof(txBuffer) - len,
-                                 "[%.2f,%.2f],", vertices[i].actual.ra, vertices[i].actual.dec);
+                                 "[%.2f,%.2f],", vertices[i].actual.az, vertices[i].actual.alt);
             }
             txBuffer[len++] = ']';
             if (mqttAvailable)
@@ -667,7 +667,7 @@ void loop()
             for (int i = 0; i < telescope.alignment.getNumVertices(); i++)
             {
                 len += snprintf((char *)(txBuffer + len), sizeof(txBuffer) - len,
-                                 "[%.2f,%.2f],", vertices[i].reference.ra, vertices[i].reference.dec);
+                                 "[%.2f,%.2f],", vertices[i].reference.az, vertices[i].reference.alt);
             }
             txBuffer[len++] = ']';
             if (mqttAvailable)
@@ -676,7 +676,7 @@ void loop()
                 broker.publish("home/appliance/telescope/reference", (char *)txBuffer);
 
 
-            auto matrix = telescope.alignment.getTransformationMatrix(telescope.horizontalToEquatorial(telescope.orientation, gnss.latitude, localSiderealTimeDegrees));
+            auto matrix = telescope.alignment.getTransformationMatrix(telescope.orientation);
             len = snprintf((char *)txBuffer, sizeof(txBuffer), "[%.2f, %.2f, %.2f, %.2f, %.2f, %.2f, %.2f, %.2f, %.2f]",
                            matrix(0, 0), matrix(0, 1), matrix(0, 2),
                            matrix(1, 0), matrix(1, 1), matrix(1, 2),

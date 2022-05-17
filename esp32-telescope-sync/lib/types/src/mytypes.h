@@ -41,13 +41,14 @@ struct Point
     double y = 0;
     Point(double xIn, double yIn);
     Point(Equatorial in);
+    Point(Horizontal in);
     Point();    
 };
 
 struct VertexPair
 {
-    Equatorial actual;
-    Equatorial reference;
+    Horizontal actual;
+    Horizontal reference;
 };
 
 enum TransformationType

@@ -28,20 +28,17 @@ void Telescope::setOrientation(Horizontal orientation)
 
 void Telescope::addReferencePoint(Equatorial reference, double latitude, double localSiderealTimeDegrees)
 {
-    Equatorial actual;
-    this->horizontalToEquatorial(this->orientation, latitude, localSiderealTimeDegrees, &actual);
+    Horizontal referenceOrientation;
+    this->equatorialToHorizontal(reference, latitude, localSiderealTimeDegrees, &referenceOrientation);
 
-    alignment.addVertexPair(actual, reference);
+    alignment.addVertexPair(this->orientation, referenceOrientation);
     alignment.TriangulateActual();
 }
 
 Equatorial Telescope::getCalibratedOrientation(double latitude, double localSiderealTimeDegrees, TransformationType &transformationType)
 {
-    Equatorial actual;
-    this->horizontalToEquatorial(this->orientation, latitude, localSiderealTimeDegrees, &actual);
-    // printf("Actual: LST=%.2f° Az=%.2f, Alt=%.2f => ra=%.2f, dec=%.2f\n", localSiderealTimeDegrees, this->orientation.az, this->orientation.alt, actual.ra, actual.dec);
-    transformationType = this->alignment.getTransformationType(actual);
-    return (this->alignment.getCalibratedOrientation(actual));
+    transformationType = this->alignment.getTransformationType(this->orientation);
+    return(this->horizontalToEquatorial(this->alignment.getCalibratedOrientation(this->orientation), latitude, localSiderealTimeDegrees));
 }
 
 Equatorial Telescope::getCalibratedOrientation(double latitude, double localSiderealTimeDegrees)

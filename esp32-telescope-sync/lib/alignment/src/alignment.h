@@ -23,7 +23,7 @@ public:
     void TriangulateActual();
 
     void clearAll();
-    bool addVertexPair(Equatorial actual, Equatorial reference);
+    bool addVertexPair(Horizontal actual, Horizontal reference);
     int getNumVertices();
     int getNumTriangles();
     Triangle *getTrianglesPtr();
@@ -32,11 +32,11 @@ public:
 
     double triangleArea(Point p1, Point p2, Point p3);
     bool isInTriangle(Point p, Point p1, Point p2, Point p3);
-    int nearestTriangle(Equatorial actual);
+    int nearestTriangle(Horizontal actual);
 
-    Equatorial getCalibratedOrientation(Equatorial actual);
-    TransformationMatrix getTransformationMatrix(Equatorial actual);
-    TransformationType getTransformationType(Equatorial actual);
+    Horizontal getCalibratedOrientation(Horizontal actual);
+    TransformationMatrix getTransformationMatrix(Horizontal actual);
+    TransformationType getTransformationType(Horizontal actual);
 
 private:
     int CircumCircle(double, double, double, double, double, double, double, double, double &, double &, double &);
