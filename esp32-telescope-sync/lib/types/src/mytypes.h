@@ -8,6 +8,8 @@
 // #include <helper.h>
 #include <linalg.h>
 
+struct Point;   // forward declaration because we need 2-way references
+
 struct Equatorial
 {
     double ra = 0;  // in degrees
@@ -21,6 +23,7 @@ struct Horizontal
     double az = 0;  // in degrees
     double alt = 0; // in degrees
     Horizontal(double azIn, double altIn);
+    Horizontal(Point in);
     Horizontal();
 };
 
@@ -47,8 +50,8 @@ struct Point
 
 struct VertexPair
 {
-    Horizontal actual;
-    Horizontal reference;
+    Point actual;
+    Point reference;
 };
 
 enum TransformationType

@@ -42,20 +42,20 @@ namespace Test_Alignment
         VertexPair *vertices = alignment.getVerticesPtr();
 
         // test sorting
-        TEST_ASSERT_FLOAT_WITHIN(0.0001, 1, vertices[0].actual.az);
-        TEST_ASSERT_FLOAT_WITHIN(0.0001, 8, vertices[0].actual.alt);
+        TEST_ASSERT_FLOAT_WITHIN(0.0001, 1, vertices[0].actual.x);
+        TEST_ASSERT_FLOAT_WITHIN(0.0001, 8, vertices[0].actual.y);
 
-        TEST_ASSERT_FLOAT_WITHIN(0.0001, 3, vertices[1].actual.az);
-        TEST_ASSERT_FLOAT_WITHIN(0.0001, 5, vertices[1].actual.alt);
+        TEST_ASSERT_FLOAT_WITHIN(0.0001, 3, vertices[1].actual.x);
+        TEST_ASSERT_FLOAT_WITHIN(0.0001, 5, vertices[1].actual.y);
 
-        TEST_ASSERT_FLOAT_WITHIN(0.0001, 4, vertices[2].actual.az);
-        TEST_ASSERT_FLOAT_WITHIN(0.0001, 7, vertices[2].actual.alt);
+        TEST_ASSERT_FLOAT_WITHIN(0.0001, 4, vertices[2].actual.x);
+        TEST_ASSERT_FLOAT_WITHIN(0.0001, 7, vertices[2].actual.y);
 
-        TEST_ASSERT_FLOAT_WITHIN(0.0001, 5, vertices[3].actual.az);
-        TEST_ASSERT_FLOAT_WITHIN(0.0001, 1, vertices[3].actual.alt);
+        TEST_ASSERT_FLOAT_WITHIN(0.0001, 5, vertices[3].actual.x);
+        TEST_ASSERT_FLOAT_WITHIN(0.0001, 1, vertices[3].actual.y);
 
-        TEST_ASSERT_FLOAT_WITHIN(0.0001, 10, vertices[4].actual.az);
-        TEST_ASSERT_FLOAT_WITHIN(0.0001, 5, vertices[4].actual.alt);
+        TEST_ASSERT_FLOAT_WITHIN(0.0001, 10, vertices[4].actual.x);
+        TEST_ASSERT_FLOAT_WITHIN(0.0001, 5, vertices[4].actual.y);
     }
 
     void test_function_Triangulate1(void)
@@ -236,8 +236,8 @@ namespace Test_Alignment
 
         // test transformation
         auto res = alignment.getCalibratedOrientation(Horizontal(4, 8));
-        TEST_ASSERT_FLOAT_WITHIN(0.01, 7, res.az);
-        TEST_ASSERT_FLOAT_WITHIN(0.01, 9, res.alt);
+        TEST_ASSERT_FLOAT_WITHIN(0.01, 7, res.x);
+        TEST_ASSERT_FLOAT_WITHIN(0.01, 9, res.y);
     }
 
     void test_function_Triangulate2Point(void)
@@ -270,8 +270,8 @@ namespace Test_Alignment
 
         // test transformation
         auto res = alignment.getCalibratedOrientation(Horizontal(4, 8));
-        TEST_ASSERT_FLOAT_WITHIN(0.01, 4.24137931, res.az);
-        TEST_ASSERT_FLOAT_WITHIN(0.01, 5.10344828, res.alt);
+        TEST_ASSERT_FLOAT_WITHIN(0.01, 4.24137931, res.x);
+        TEST_ASSERT_FLOAT_WITHIN(0.01, 5.10344828, res.y);
     }
 
     void test_function_Triangulate3Point(void)
@@ -305,8 +305,8 @@ namespace Test_Alignment
 
         // test transformation
         auto res = alignment.getCalibratedOrientation(Horizontal(3, 4));
-        TEST_ASSERT_FLOAT_WITHIN(0.01, 3.77777778, res.az);
-        TEST_ASSERT_FLOAT_WITHIN(0.01, 2.55555556, res.alt);
+        TEST_ASSERT_FLOAT_WITHIN(0.01, 3.77777778, res.x);
+        TEST_ASSERT_FLOAT_WITHIN(0.01, 2.55555556, res.y);
     }
 
     void test_function_Triangulate3PointOutside1(void)
@@ -340,8 +340,8 @@ namespace Test_Alignment
 
         // test transformation
         auto res = alignment.getCalibratedOrientation(Horizontal(8, 8));
-        TEST_ASSERT_FLOAT_WITHIN(0.01, 8.61111111, res.az);
-        TEST_ASSERT_FLOAT_WITHIN(0.01, 5.72222222, res.alt);
+        TEST_ASSERT_FLOAT_WITHIN(0.01, 8.61111111, res.x);
+        TEST_ASSERT_FLOAT_WITHIN(0.01, 5.72222222, res.y);
     }
 
     void test_function_getCalibratedOrientationIdentity(void)
@@ -351,8 +351,8 @@ namespace Test_Alignment
         TEST_ASSERT_EQUAL(0, alignment.getNumTriangles());
         auto res = alignment.getCalibratedOrientation(Horizontal(1, 2));
 
-        TEST_ASSERT_FLOAT_WITHIN(0.001, 1, res.az);
-        TEST_ASSERT_FLOAT_WITHIN(0.001, 2, res.alt);
+        TEST_ASSERT_FLOAT_WITHIN(0.001, 1, res.x);
+        TEST_ASSERT_FLOAT_WITHIN(0.001, 2, res.y);
     }
 
     void test_function_ClearAlignment(void)
@@ -446,14 +446,14 @@ namespace Test_Alignment
 
         // for (int i = 0; i < alignment.getNumVertices(); i++)
         //     printf("Vertices %i: (%.0f, %.0f)\n", i,
-        //            vertices[i].actual.az, vertices[i].actual.alt);
+        //            vertices[i].actual.x, vertices[i].actual.y);
 
         // printf("Triangles: %i\n", alignment.getNumTriangles());
         // for (int i = 0; i < alignment.getNumTriangles(); i++)
         //     printf("Triangle %i: (%.0f, %.0f) (%.0f, %.0f) (%.0f, %.0f)\n", i,
-        //            vertices[triangles[i].p1].actual.az, vertices[triangles[i].p1].actual.alt,
-        //            vertices[triangles[i].p2].actual.az, vertices[triangles[i].p2].actual.alt,
-        //            vertices[triangles[i].p3].actual.az, vertices[triangles[i].p3].actual.alt);
+        //            vertices[triangles[i].p1].actual.x, vertices[triangles[i].p1].actual.y,
+        //            vertices[triangles[i].p2].actual.x, vertices[triangles[i].p2].actual.y,
+        //            vertices[triangles[i].p3].actual.x, vertices[triangles[i].p3].actual.y);
 
         TEST_ASSERT_EQUAL(4, alignment.getNumTriangles());
 

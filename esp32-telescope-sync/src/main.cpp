@@ -216,7 +216,7 @@ void setup()
     Serial.begin(115200U);
     delay(500);
     Serial.println();
-    Serial.println("[  INIT  ] Begin");
+    Serial.println("[  INIT  ] Telescope Sync 1.0");
     initStage++;
 
     Serial.printf("[  INIT  ] ChipRevision: 0x%02X   CpuFreq: %uMHz   FlashChipSize: %uKiB   HeapSize: %uKiB   MAC: %s   SdkVersion: %s\n",
@@ -654,7 +654,7 @@ void loop()
             for (int i = 0; i < telescope.alignment.getNumVertices(); i++)
             {
                 len += snprintf((char *)(txBuffer + len), sizeof(txBuffer) - len,
-                                 "[%.2f,%.2f],", vertices[i].actual.az, vertices[i].actual.alt);
+                                 "[%.2f,%.2f],", vertices[i].actual.x, vertices[i].actual.y);
             }
             txBuffer[len++] = ']';
             if (mqttAvailable)
@@ -667,7 +667,7 @@ void loop()
             for (int i = 0; i < telescope.alignment.getNumVertices(); i++)
             {
                 len += snprintf((char *)(txBuffer + len), sizeof(txBuffer) - len,
-                                 "[%.2f,%.2f],", vertices[i].reference.az, vertices[i].reference.alt);
+                                 "[%.2f,%.2f],", vertices[i].reference.x, vertices[i].reference.y);
             }
             txBuffer[len++] = ']';
             if (mqttAvailable)

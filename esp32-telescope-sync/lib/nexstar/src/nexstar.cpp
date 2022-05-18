@@ -109,7 +109,7 @@ uint32_t NexStar::handleRequest(const uint8_t *request, size_t requestLength, ui
         VertexPair *vertices = telescope->alignment.getVerticesPtr();
         for (int i = 0; i < numVertices; i++)
         {
-            Serial.printf(" %i: actual=(%.2f, %.2f) ref=(%.2f, %.2f)\n", i, vertices[i].actual.az, vertices[i].actual.alt, vertices[i].reference.az, vertices[i].reference.alt);
+            Serial.printf(" %i: actual=(%.2f, %.2f) ref=(%.2f, %.2f)\n", i, vertices[i].actual.x, vertices[i].actual.y, vertices[i].reference.x, vertices[i].reference.y);
         }
 
         auto triangles = this->telescope->alignment.getNumTriangles();

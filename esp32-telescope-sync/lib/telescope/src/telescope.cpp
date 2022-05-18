@@ -38,7 +38,7 @@ void Telescope::addReferencePoint(Equatorial reference, double latitude, double 
 Equatorial Telescope::getCalibratedOrientation(double latitude, double localSiderealTimeDegrees, TransformationType &transformationType)
 {
     transformationType = this->alignment.getTransformationType(this->orientation);
-    return(this->horizontalToEquatorial(this->alignment.getCalibratedOrientation(this->orientation), latitude, localSiderealTimeDegrees));
+    return(this->horizontalToEquatorial(Horizontal(this->alignment.getCalibratedOrientation(this->orientation)), latitude, localSiderealTimeDegrees));
 }
 
 Equatorial Telescope::getCalibratedOrientation(double latitude, double localSiderealTimeDegrees)
