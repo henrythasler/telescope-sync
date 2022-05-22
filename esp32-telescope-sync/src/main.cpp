@@ -82,6 +82,7 @@ sensors_event_t accel, gyro, mag;
 float roll = 0, pitch = 0, heading = 0;
 float gx = 0, gy = 0, gz = 0;
 float qw = 0, qx = 0, qy = 0, qz = 0;
+float temperature = 0;
 bool wifiClientMode = false;
 bool wifiAccessPointMode = false;
 float headingOffset = 0;
@@ -637,6 +638,12 @@ void loop()
             if (localBrokerAvailable)
                 broker.publish("home/appliance/telescope/heading", (char *)txBuffer);
 
+            len = snprintf((char *)txBuffer, sizeof(txBuffer), "%.1f", temperature);
+            if (mqttAvailable)
+                mqttClient.publish("home/appliance/telescope/temp", txBuffer, len);
+            if (localBrokerAvailable)
+                broker.publish("home/appliance/telescope/temp", (char *)txBuffer);
+
             len = snprintf((char *)txBuffer, sizeof(txBuffer),
                            "{\"vertices\":%i,\"triangles\":%i, \"type\": %i}",
                            telescope.alignment.getNumVertices(),
@@ -756,6 +763,11 @@ void loop()
         if (mqttAvailable && !mqttClient.connected())
         {
             reconnectMQTTClient();
+        }
+
+        if (orientationSensorAvailable)
+        {
+            temperature = imu.getTemperature();
         }
         return;
     }

@@ -3,6 +3,14 @@
 
 namespace Test_GNSS
 {
+
+    void test_function_gnss_basic(void)
+    {
+        GNSS gnss(48, 11);
+        TEST_ASSERT_FLOAT_WITHIN(0.0001, 48, gnss.latitude);
+        TEST_ASSERT_FLOAT_WITHIN(0.0001, 11, gnss.longitude);
+    }
+
     void test_function_gnss_rmc(void)
     {
         GNSS gnss;
@@ -73,6 +81,16 @@ namespace Test_GNSS
         TEST_ASSERT_FLOAT_WITHIN(0.0001, 0, gnss2.course);
     }
 
+    void test_function_gnss_rmc_invalid_checksum(void)
+    {
+        GNSS gnss;
+        bool res = false;
+
+        std::string sentence = "$GPRMC,165011.00,V,,,,,,,291221,,,N*75";   // correct checksum is 74
+        res = gnss.fromRMC(sentence);
+        TEST_ASSERT_FALSE_MESSAGE(res, "return value");
+    }    
+
     void test_function_gnss_gga(void)
     {
         GNSS gnss;
@@ -140,6 +158,16 @@ namespace Test_GNSS
         TEST_ASSERT_EQUAL_UINT32(0, gnss2.satUsed);
     }
 
+    void test_function_gnss_gga_invalid_checksum(void)
+    {
+        GNSS gnss;
+        bool res = false;
+
+        std::string sentence = "$GPGGA,165011.00,,,,,0,00,99.99,,,,,,*6";   // correct checksum is 64
+        res = gnss.fromGGA(sentence);
+        TEST_ASSERT_FALSE_MESSAGE(res, "return value");
+    }      
+
     void test_function_gnss_gsv(void)
     {
         GNSS gnss;
@@ -156,6 +184,16 @@ namespace Test_GNSS
         TEST_ASSERT_EQUAL_UINT32(1, gnss.satView);
     }
 
+    void test_function_gnss_gsv_invalid_checksum(void)
+    {
+        GNSS gnss;
+        bool res = false;
+
+        std::string sentence = "$GPGSV,3,1,12,02,11,234,15,07,54,060,14,08,03,065,,09,20,099,23*1C";   // correct checksum is 7C
+        res = gnss.fromGSV(sentence);
+        TEST_ASSERT_FALSE_MESSAGE(res, "return value");
+    }        
+
     void test_function_gnss_checksum(void)
     {
         GNSS gnss;
@@ -168,6 +206,10 @@ namespace Test_GNSS
         std::string sentenceB = "$GPGGA,165011.00,,,,,0,00,99.99,,,,,,*64";
         res = gnss.verifyChecksum(sentenceB);
         TEST_ASSERT_TRUE_MESSAGE(res, "sentenceB");
+
+        std::string sentenceC = "$GPGGA,165011.00,,,,,0,00,99.99,,,,,,*3"; // correct checksum is 64
+        res = gnss.verifyChecksum(sentenceC);
+        TEST_ASSERT_FALSE_MESSAGE(res, "sentenceC");
     }
 
     void test_function_gnss_nmea(void)
@@ -183,9 +225,17 @@ namespace Test_GNSS
         res = gnss.fromNMEA(sentenceB);
         TEST_ASSERT_TRUE_MESSAGE(res, "sentenceB");
 
-        std::string sentenceC = "$NOTFOUND,082804.683,A,5205.9421,N,00506.4368,E,0.02,146.61,190408,,*0C";
+        std::string sentenceC = "$GPGGA,165011.00,,,,,0,00,99.99,,,,,,*64";
         res = gnss.fromNMEA(sentenceC);
-        TEST_ASSERT_FALSE_MESSAGE(res, "sentenceC");
+        TEST_ASSERT_TRUE_MESSAGE(res, "sentenceC");
+
+        std::string sentenceD = "$GPGSV,1,1,01,21,00,000,*4B";
+        res = gnss.fromNMEA(sentenceD);
+        TEST_ASSERT_TRUE_MESSAGE(res, "sentenceD");
+
+        std::string sentenceE = "$NOTFOUND,082804.683,A,5205.9421,N,00506.4368,E,0.02,146.61,190408,,*0C";
+        res = gnss.fromNMEA(sentenceE);
+        TEST_ASSERT_FALSE_MESSAGE(res, "sentenceE");       
     }
 
     void test_function_gnss_buffer(void)
@@ -210,12 +260,16 @@ namespace Test_GNSS
     {
         UNITY_BEGIN();
 
+        RUN_TEST(test_function_gnss_basic);
         RUN_TEST(test_function_gnss_checksum);
 
         // Low-Level decoder
         RUN_TEST(test_function_gnss_rmc);
+        RUN_TEST(test_function_gnss_rmc_invalid_checksum);
         RUN_TEST(test_function_gnss_gga);
+        RUN_TEST(test_function_gnss_gga_invalid_checksum);
         RUN_TEST(test_function_gnss_gsv);
+        RUN_TEST(test_function_gnss_gsv_invalid_checksum);
 
         // High-Level wrapper
         RUN_TEST(test_function_gnss_nmea);

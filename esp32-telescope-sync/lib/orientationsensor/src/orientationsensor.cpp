@@ -24,6 +24,7 @@ bool LSM6Wrapper::begin(void)
 
     accelerometer = lsm6.getAccelerometerSensor();
     gyroscope = lsm6.getGyroSensor();
+    temperature = lsm6.getTemperatureSensor();
     return true;
 }
 
@@ -44,6 +45,13 @@ void LSM6Wrapper::getEvent(sensors_event_t *acc, sensors_event_t *gyr)
 {
     accelerometer->getEvent(acc);
     gyroscope->getEvent(gyr);
+}
+
+float LSM6Wrapper::getTemperature()
+{
+    sensors_event_t temp;
+    this->temperature->getEvent(&temp);
+    return(temp.temperature);
 }
 
 void LSM6Wrapper::calibrate(sensors_event_t *acc, sensors_event_t *gyr)

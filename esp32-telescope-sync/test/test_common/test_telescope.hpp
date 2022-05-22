@@ -228,7 +228,7 @@ namespace Test_Telescope
         Telescope telescope;
 
         auto orientation = telescope.equatorialToHorizontal(1, 2, 0, 0);
-        telescope.setOrientation(orientation);
+        telescope.setOrientation(orientation.az, orientation.alt);
 
         auto res = telescope.getCalibratedOrientation(0, 0);
         TEST_ASSERT_FLOAT_WITHIN(0.001, 1, res.ra);

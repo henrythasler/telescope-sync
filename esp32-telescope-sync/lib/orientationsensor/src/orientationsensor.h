@@ -16,6 +16,7 @@ public:
     bool begin(void);
     void setCalibration(void);
     void getEvent(sensors_event_t *acc, sensors_event_t *gyr);
+    float getTemperature();
     void calibrate(sensors_event_t *acc, sensors_event_t *gyr);
     void clipGyroNoise(sensors_event_t *gyr);
     void gyroSample(float *samples, uint32_t offset);
@@ -50,7 +51,7 @@ private:
 
     Adafruit_LSM6DSOX lsm6; // Acc+Gyr
 
-    Adafruit_Sensor *accelerometer, *gyroscope;
+    Adafruit_Sensor *accelerometer, *gyroscope, *temperature;
 
     int32_t accSensorID = 0;
 
