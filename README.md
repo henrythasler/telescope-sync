@@ -32,7 +32,7 @@ With this information we can transform the orientation of the telescope from a h
 
 ## Overall Design
 
-![Block Diagram](docs/block-diagram.svg)
+![Block Diagram](docs/block-diagram.png)
 
 ### Parts List
 
