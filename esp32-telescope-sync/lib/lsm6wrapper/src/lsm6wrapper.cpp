@@ -1,4 +1,4 @@
-#include <orientationsensor.h>
+#include <lsm6wrapper.h>
 
 #ifdef ARDUINO
 LSM6Wrapper::LSM6Wrapper(int32_t accSensorID, uint8_t accAddress, TwoWire * const theWire)

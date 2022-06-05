@@ -55,12 +55,14 @@ POM Plastic Sheet 6mm | Attach Angle Sensor | n/a | 10€ | Hardware Store
 Steel Rod 25mm diameter | Attach Angle Sensor | n/a | 20€ | Hardware Store
 various Fasteners | Parts assembly | n/a | <10€ | Hardware Store
 
-## Hardware Design
+## Hardware Setup
 
 ![Wire Diagram](docs/ESP32-Devkit-v1-30pin_bb.png)
 
 ## Mechanical Construction
 
 ## Software
+
+![Software Architecture](docs/software-architecture.png)
 
 ## User Interface

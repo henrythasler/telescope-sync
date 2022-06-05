@@ -6,7 +6,7 @@
 #include <mqttbroker.h>
 #include <helper.h>
 #include <ledmanager.h>
-#include <orientationsensor.h>
+#include <lsm6wrapper.h>
 
 /**
  * A file called 'secrets.h' must be placed in 'lib/secrets' and contain the following content:
