@@ -87,8 +87,7 @@ $$\begin{pmatrix}
          c_x\\
          c_y\\ 
          c_z 
-     \end{pmatrix} 
- =      
+     \end{pmatrix}  =      
     \begin{bmatrix}
          m_{11} & m_{12} & m_{13}\\
          m_{21} & m_{22} & m_{23}\\ 
@@ -99,8 +98,7 @@ $$\begin{pmatrix}
          a_x\\
          a_y\\ 
          1 
-     \end{pmatrix}
-$$
+     \end{pmatrix}$$
 
 $c_x$ and $c_y$ can the be transformed from Horizontal to Equatorial coordinate system using the local latitude and [sidereal time](http://www2.arnes.si/~gljsentvid10/sidereal.htm).
 
