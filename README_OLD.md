@@ -109,6 +109,7 @@ Blink 1Hz | Orientation Sensor not yet calibrated
 - [Learn How to Write Markdown & LaTeX in The Jupyter Notebook](https://towardsdatascience.com/write-markdown-latex-in-the-jupyter-notebook-10985edb91fd)
 - [tomstewart89/BasicLinearAlgebra](https://github.com/tomstewart89/BasicLinearAlgebra)
 - [Efficient Triangulation Algorithm Suitable for Terrain Modelling, Paul Bourke, 1989](http://paulbourke.net/papers/triangulate/)
+- [Use Markdown to display mathematical expressions on GitHub](https://docs.github.com/en/get-started/writing-on-github/working-with-advanced-formatting/writing-mathematical-expressions)
 
 ### Orientation Sensor
 
