@@ -71,7 +71,7 @@ various Fasteners | Parts assembly | n/a | <10€ | Hardware Store
 
 As the telescope's orientation after installation, especially with the more mobile dobsonians, is likely to deviate from the ideal horizontal/vertical orientation and to compensate for sensor-offset in general, an alignment-step is needed before use.
 
-The aligment method is based on the aligmnment models described by [THE EQMOD PROJECT - DOCUMENTATION & FAQs ](http://eq-mod.sourceforge.net/tutindex.html). To allow for maximum flexibility and precision, I implemented the following methods and algorithms:
+The aligment method is based on the alignment models described by [THE EQMOD PROJECT - DOCUMENTATION & FAQs ](http://eq-mod.sourceforge.net/tutindex.html). To allow for maximum flexibility and precision, I implemented the following methods and algorithms:
 
 - 1-point alignment for a real quick setup
 - 2-point alignment to compensate for rotation errors
@@ -83,43 +83,100 @@ For each alignment method, one (or multiple) transformation matrices are calcula
 
 ### 1-Point-Alignment
 
-Consider a simple example where the telescope is pointed at a target (like, a star) and the sensor output indicates that the position of that target is $s1$. We know that, based on our current location and time, the target should be at position $r1$. We can then calculate the difference $\Delta_{Az}$ and $\Delta_{Alt}$ and use these values to transform any given sensor input to it's real position.
+Consider a simple example where the telescope is pointed at a target (like, a star) and the sensor output indicates that the position of that target is $\mathbf{S}_1$. We know that, based on our current location and time, the target should be at the reference position $\mathbf{R}_1$.
 
 ![1-Point-Alignment](docs/1-point-alignment-illustration.png)
+
+We can then calculate the difference $\Delta_{Az}$ and $\Delta_{Alt}$ and use these values to transform any given sensor input to it's real position:
+
+$$\begin{pmatrix}
+         R_{Az}\\
+         R_{Alt} 
+     \end{pmatrix} =
+\begin{pmatrix}
+         S_{Az} + \Delta_{Az} \\
+         S_{Alt} + \Delta_{Alt}
+     \end{pmatrix}
+$$
 
 This simple method clearly has it's limitations as it can't compensate for rotation and scale errors. To overcome this limitation, additional alignment points need to be added.
 
 ### 3-Point-Alignment
 
+With 3 alignment points, we can draw lines between the sensor positions $\mathbf{S}_n$ resulting in a triangle. We can do the same with the real positions $\mathbf{R}_n$ and get another triangle. 
+
 ![3-Point-Alignment](docs/3-point-alignment-illustration.png)
 
-### n-Point-Alignment
+We can then calculate the affine transformation matrix $\mathbf{M}$ between the two triangles as follows:
 
-![n-Point-Alignment](docs/n-point-alignment-illustration.png)
-
-
-The calibrated position $C$ is then derived from the actual position $A$ and the transformation matrix $M$ as follows:
-
-$$\begin{pmatrix}
-         c_x\\
-         c_y\\ 
-         c_z 
-     \end{pmatrix}  =      
+$$\begin{aligned}
+\mathbf{M} &= \mathbf{R} \times \mathbf{S}^{-1} \\
+&= \begin{bmatrix}
+         R_{1_{Az}} & R_{2_{Az}} & R_{3_{Az}}\\
+         R_{1_{Alt}} & R_{2_{Alt}} & R_{3_{Alt}}\\
+         1 & 1 & 1
+     \end{bmatrix} \times
     \begin{bmatrix}
-         m_{11} & m_{12} & m_{13}\\
-         m_{21} & m_{22} & m_{23}\\ 
-         m_{31} & m_{32} & m_{33} 
+         S_{1_{Az}} & S_{2_{Az}} & S_{3_{Az}}\\
+         S_{1_{Alt}} & S_{2_{Alt}} & S_{3_{Alt}}\\
+         1 & 1 & 1
+     \end{bmatrix}^{-1}
+\end{aligned}$$
+
+> Please note that in order to do the actial matrix calculations, we have to add a 3rd dimension ($z=1$) to each point.
+
+We can then apply this transformation to any measured point $\mathbf{P}_S$ within the sensor input triangle to obtain the actual position $\mathbf{A}$ :
+
+$$\begin{aligned}
+\mathbf{A} &= \mathbf{M} \times \mathbf{P}_S\\
+\begin{pmatrix}
+         A_{Az}\\
+         A_{Alt}\\ 
+         A_z 
+     \end{pmatrix} &=      
+    \begin{bmatrix}
+         M_{11} & M_{12} & M_{13}\\
+         M_{21} & M_{22} & M_{23}\\ 
+         M_{31} & M_{32} & M_{33} 
      \end{bmatrix} 
      \times 
     \begin{pmatrix}
-         a_x\\
-         a_y\\ 
+         P_{Az}\\
+         P_{Alt}\\ 
          1 
-     \end{pmatrix}$$
+     \end{pmatrix}
+\end{aligned}$$
 
-$c_x$ and $c_y$ can the be transformed from Horizontal to Equatorial coordinate system using the local latitude and [sidereal time](http://www2.arnes.si/~gljsentvid10/sidereal.htm).
+$A_z$ can be ignored. We only need $A_{Az}$ and $A_{Alt}$.
+
+This method can also be applied to points outside the alignment triangle but the precision will likely decrease with the distance to the triangle.
+
+Solution? More alignment points!
+
+### n-Point-Alignment
+
+Adding more alignment points will give a better coverage of the sky but leads to another set of problems: 
+
+1. New alignment points lead to new triangles.
+2. Triangles might overlap.
+3. Each triangle-pair (Sensor and Reference) can have it's own specific transformation matrix.
+
+The solution to this is triangulation. We add all alignment points to an array and compute the resulting set of triangles using a [triangulation algorithm](http://paulbourke.net/papers/triangulate/). Whenever a sensor input needs to be transformed to the real position, we execute the following steps:
+
+1. select the nearest triangle $T$ in our set of reference triangles.
+2. use the triangle's specific transformation matrix $\mathbf{M}_T$, to calculate the real position
+
+![n-Point-Alignment](docs/n-point-alignment-illustration.png)
+
+The actual horizontal position $\mathbf{A}$ is then derived from the sensor input $\mathbf{P}_S$ and the transformation matrix $M$ as follows:
+
+$$\mathbf{A} = \mathbf{M}_T \times \mathbf{P}_S$$
 
 ## User Interface
+
+## Known Issues and Limitations
+
+- Alignment near the zenith does not work very well due to the properties of the horizontal (Az-Alt) coordinate system.
 
 ## References
 
