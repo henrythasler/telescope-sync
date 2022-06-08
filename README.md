@@ -67,7 +67,7 @@ various Fasteners | Parts assembly | n/a | <10€ | Hardware Store
 
 ![Software Architecture](docs/software-architecture.png)
 
-### Telescope Alignment
+## Telescope Alignment
 
 As the telescope's orientation after installation, especially with the more mobile dobsonians, is likely to deviate from the ideal horizontal/vertical orientation and to compensate for sensor-offset in general, an alignment-step is needed before use.
 
@@ -80,6 +80,23 @@ The aligment method is based on the aligmnment models described by [THE EQMOD PR
 The software picks the best method automatically, depending on the number of available alignment points.
 
 For each alignment method, one (or multiple) transformation matrices are calculated using [2D affine transformations](https://medium.com/hipster-color-science/computing-2d-affine-transformations-using-only-matrix-multiplication-2ccb31b52181).
+
+### 1-Point-Alignment
+
+Consider a simple example where the telescope is pointed at a target (like, a star) and the sensor output indicates that the position of that target is $s1$. We know that, based on our current location and time, the target should be at position $r1$. We can then calculate the difference $\Delta_{Az}$ and $\Delta_{Alt}$ and use these values to transform any given sensor input to it's real position.
+
+![1-Point-Alignment](docs/1-point-alignment-illustration.png)
+
+This simple method clearly has it's limitations as it can't compensate for rotation and scale errors. To overcome this limitation, additional alignment points need to be added.
+
+### 3-Point-Alignment
+
+![3-Point-Alignment](docs/3-point-alignment-illustration.png)
+
+### n-Point-Alignment
+
+![n-Point-Alignment](docs/n-point-alignment-illustration.png)
+
 
 The calibrated position $C$ is then derived from the actual position $A$ and the transformation matrix $M$ as follows:
 
