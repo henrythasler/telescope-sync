@@ -1,12 +1,20 @@
 # Upgrading a Dobsonian-Telescope with Push-To Capabilities
 
-This is about retrofitting a [Dobsonian Telescope](https://en.wikipedia.org/wiki/Dobsonian_telescope) with fancy electronics and means to indicate where the telescope is pointing at, to allowing the observer to quickly find an object in the night sky. My motivation was born on a very cold evening shortly after I bought the telescope and I desparately tried to find Uranus in the night sky - and failed.
+This is about retrofitting a [Dobsonian Telescope](https://en.wikipedia.org/wiki/Dobsonian_telescope) with fancy electronics and means to indicate where the telescope is pointing at, to allow the observer to quickly find an object in the night sky. My motivation was born on a very cold evening shortly after I bought the telescope and I desparately tried to find Uranus in the night sky - and failed.
 
 The resulting setup can, for example, be used with the excellent [Stellarium Plus](https://www.stellarium-labs.com/stellarium-mobile-plus/) App. 
 
 ![Telescope Assembly](docs/telescope-assembly.png)
 
 ![Stellarium Screenshot](docs/stellarium-screenshot1.jpg)
+
+## Quick-Start-Guide
+
+1. Connect power supply.
+2. Connect Stellarium Plus via Bluetooth.
+3. Wait for GPS location fix.
+4. Point the telescope to a known target and set alignment point via Stellarium App.
+5. Repeat step 4 to increase alignment precision.
 
 ## Introduction
 
@@ -36,12 +44,24 @@ With this information we can transform the orientation of the telescope from a h
 
 ![Block Diagram](docs/block-diagram.png)
 
-### Parts List
+### Stationary precision, noise
+
+Pitch is filtered with 50-samples moving-average:
+
+![Chart Pitch Longterm](docs/pitch-longterm.png)
+
+Heading is filtered with a simple IIR-Filter (decay=0.7):
+
+![Chart Heading Longterm](docs/heading-longterm.png)
+
+I'm really happy with the stationary precision and overall noise level.
+
+## Parts List
 
 Part | Description | Datasheet | Price | Source
 ---|---|---|---|--
 ESP32 DEVKIT V1 30-pin | Microcontroller | [ESP-WROOM-32 (30P)](https://github.com/TronixLab/DOIT_ESP32_DevKit-v1_30P) | <10€ | eBay
-GP-20U7 | GPS-Receiver | [GP-20U7_Datasheet_v1 2.pdf](docs/GP-20U7_Datasheet_v1 2.pdf) | ~22€ | [Sparkfun](https://www.sparkfun.com/products/13740), [Berrybase](https://www.berrybase.de/en/audio-video/navigation/gps-empf-228-nger-gp-20u7-56-kan-228-le)
+GP-20U7 | GPS-Receiver | [GP-20U7_Datasheet_v1 2.pdf](docs/GP-20U7_Datasheet_v1_2.pdf) | ~22€ | [Sparkfun](https://www.sparkfun.com/products/13740), [Berrybase](https://www.berrybase.de/en/audio-video/navigation/gps-empf-228-nger-gp-20u7-56-kan-228-le)
 LSM6DSOX 6 DoF | Motion Sensor | [LSM6DSOX Datasheet](docs/lsm6dsox.pdf) | 12€ | [Berrybase](https://www.berrybase.de/en/sensors-modules/motion-distance/adafruit-lsm6dsox-6-dof-beschleugnigunssensor-und-gyroskop)
 SD-Card Case | Housing for Motion Sensor | n/a | n/a | you will have one of these lying around
 AMT222B-V | Angle Sensor | [AMT22-V Kit ](https://www.cuidevices.com/product/motion/rotary-encoders/absolute/modular/amt22-v-kit) | 50€ | [Mouser](https://eu.mouser.com/ProductDetail/CUI-Devices/AMT222B-V?qs=l7cgNqFNU1jQeqcgztT9Sw%3D%3D)
@@ -63,6 +83,26 @@ various Fasteners | Parts assembly | n/a | <10€ | Hardware Store
 
 ## Mechanical Construction
 
+A FeeCAD-File is available in the `cad`-folder. The following parts need to be manufactured:
+
+### Sensor Plate 
+
+Where the angle sensor is attached.
+
+![Sensor Plate Drawing](docs/sensor-plate.png)
+
+### Bolt 
+
+Holds the upper and lower plate together. Holding fixture for the angle sensor rotor.
+
+![Bolt Drawing](docs/bolt.png)
+
+### Clamp
+
+Attaches the bolt to the lower base plate.
+
+![Clamp Drawing](docs/clamp.png)
+
 ## Software
 
 ![Software Architecture](docs/software-architecture.png)
@@ -80,6 +120,10 @@ The aligment method is based on the alignment models described by [THE EQMOD PRO
 The software picks the best method automatically, depending on the number of available alignment points.
 
 For each alignment method, one (or multiple) transformation matrices are calculated using [2D affine transformations](https://medium.com/hipster-color-science/computing-2d-affine-transformations-using-only-matrix-multiplication-2ccb31b52181).
+
+### Alignment Guide
+
+Alignment is done by pointing the telescope to a know target (e.g. star) and sending the real position of that target to the control unit. This is usually done with the telescope control feature of [Stellarium Plus](https://www.stellarium-labs.com/stellarium-mobile-plus/).
 
 ### 1-Point-Alignment
 
@@ -123,7 +167,7 @@ $$\begin{aligned}
      \end{bmatrix}^{-1}
 \end{aligned}$$
 
-> Please note that in order to do the actial matrix calculations, we have to add a 3rd dimension ($z=1$) to each point.
+> Please note that in order to do the actual matrix calculations, we have to add a 3rd dimension ($z=1$) to each point.
 
 We can then apply this transformation to any measured point $\mathbf{P}_S$ within the sensor input triangle to obtain the actual position $\mathbf{A}$ :
 
@@ -211,6 +255,7 @@ I used a lot of resources on the internet during this project. Here's a list of 
 - [tomstewart89/BasicLinearAlgebra](https://github.com/tomstewart89/BasicLinearAlgebra)
 - [Efficient Triangulation Algorithm Suitable for Terrain Modelling, Paul Bourke, 1989](http://paulbourke.net/papers/triangulate/)
 - [Use Markdown to display mathematical expressions on GitHub](https://docs.github.com/en/get-started/writing-on-github/working-with-advanced-formatting/writing-mathematical-expressions)
+- [FIIIR! - Design FIR & IIR Filters](https://fiiir.com/)
 
 ### Orientation Sensor
 

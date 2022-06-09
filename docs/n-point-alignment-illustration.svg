@@ -9,9 +9,9 @@
    id="svg5"
    inkscape:version="1.2 (1:1.2+202206011327+fc4e4096c5)"
    sodipodi:docname="n-point-alignment-illustration.svg"
-   inkscape:export-filename="1-point-alignment-illustration.png"
-   inkscape:export-xdpi="300"
-   inkscape:export-ydpi="300"
+   inkscape:export-filename="n-point-alignment-illustration.png"
+   inkscape:export-xdpi="150"
+   inkscape:export-ydpi="150"
    xmlns:inkscape="http://www.inkscape.org/namespaces/inkscape"
    xmlns:sodipodi="http://sodipodi.sourceforge.net/DTD/sodipodi-0.dtd"
    xmlns:xlink="http://www.w3.org/1999/xlink"
@@ -28,9 +28,9 @@
      inkscape:deskcolor="#545454"
      inkscape:document-units="mm"
      showgrid="false"
-     inkscape:zoom="1.6819304"
-     inkscape:cx="438.78153"
-     inkscape:cy="273.79254"
+     inkscape:zoom="0.5946522"
+     inkscape:cx="665.93549"
+     inkscape:cy="242.99919"
      inkscape:window-width="1848"
      inkscape:window-height="1136"
      inkscape:window-x="72"
@@ -429,7 +429,7 @@
        style="font-style:normal;font-variant:normal;font-weight:normal;font-stretch:normal;font-size:21.3333px;line-height:1.25;font-family:'Liberation Sans';-inkscape-font-specification:'Liberation Sans, Normal';font-variant-ligatures:normal;font-variant-caps:normal;font-variant-numeric:normal;font-variant-east-asian:normal;white-space:pre;shape-inside:url(#rect10593);display:inline"><tspan
          x="50.644531"
          y="732.0227"
-         id="tspan22790">real position</tspan></text>
+         id="tspan773">real position</tspan></text>
     <text
        xml:space="preserve"
        transform="matrix(0.26458333,0,0,0.26458333,244.89715,12.70163)"
@@ -437,7 +437,7 @@
        style="font-style:normal;font-variant:normal;font-weight:normal;font-stretch:normal;font-size:21.3333px;line-height:1.25;font-family:'Liberation Sans';-inkscape-font-specification:'Liberation Sans, Normal';font-variant-ligatures:normal;font-variant-caps:normal;font-variant-numeric:normal;font-variant-east-asian:normal;white-space:pre;shape-inside:url(#rect10593-1);display:inline"><tspan
          x="50.644531"
          y="732.0227"
-         id="tspan22792">sensor input</tspan></text>
+         id="tspan775">sensor input</tspan></text>
     <path
        style="fill:none;stroke:#808080;stroke-width:2;stroke-linecap:round;stroke-linejoin:round;stroke-dasharray:none;stroke-opacity:1;marker-start:url(#Arrow2);stop-color:#000000"
        id="path718-3-6-7-7"
@@ -508,7 +508,7 @@
      inkscape:groupmode="layer"
      id="layer5"
      inkscape:label="1-Point Alignment"
-     style="display:inline">
+     style="display:none">
     <path
        style="fill:none;stroke:#5fd38d;stroke-width:2;stroke-linecap:round;stroke-linejoin:round;stroke-dasharray:none;stroke-opacity:1;stop-color:#000000"
        id="path718-5"
@@ -572,9 +572,9 @@
            y="0"><tspan
              x="471.4253"
              y="701.69949"
-             id="tspan22796"><tspan
+             id="tspan779"><tspan
                style="text-align:center;text-anchor:middle"
-               id="tspan22794">Affine Transformation</tspan></tspan></text>
+               id="tspan777">Affine Transformation</tspan></tspan></text>
       </g>
     </g>
     <text
@@ -607,20 +607,24 @@
    id="tspan22493-0">Alt</tspan></tspan></text>
     <text
        xml:space="preserve"
-       transform="matrix(0.26458333,0,0,0.26458333,-36.846092,-27.896082)"
+       transform="matrix(0.26458333,0,0,0.26458333,-36.729559,-28.294068)"
        id="text11950-64"
        style="font-style:normal;font-variant:normal;font-weight:normal;font-stretch:normal;font-size:21.3333px;line-height:1.25;font-family:'Liberation Mono';-inkscape-font-specification:'Liberation Mono, Normal';font-variant-ligatures:normal;font-variant-caps:normal;font-variant-numeric:normal;font-variant-east-asian:normal;white-space:pre;shape-inside:url(#rect11952-6);display:inline"><tspan
          x="575.88867"
          y="409.3608"
-         id="tspan22798">r1</tspan></text>
+         id="tspan783">R<tspan
+   style="font-size:16px"
+   id="tspan781">1</tspan></tspan></text>
     <text
        xml:space="preserve"
-       transform="matrix(0.26458333,0,0,0.26458333,-85.427593,-60.108679)"
+       transform="matrix(0.26458333,0,0,0.26458333,-85.051739,-59.931956)"
        id="text11950-1-0"
        style="font-style:normal;font-variant:normal;font-weight:normal;font-stretch:normal;font-size:21.3333px;line-height:1.25;font-family:'Liberation Mono';-inkscape-font-specification:'Liberation Mono, Normal';font-variant-ligatures:normal;font-variant-caps:normal;font-variant-numeric:normal;font-variant-east-asian:normal;white-space:pre;shape-inside:url(#rect11952-1-5);display:inline"><tspan
          x="575.88867"
          y="409.3608"
-         id="tspan22800">s1</tspan></text>
+         id="tspan787">S<tspan
+   style="font-size:16px"
+   id="tspan785">1</tspan></tspan></text>
   </g>
   <g
      inkscape:groupmode="layer"
@@ -711,7 +715,7 @@
        style="font-style:normal;font-variant:normal;font-weight:normal;font-stretch:normal;font-size:21.3333px;line-height:1.25;font-family:'Liberation Mono';-inkscape-font-specification:'Liberation Mono, Normal';font-variant-ligatures:normal;font-variant-caps:normal;font-variant-numeric:normal;font-variant-east-asian:normal;white-space:pre;shape-inside:url(#rect11952);display:inline"><tspan
          x="575.88867"
          y="409.3608"
-         id="tspan22802">r1</tspan></text>
+         id="tspan789">r1</tspan></text>
     <text
        xml:space="preserve"
        transform="matrix(0.26458333,0,0,0.26458333,-63.272523,33.131542)"
@@ -719,7 +723,7 @@
        style="font-style:normal;font-variant:normal;font-weight:normal;font-stretch:normal;font-size:21.3333px;line-height:1.25;font-family:'Liberation Mono';-inkscape-font-specification:'Liberation Mono, Normal';font-variant-ligatures:normal;font-variant-caps:normal;font-variant-numeric:normal;font-variant-east-asian:normal;white-space:pre;shape-inside:url(#rect11952-2);display:inline"><tspan
          x="575.88867"
          y="409.3608"
-         id="tspan22804">r3</tspan></text>
+         id="tspan791">r3</tspan></text>
     <text
        xml:space="preserve"
        transform="matrix(0.26458333,0,0,0.26458333,38.806945,-25.899569)"
@@ -727,7 +731,7 @@
        style="font-style:normal;font-variant:normal;font-weight:normal;font-stretch:normal;font-size:21.3333px;line-height:1.25;font-family:'Liberation Mono';-inkscape-font-specification:'Liberation Mono, Normal';font-variant-ligatures:normal;font-variant-caps:normal;font-variant-numeric:normal;font-variant-east-asian:normal;white-space:pre;shape-inside:url(#rect11952-22);display:inline"><tspan
          x="575.88867"
          y="409.3608"
-         id="tspan22806">r2</tspan></text>
+         id="tspan793">r2</tspan></text>
     <text
        xml:space="preserve"
        transform="matrix(0.26458333,0,0,0.26458333,-85.426803,-60.030099)"
@@ -735,7 +739,7 @@
        style="font-style:normal;font-variant:normal;font-weight:normal;font-stretch:normal;font-size:21.3333px;line-height:1.25;font-family:'Liberation Mono';-inkscape-font-specification:'Liberation Mono, Normal';font-variant-ligatures:normal;font-variant-caps:normal;font-variant-numeric:normal;font-variant-east-asian:normal;white-space:pre;shape-inside:url(#rect11952-1);display:inline"><tspan
          x="575.88867"
          y="409.3608"
-         id="tspan22808">s1</tspan></text>
+         id="tspan795">s1</tspan></text>
     <text
        xml:space="preserve"
        transform="matrix(0.26458333,0,0,0.26458333,-117.29685,-2.7970464)"
@@ -743,7 +747,7 @@
        style="font-style:normal;font-variant:normal;font-weight:normal;font-stretch:normal;font-size:21.3333px;line-height:1.25;font-family:'Liberation Mono';-inkscape-font-specification:'Liberation Mono, Normal';font-variant-ligatures:normal;font-variant-caps:normal;font-variant-numeric:normal;font-variant-east-asian:normal;white-space:pre;shape-inside:url(#rect11952-2-0);display:inline"><tspan
          x="575.88867"
          y="409.3608"
-         id="tspan22810">s3</tspan></text>
+         id="tspan797">s3</tspan></text>
     <text
        xml:space="preserve"
        transform="matrix(0.26458333,0,0,0.26458333,-16.060275,-48.072804)"
@@ -751,7 +755,7 @@
        style="font-style:normal;font-variant:normal;font-weight:normal;font-stretch:normal;font-size:21.3333px;line-height:1.25;font-family:'Liberation Mono';-inkscape-font-specification:'Liberation Mono, Normal';font-variant-ligatures:normal;font-variant-caps:normal;font-variant-numeric:normal;font-variant-east-asian:normal;white-space:pre;shape-inside:url(#rect11952-22-6);display:inline"><tspan
          x="575.88867"
          y="409.3608"
-         id="tspan22812">s2</tspan></text>
+         id="tspan799">s2</tspan></text>
     <path
        style="font-variation-settings:normal;opacity:1;fill:none;fill-opacity:1;stroke:#5fd38d;stroke-width:2;stroke-linecap:round;stroke-linejoin:round;stroke-miterlimit:4;stroke-dasharray:none;stroke-dashoffset:0;stroke-opacity:1;marker-end:url(#marker12608);stop-color:#000000;stop-opacity:1"
        d="m 83.382429,70.677185 c 1.909054,13.860905 13.08254,32.005135 33.853331,31.742455"
@@ -779,9 +783,9 @@
            y="0"><tspan
              x="471.4253"
              y="701.69949"
-             id="tspan22816"><tspan
+             id="tspan803"><tspan
                style="text-align:center;text-anchor:middle"
-               id="tspan22814">Affine Transformation</tspan></tspan></text>
+               id="tspan801">Affine Transformation</tspan></tspan></text>
       </g>
     </g>
   </g>
@@ -789,7 +793,7 @@
      inkscape:groupmode="layer"
      id="layer8"
      inkscape:label="n-Point Alignment"
-     style="display:none">
+     style="display:inline">
     <path
        style="font-variation-settings:normal;opacity:1;vector-effect:none;fill:#e5ddcb;fill-opacity:0.503929;stroke:#808080;stroke-width:2;stroke-linecap:round;stroke-linejoin:round;stroke-miterlimit:4;stroke-dasharray:none;stroke-dashoffset:0;stroke-opacity:1;-inkscape-stroke:none;stop-color:#000000;stop-opacity:1"
        d="m 39.847035,-27.543148 94.027305,10.221552 149.31724,7.5212178 -9.20073,74.5796912 -54.80416,74.730917 -102.16956,16.21582 -81.247475,-54.34672 -56.92772,-72.450104 z"
@@ -937,7 +941,7 @@
          y="0"><tspan
            x="480.38705"
            y="701.69949"
-           id="tspan22818">1</tspan></text>
+           id="tspan805">1</tspan></text>
     </g>
     <g
        id="g3301-5-8-9"
@@ -959,7 +963,7 @@
          y="0"><tspan
            x="480.38705"
            y="701.69949"
-           id="tspan22820">2</tspan></text>
+           id="tspan807">2</tspan></text>
     </g>
   </g>
 </svg>

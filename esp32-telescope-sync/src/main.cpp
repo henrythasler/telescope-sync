@@ -61,6 +61,9 @@ constexpr int IMU_PIN_I2C_SDA = 21;
 constexpr int IMU_I2C_CLOCK = 400000U;
 constexpr int IMU_BUS_ID = 0;
 
+// Filter settings
+constexpr float HEADING_LOWPASS = 0.3;
+
 TwoWire I2CBus = TwoWire(IMU_BUS_ID); // set up a new Wire-Instance
 LSM6Wrapper imu(0, 0x6A, &I2CBus);
 
@@ -79,7 +82,7 @@ bool bluetoothAvailable = false;
 // internal variables
 Adafruit_Sensor *accelerometer, *gyroscope;
 sensors_event_t accel, gyro, mag;
-float roll = 0, pitch = 0, heading = 0;
+float roll = 0, pitch = 0, heading = 180;
 float gx = 0, gy = 0, gz = 0;
 float qw = 0, qx = 0, qy = 0, qz = 0;
 float temperature = 0;
@@ -474,7 +477,8 @@ void loop()
         if (Checksum::verifyAmtCheckbits(heading_raw))
         {
             // update heading if checksum is ok
-            heading = float(heading_raw & 0x3fff) * 360. / 16385.;
+            // apply simple IIR-Filter
+            heading += HEADING_LOWPASS * ((float(heading_raw & 0x3fff) * 360. / 16385.) - heading);
         }
 
         // update telescope properties with current measurements
@@ -513,10 +517,6 @@ void loop()
             mqttClient.loop();
         }
 
-        // if (!gyroCalibrationDone)
-        // {
-        //     ledmanager.setMode(LEDManager::LEDMode::BLINK_10HZ);
-        // }
         if (!gnss.valid)
         {
             ledmanager.setMode(LEDManager::LEDMode::BLINK_1HZ);
@@ -654,14 +654,13 @@ void loop()
             if (localBrokerAvailable)
                 broker.publish("home/appliance/telescope/alignment", (char *)txBuffer);
 
-
             auto vertices = telescope.alignment.getVerticesPtr();
             len = 0;
             txBuffer[len++] = '[';
             for (int i = 0; i < telescope.alignment.getNumVertices(); i++)
             {
                 len += snprintf((char *)(txBuffer + len), sizeof(txBuffer) - len,
-                                 "[%.2f,%.2f],", vertices[i].actual.x, vertices[i].actual.y);
+                                "[%.2f,%.2f],", vertices[i].actual.x, vertices[i].actual.y);
             }
             txBuffer[len++] = ']';
             if (mqttAvailable)
@@ -674,14 +673,13 @@ void loop()
             for (int i = 0; i < telescope.alignment.getNumVertices(); i++)
             {
                 len += snprintf((char *)(txBuffer + len), sizeof(txBuffer) - len,
-                                 "[%.2f,%.2f],", vertices[i].reference.x, vertices[i].reference.y);
+                                "[%.2f,%.2f],", vertices[i].reference.x, vertices[i].reference.y);
             }
             txBuffer[len++] = ']';
             if (mqttAvailable)
                 mqttClient.publish("home/appliance/telescope/reference", txBuffer, len);
             if (localBrokerAvailable)
                 broker.publish("home/appliance/telescope/reference", (char *)txBuffer);
-
 
             auto matrix = telescope.alignment.getTransformationMatrix(telescope.orientation);
             len = snprintf((char *)txBuffer, sizeof(txBuffer), "[%.2f, %.2f, %.2f, %.2f, %.2f, %.2f, %.2f, %.2f, %.2f]",
