@@ -44,6 +44,10 @@ With this information we can transform the orientation of the telescope from a h
 
 ![Block Diagram](docs/block-diagram.png)
 
+![Telescope Picture](docs/img-telescope.jpg) 
+
+![ECU Picture](docs/img-ecu.jpg)
+
 ### Stationary precision, noise
 
 Pitch is filtered with 50-samples moving-average:
@@ -55,6 +59,8 @@ Heading is filtered with a simple IIR-Filter (decay=0.7):
 ![Chart Heading Longterm](docs/heading-longterm.png)
 
 I'm really happy with the stationary precision and overall noise level.
+
+Details about these test-results can be found in the [jupyter-lab notebook](docs/heading-pitch-longterm.ipynb) 
 
 ## Parts List
 
@@ -212,7 +218,7 @@ The solution to this is triangulation. We add all alignment points to an array a
 
 ![n-Point-Alignment](docs/n-point-alignment-illustration.png)
 
-The actual horizontal position $\mathbf{A}$ is then derived from the sensor input $\mathbf{P}_S$ and the transformation matrix $M$ as follows:
+The actual horizontal position $\mathbf{A}$ is then derived from the sensor input $\mathbf{P}_S$ and the transformation matrix $\mathbf{M}_T$ as follows:
 
 $$\mathbf{A} = \mathbf{M}_T \times \mathbf{P}_S$$
 
