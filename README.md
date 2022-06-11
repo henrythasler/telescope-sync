@@ -172,7 +172,7 @@ $$\begin{aligned}
 We can then apply this transformation to any measured point $\mathbf{P}_S$ within the sensor input triangle to obtain the actual position $\mathbf{A}$ :
 
 $$\begin{aligned}
-\mathbf{A} &= \mathbf{M} \times \mathbf{P}_S\\
+\mathbf{A} &= \mathbf{M} \times \mathbf{P}\_S\\
 \begin{pmatrix}
          A_{Az}\\
          A_{Alt}\\ 
@@ -191,7 +191,7 @@ $$\begin{aligned}
      \end{pmatrix}
 \end{aligned}$$
 
-$A_z$ can be ignored. We only need $A_{Az}$ and $A_{Alt}$.
+> $A_z$ can be ignored. We only need $A_{Az}$ and $A_{Alt}$.
 
 This method can also be applied to points outside the alignment triangle but the precision will likely decrease with the distance to the triangle.
 
