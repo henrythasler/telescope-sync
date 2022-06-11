@@ -91,23 +91,11 @@ various Fasteners | Parts assembly | n/a | <10€ | Hardware Store
 
 A FeeCAD-File is available in the `cad`-folder. The following parts need to be manufactured:
 
-### Sensor Plate 
-
-Where the angle sensor is attached.
-
-![Sensor Plate Drawing](docs/sensor-plate.png)
-
-### Bolt 
-
-Holds the upper and lower plate together. Holding fixture for the angle sensor rotor.
-
-![Bolt Drawing](docs/bolt.png)
-
-### Clamp
-
-Attaches the bolt to the lower base plate.
-
-![Clamp Drawing](docs/clamp.png)
+Part | Description | Drawing
+---|---|---
+Sensor Plate | The plate is attached to the center of the upper base plate of the dobsonian. The 25mm hole holds the flange of the bolt. The angle sensor is then centered over the bolt and attached to the sensor plate. | ![Sensor Plate Drawing](docs/sensor-plate.png)
+Bolt | Holds the upper and lower plate together. Holding fixture for the angle sensor rotor. The long part needs an M10 thread for a self-locking nut.| ![Bolt Drawing](docs/bolt.png)
+Clamp | Attaches the bolt to the lower base plate. The hex-cutout goes over the self-locking-nut. | ![Clamp Drawing](docs/clamp.png)
 
 ## Software
 
